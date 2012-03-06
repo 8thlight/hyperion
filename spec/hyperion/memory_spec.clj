@@ -6,11 +6,11 @@
 
 (describe "Memory Implementation"
 
-  (with ds (new-memory-datastore))
-  (before (reset! DS @ds))
+  (with _ds (new-memory-datastore))
+  (before (reset! DS @_ds))
 
   (it "can be created"
-    (should= {} @(.store @ds)))
+    (should= {} @(.store @_ds)))
 
   (it "assigns key to new records"
     (let [saved (save {:kind "widget"})]
@@ -54,14 +54,67 @@
       (apply delete saved)
       (should= 0 (count (find-by-kind "inf")))))
 
-;  (it "applies filters to find-by-kind")
-;  (it "applies sorts to find-by-kind")
-;  (it "applies limit and offset to find-by-kind")
-;  (it "counts by kind")
-;  (it "counts by kind with filters")
-;  (it "finds by all kinds (find-all-kinds)")
-;  (it "countss by all kinds (count-all-kinds)")
+  (context "searching"
+    (with test-data [{:kind "thing" :int 1 :str "one"}
+                     {:kind "thing" :int 12 :str "twelve"}
+                     {:kind "thing" :int 23 :str "twenty3"}
+                     {:kind "thing" :int 34 :str "thirty4"}
+                     {:kind "thing" :int 45 :str "forty5"}
+                     {:kind "who" :int 56 :str "fifty6"}])
+    (before (save* @test-data))
 
+    (it "applies filters to find-by-kind with ints"
+      (should= #{1 12 23} (set (map :int (find-by-kind "thing" :filters [:< :int 25]))))
+      (should= #{1 12 23} (set (map :int (find-by-kind "thing" :filters [:<= :int 23]))))
+      (should= #{34 45} (set (map :int (find-by-kind "thing" :filters [:> :int 25]))))
+      (should= #{34 45} (set (map :int (find-by-kind "thing" :filters [:>= :int 34]))))
+      (should= #{34} (set (map :int (find-by-kind "thing" :filters [:= :int 34]))))
+      (should= #{1 12 23 45} (set (map :int (find-by-kind "thing" :filters [:!= :int 34]))))
+      (should= #{12 34} (set (map :int (find-by-kind "thing" :filters [:in :int [12 34]]))))
+      (should= #{} (set (map :int (find-by-kind "thing" :filters [[:< :int 24] [:> :int 25]]))))
+      (should= #{1 45} (set (map :int (find-by-kind "thing" :filters [[:!= :int 12] [:!= :int 23] [:!= :int 34]]))))
+      )
+
+    (it "applies filters to find-by-kind with strings"
+      (should= #{"one" "forty5"} (set (map :str (find-by-kind "thing" :filters [:< :str "qux"]))))
+      (should= #{"one" "forty5"} (set (map :str (find-by-kind "thing" :filters [:<= :str "one"]))))
+      (should= #{"twelve" "twenty3" "thirty4"} (set (map :str (find-by-kind "thing" :filters [:> :str "qux"]))))
+      (should= #{"twelve" "twenty3" "thirty4"} (set (map :str (find-by-kind "thing" :filters [:>= :str "thirty4"]))))
+      (should= #{"one"} (set (map :str (find-by-kind "thing" :filters [:= :str "one"]))))
+      (should= #{"twelve" "twenty3" "thirty4" "forty5"} (set (map :str (find-by-kind "thing" :filters [:!= :str "one"]))))
+      (should= #{"one" "twelve"} (set (map :str (find-by-kind "thing" :filters [:in :str ["one" "twelve"]]))))
+      (should= #{} (set (map :str (find-by-kind "thing" :filters [[:> :str "qux"] [:< :str "qux"]]))))
+      (should= #{"thirty4" "forty5"} (set (map :str (find-by-kind "thing" :filters [[:!= :str "one"] [:!= :str "twelve"] [:!= :str "twenty3"]])))))
+
+    (it "applies sorts to find-by-kind"
+      (should= [1 12 23 34 45] (map :int (find-by-kind "thing" :sorts [:int :asc])))
+      (should= [45 34 23 12 1] (map :int (find-by-kind "thing" :sorts [:int :desc])))
+      (should= [45 1 34 12 23] (map :int (find-by-kind "thing" :sorts [:str :asc])))
+      (should= [23 12 34 1 45] (map :int (find-by-kind "thing" :sorts [:str :desc])))
+      (save {:kind "thing" :int 1 :str "the one"})
+      (save {:kind "thing" :int 44 :str "forty5"})
+      (should= ["one" "the one" "twelve" "twenty3" "thirty4" "forty5" "forty5"] (map :str (find-by-kind "thing" :sorts [[:int :asc] [:str :asc]])))
+      (should= [44 45 1 1 34 12 23] (map :int (find-by-kind "thing" :sorts [[:str :asc] [:int :asc]]))))
+
+    (it "applies limit and offset to find-by-kind"
+      (should= [1 12] (map :int (find-by-kind "thing" :sorts [:int :asc] :limit 2)))
+      (should= [23 34] (map :int (find-by-kind "thing" :sorts [:int :asc] :limit 2 :offset 2)))
+      (should= [45] (map :int (find-by-kind "thing" :sorts [:int :asc] :limit 2 :offset 4))))
+
+    (it "counts by kind"
+      (should= 5 (count-by-kind "thing"))
+      (should= 3 (count-by-kind "thing" :filters [:> :int 20]))
+      (should= 1 (count-by-kind "who")))
+
+    (it "finds by all kinds (find-all-kinds)"
+      (should= [1 12 23 34 45 56] (sort (map :int (find-all-kinds))))
+      (should= [34 45 56] (map :int (find-all-kinds :filters [:> :int 30] :sorts [:int :asc]))))
+
+    (it "counts by all kinds (count-all-kinds)"
+      (should= 6 (count-all-kinds))
+      (should= 3 (count-all-kinds :filters [:> :int 30] :sorts [:int :asc])))
+
+    )
   )
 
 (run-specs :stacktrace true)
