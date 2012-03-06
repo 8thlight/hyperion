@@ -1,4 +1,4 @@
-(defproject hyperion "0.0.1-SNAPSHOT"
+(defproject hyperion "1.0.0"
   :description "A library for storing data."
   :dependencies [[org.clojure/clojure "1.4.0-beta1"]]
   :dev-dependencies [[speclj "2.1.1"]]

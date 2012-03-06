@@ -101,5 +101,6 @@
   (ds-find-all-kinds [this filters sorts limit offset] (find-records this filters sorts limit offset))
   )
 
-(defn new-memory-datastore []
-  (MemoryDatastore. (ref {})))
+(defn new-memory-datastore
+  ([] (MemoryDatastore. (ref {})))
+  ([stuff] (MemoryDatastore. (ref stuff))))

@@ -12,6 +12,10 @@
   (it "can be created"
     (should= {} @(.store @_ds)))
 
+  (it "can be created with starting stuff"
+    (let [ds (new-memory-datastore {"some-key" {:kind "mine" :value 42}})]
+      (should= {"some-key" {:kind "mine" :value 42}} @(.store ds))))
+
   (it "assigns key to new records"
     (let [saved (save {:kind "widget"})]
       (should= 2 (count saved))
