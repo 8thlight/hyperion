@@ -6,8 +6,8 @@
 
 (describe "Memory Implementation"
 
-  (with ds (reset! DS (new-memory-datastore)))
-  (before @ds)
+  (with ds (new-memory-datastore))
+  (before (reset! DS @ds))
 
   (it "can be created"
     (should= {} @(.store @ds)))
@@ -41,13 +41,26 @@
       (should= [two] (find-by-kind "two"))
       (should= [tre] (find-by-kind "tre"))))
 
-  (it "applies filters to find-by-kind")
-  (it "applies sorts to find-by-kind")
-  (it "applies limit and offset to find-by-kind")
-  (it "counts by kind")
-  (it "counts by kind with filters")
-  (it "finds by all kinds (find-all-kinds)")
-  (it "countss by all kinds (count-all-kinds)")
+  (it "can save many records"
+    (let [inf-records (map #(hash-map :kind "inf" :value %) (iterate inc 0))
+          saved (save* (take 10 inf-records))]
+      (should= 10 (count (set (map :key saved))))
+      (should= 10 (count (find-by-kind "inf")))
+      (should= (range 10) (sort (map :value (find-by-kind "inf"))))))
+
+  (it "can delete many records"
+    (let [inf-records (map #(hash-map :kind "inf" :value %) (iterate inc 0))
+          saved (save* (take 10 inf-records))]
+      (apply delete saved)
+      (should= 0 (count (find-by-kind "inf")))))
+
+;  (it "applies filters to find-by-kind")
+;  (it "applies sorts to find-by-kind")
+;  (it "applies limit and offset to find-by-kind")
+;  (it "counts by kind")
+;  (it "counts by kind with filters")
+;  (it "finds by all kinds (find-all-kinds)")
+;  (it "countss by all kinds (count-all-kinds)")
 
   )
 
