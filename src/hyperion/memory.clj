@@ -50,7 +50,12 @@
         multiplier (if (= :desc (second spec)) -1 1)]
     (fn [a b]
       (* multiplier
-        (.compareTo (get a field) (get b field))))))
+        (let [av (get a field)
+              bv (get b field)]
+          (cond
+            (nil? av) 1
+            (nil? bv) -1
+            :else (.compareTo av bv)))))))
 
 (defn- build-comparator [sorts]
   (let [compare-fns (map ->compare-fn sorts)]

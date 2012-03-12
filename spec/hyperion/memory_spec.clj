@@ -100,6 +100,14 @@
       (should= ["one" "the one" "twelve" "twenty3" "thirty4" "forty5" "forty5"] (map :str (find-by-kind "thing" :sorts [[:int :asc] [:str :asc]])))
       (should= [44 45 1 1 34 12 23] (map :int (find-by-kind "thing" :sorts [[:str :asc] [:int :asc]]))))
 
+    (it "sorts treat nil as last"
+      (let [no-int (save {:kind "thing" :int nil :str "mo"})
+            no-str (save {:kind "thing" :int 25 :str nil})]
+        (should= no-int (last (find-by-kind "thing" :sorts [:int :asc])))
+        (should= no-int (first (find-by-kind "thing" :sorts [:int :desc])))
+        (should= no-str (last (find-by-kind "thing" :sorts [:str :asc])))
+        (should= no-str (first (find-by-kind "thing" :sorts [:str :desc])))))
+
     (it "applies limit and offset to find-by-kind"
       (should= [1 12] (map :int (find-by-kind "thing" :sorts [:int :asc] :limit 2)))
       (should= [23 34] (map :int (find-by-kind "thing" :sorts [:int :asc] :limit 2 :offset 2)))
