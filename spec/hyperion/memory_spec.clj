@@ -126,6 +126,12 @@
       (should= 6 (count-all-kinds))
       (should= 3 (count-all-kinds :filters [:> :int 30] :sorts [:int :asc])))
 
+    (it "can sort this data"
+      (let [data [{:pump-manufacturer "" :kind "fire-pump" :key "fp123" :job-site-key "jskey123" :pump-model ""}
+                  {:pump-manufacturer "" :kind "fire-pump" :key "fp321" :job-site-key "jskey123" :pump-model ""}]]
+        (save* data)
+        (find-by-kind "fire-pump" :filters [:= :job-site-key "jskey123"] :sorts [[:pump-manufacturer :asc][:pump-model :asc]])))
+
     )
   )
 
