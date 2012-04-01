@@ -61,14 +61,14 @@
   (let [compare-fns (map ->compare-fn sorts)]
     (proxy [java.util.Comparator] []
       (compare [a b]
-        (some
-          #(if (zero? %) false %)
-          (map (fn [compare-fn] (compare-fn a b)) compare-fns))))))
+        (let [compare-results (map (fn [compare-fn] (compare-fn a b)) compare-fns)
+              result (some #(if (zero? %) false %) compare-results)]
+          (if (nil? result) 0 result))))))
 
 (defn- apply-sorts [sorts records]
-  (if (seq sorts)
-    (sort (build-comparator sorts) records)
-    records))
+  (if (empty? sorts)
+    records
+    (sort (build-comparator sorts) records)))
 
 (defn- apply-offset [offset records]
   (if offset

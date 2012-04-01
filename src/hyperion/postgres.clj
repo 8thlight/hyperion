@@ -1,8 +1,21 @@
 (ns hyperion.postgres
-  (:use [hyperion.core])
+  (:use
+    [hyperion.core]
+    [hyperion.query-gen])
   (:require
     [clojure.java.jdbc :as sql]
+    [clojure.java.jdbc.internal :as sql-internal]
     [clojure.string :as clj-str]))
+
+(defn- do-query [conn query]
+  (sql/with-connection conn
+    (sql/with-query-results
+      res [query]
+      (doall res))))
+
+(defn- do-command [conn command]
+  (sql/with-connection conn
+    (sql-internal/do-prepared-return-keys* command nil)))
 
 (defn- build-key [table-name id]
   (str table-name "-" id))
@@ -10,7 +23,7 @@
 (defn- destructure-key [key]
   (let [index (.lastIndexOf key "-")
         table-name (.substring key 0 index)
-        id (.substring key (inc index) (.length key))]
+        id (Integer/parseInt (.substring key (inc index) (.length key)))]
     [table-name id]))
 
 (defn- apply-kind-and-key
@@ -20,125 +33,77 @@
     (assoc record :kind table-name :key (build-key table-name id))))
 
 (defn- save-record [ds record]
-  (sql/with-connection (.conn ds)
-    (let [table-name (:kind record)
-          to-insert (dissoc record :kind)
-          record (sql/insert-record table-name to-insert)
-          record (apply-kind-and-key record table-name)]
-      record)))
+  (let [table-name (:kind record)
+        to-insert (dissoc record :kind)
+        query (insert-query (.query-builder ds) table-name to-insert)
+        result (do-command (.conn ds) query)]
+    (apply-kind-and-key result table-name)))
 
 (defn- save-records [ds records]
   (doall (map #(save-record ds %) records)))
 
-(defn- find-record-by-key [ds key]
-  (let [[table-name id] (destructure-key key)]
-    (sql/with-connection (.conn ds)
-      (sql/with-query-results
-        res [(str "SELECT * FROM " table-name "  WHERE id=" id)]
-        (let [record (first res)]
-          (when record
-            (apply-kind-and-key record table-name id)))))))
-
 (defn- delete-record [ds table-name id]
-  (sql/with-connection (.conn ds)
-    (sql/delete-rows
-      table-name
-      [(str "id=" id)])))
+  (let [query (delete-query (.query-builder ds) table-name [[:= :id id]])]
+    (do-command (.conn ds) query)))
 
 (defn- delete-records [ds keys]
   (doseq [key keys]
     (let [[table-name id] (destructure-key key)]
       (delete-record ds table-name id))))
 
-(defmulti format-value (fn [val] (type val)))
+(defn- count-records-by-kind [ds kind filters]
+  (let [query (count-query (.query-builder ds) kind filters)
+        results (do-query (.conn ds) query)]
+    (:count (first results))))
 
-(defmethod format-value java.lang.String [val]
-  (str "'" val "'"))
-
-(defmethod format-value clojure.lang.Keyword [val]
-  (name val))
-
-(defmethod format-value clojure.lang.Sequential [val]
-  (str "(" (clj-str/join ", " (map format-value val)) ")"))
-
-(defmethod format-value :default [val]
-  (str val))
-
-(defn- build-filter
-  ([filter] (build-filter filter (format-value (first filter))))
-  ([filter op] (build-filter (format-value (second filter)) op (last filter)))
-  ([col op val] (str col " " op " " (format-value val))))
-
-(defmulti filter->sql (fn [filter] (first filter)))
-
-(defmethod filter->sql :!= [filter]
-  (build-filter filter "<>"))
-
-(defmethod filter->sql :contains? [filter]
-  (build-filter filter "IN"))
-
-(defmethod filter->sql :default [filter]
-  (build-filter filter))
-
-(defn- apply-filters [query filters]
-  (if (empty? filters)
-    query
-    (let [where-clause (str "WHERE " (clj-str/join " AND " (map filter->sql filters)))]
-      (str query " " where-clause))))
-
-(defn- sort->sql [sort]
-  (let [order (case (second sort) :asc "ASC" :desc "DESC")]
-    (str (format-value (first sort)) " " order)))
-
-(defn- apply-sorts [query sorts]
-  (if (empty? sorts)
-    query
-    (let [order-by-clause (str "ORDER BY " (clj-str/join ", " (map sort->sql sorts)))]
-      (str query " " order-by-clause))))
-
-(defn- apply-limit [query limit]
-  (if (nil? limit)
-    query
-    (str query " LIMIT " limit)))
-
-(defn- apply-offset [query offset]
-  (if (nil? offset)
-    query
-    (str query " OFFSET " offset)))
+(defn- count-records-by-all-kinds [ds filters]
+  (let [query (count-all-query (.query-builder ds) (.schema ds) filters)
+        results (do-query (.conn ds) query)]
+    (:count (first results))))
 
 (defn- find-records-by-kind [ds kind filters sorts limit offset]
-  (let [query (->
-                (str "SELECT * FROM " kind)
-                (apply-filters filters)
-                (apply-sorts sorts)
-                (apply-limit limit)
-                (apply-offset offset))]
-    (sql/with-connection (.conn ds)
-      (sql/with-query-results
-        results [query]
-        (let [full-results (doall (map #(apply-kind-and-key % kind) results))]
-          full-results)))))
+  (let [query (select-query (.query-builder ds) kind filters sorts limit offset)
+        results (do-query (.conn ds) query)]
+    (map #(apply-kind-and-key % kind) results)))
 
-(defn- count-records-by-kind [ds kind filters]
-  (let [query (->
-                (str "SELECT COUNT(*) FROM " kind)
-                (apply-filters filters))]
-    (sql/with-connection (.conn ds)
-      (sql/with-query-results
-        results [query]
-        (:count (first results))))))
+(defn- find-record-by-key [ds key]
+  (let [[table-name id] (destructure-key key)
+        records (find-records-by-kind ds table-name [[:= :id id]] nil nil nil)]
+    (first records)))
 
-(deftype PostgresDatastore [conn]
+(defn- build-schema [columns]
+  (let [schema (reduce #(assoc %1 (:table_name %2) []) {} columns)]
+    (reduce
+      (fn [schema {:keys [table_name column_name]}]
+        (update-in schema [table_name] #(conj % (keyword column_name))))
+        schema
+        columns)))
+
+(defn clean-record [record schema]
+  (let [table-name (:table_name record)
+        record (select-keys record (get schema table-name))]
+    (apply-kind-and-key record table-name)))
+
+(defn- find-records-by-all-kinds [ds filters sorts limit offset]
+  (let [schema (.schema ds)
+        query (select-all-query (.query-builder ds) schema filters sorts limit offset)
+        results (do-query (.conn ds) query)]
+    (map #(clean-record % schema) results)))
+
+(deftype SqlDatastore [conn schema query-builder]
   Datastore
   (ds-save [this record] (save-record this record))
   (ds-save* [this records] (save-records this records))
   (ds-delete [this keys] (delete-records this keys))
   (ds-count-by-kind [this kind filters] (count-records-by-kind this kind filters))
-  (ds-count-all-kinds [this filters])
+  (ds-count-all-kinds [this filters] (count-records-by-all-kinds this filters))
   (ds-find-by-key [this key] (find-record-by-key this key))
   (ds-find-by-kind [this kind filters sorts limit offset] (find-records-by-kind this kind filters sorts limit offset))
-  (ds-find-all-kinds [this filters sorts limit offset])
-  )
+  (ds-find-all-kinds [this filters sorts limit offset] (find-records-by-all-kinds this filters sorts limit offset)))
 
 (defn new-postgres-datastore [conn]
-  (PostgresDatastore. conn))
+  (let [query-gen (new-postgres-query-builder)
+        schema-query (schema-query query-gen)
+        results (do-query conn schema-query)
+        schema (build-schema results)]
+  (SqlDatastore. conn schema query-gen)))
