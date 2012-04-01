@@ -13,6 +13,10 @@
       res [query]
       (doall res))))
 
+(defn- do-command1 [conn command]
+  (sql/with-connection conn
+    (sql-internal/do-prepared* command nil)))
+
 (defn- do-command [conn command]
   (sql/with-connection conn
     (sql-internal/do-prepared-return-keys* command nil)))
@@ -33,9 +37,14 @@
     (assoc record :kind table-name :key (build-key table-name id))))
 
 (defn- save-record [ds record]
-  (let [table-name (:kind record)
-        to-insert (dissoc record :kind)
-        query (insert-query (.query-builder ds) table-name to-insert)
+  (let [[record query-fn]
+          (if (new? record)
+            [record insert-query]
+            (let [[table-name id] (destructure-key (:key record))]
+              [(assoc record :kind table-name :id id) update-query]))
+        table-name (:kind record)
+        to-save (dissoc record :kind :key)
+        query (query-fn (.query-builder ds) table-name to-save)
         result (do-command (.conn ds) query)]
     (apply-kind-and-key result table-name)))
 

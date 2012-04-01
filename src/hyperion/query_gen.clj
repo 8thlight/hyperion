@@ -63,9 +63,6 @@
 (defn build-with [[name query]]
   (str name " AS (" query ")"))
 
-(defn apply-withs [query withs]
-  (str "WITH " (clj-str/join ", " (map build-with withs)) " " query))
-
 (defn add-as [query name]
   (str query " AS " name))
 
@@ -77,6 +74,13 @@
         column-names (format-value (keys item))
         values (format-value (vals item))]
     (str "INSERT INTO " table-name " " column-names " VALUES " values)))
+
+(defn build-update-query [table item]
+  (let [table-name (format-table table)
+        filters (map (fn [[col val]] [:= col val]) (dissoc item :id))
+        set (clj-str/join ", " (map filter->sql filters))
+        query (str "UPDATE " table-name " SET " set)]
+    (apply-filters query [[:= :id (:id item)]])))
 
 (defn build-delete-query [table filters]
   (let [table-name (format-table table)
@@ -127,6 +131,7 @@
 
 (defprotocol SqlQueryBuilder
   (insert-query [this table item])
+  (update-query [this table item])
   (delete-query [this table filters])
   (select-query [this table filters sorts limit offset])
   (select-all-query [this schema filters sorts limit offset])
@@ -137,6 +142,7 @@
 (deftype PostgresQueryBuilder []
   SqlQueryBuilder
   (insert-query [this table item] (build-insert-query table item))
+  (update-query [this table item] (build-update-query table item))
   (delete-query [this table filters] (build-delete-query table filters))
   (select-query [this table filters sorts limit offset] (build-select-query table filters sorts limit offset "*"))
   (select-all-query [this schema filters sorts limit offset] (build-select-all-query schema filters sorts limit offset "*"))

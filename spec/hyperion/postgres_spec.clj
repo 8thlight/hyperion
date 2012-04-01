@@ -29,6 +29,12 @@
         (should= "testing" (:kind record))
         (should= "hello" (:data record))))
 
+    (it "it saves an existing record"
+      (let [record1 (save {:kind "testing" :data "hello"})
+            record2 (save (assoc record1 :data "hello2"))]
+        (should= (:key record1) (:key record2))
+        (should= 1 (count (find-by-kind "testing")))))
+
     (it "saves a map with kind as a symbol and returns it"
       (let [record (save {:kind :testing :data "hello"})]
         (should= :testing (:kind record))
