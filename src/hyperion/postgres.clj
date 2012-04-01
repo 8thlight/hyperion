@@ -37,14 +37,14 @@
     (assoc record :kind table-name :key (build-key table-name id))))
 
 (defn- save-record [ds record]
-  (let [[record query-fn]
+  (let [[table-name record query-fn]
           (if (new? record)
-            [record insert-query]
-            (let [[table-name id] (destructure-key (:key record))]
-              [(assoc record :kind table-name :id id) update-query]))
-        table-name (:kind record)
-        to-save (dissoc record :kind :key)
-        query (query-fn (.query-builder ds) table-name to-save)
+            [(:kind record) (dissoc record :kind) insert-query]
+            (let [[table-name id] (destructure-key (:key record))
+                  record (assoc record :id id)
+                  record (dissoc record :kind :key)]
+              [table-name record update-query]))
+        query (query-fn (.query-builder ds) table-name record)
         result (do-command (.conn ds) query)]
     (apply-kind-and-key result table-name)))
 
