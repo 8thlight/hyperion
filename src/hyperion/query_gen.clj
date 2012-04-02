@@ -60,95 +60,80 @@
     query
     (str query " OFFSET " offset)))
 
-(defn build-with [[name query]]
-  (str name " AS (" query ")"))
-
-(defn add-as [query name]
-  (str query " AS " name))
-
 (defn build-subquery [query name]
-  (add-as (str "(" query ")") name))
+  (str "(" query ") AS " name))
 
-(defn build-insert-query [table item]
+(defn build-with [[name query]]
+  (str name " AS (" query  ")"))
+
+(defn build-withs [withs]
+  (when-not (empty? withs)
+    (str "WITH " (clj-str/join ", " (map build-with withs)) " ")))
+
+(defn build-return-statement [returns]
+  (clj-str/join ", " (map
+    (fn [return]
+      (if (coll? return)
+        (str (format-value (first return)) " AS " (format-value (second return)))
+        (format-value return)))
+    returns)))
+
+(defn build-insert [table item]
   (let [table-name (format-table table)
         column-names (format-value (keys item))
         values (format-value (vals item))]
     (str "INSERT INTO " table-name " " column-names " VALUES " values)))
 
-(defn build-update-query [table item]
+(defn build-update [table item]
   (let [table-name (format-table table)
         filters (map (fn [[col val]] [:= col val]) (dissoc item :id))
         set (clj-str/join ", " (map filter->sql filters))
         query (str "UPDATE " table-name " SET " set)]
     (apply-filters query [[:= :id (:id item)]])))
 
-(defn build-delete-query [table filters]
+(defn build-delete [table filters]
   (let [table-name (format-table table)
         query (str "DELETE FROM " table-name)]
     (apply-filters query filters)))
 
-(defn build-select-query [table filters sorts limit offset return]
+(defn build-select [withs return-statement table filters sorts limit offset]
    (->
-    (str "SELECT " return " FROM " table)
+    (str (build-withs withs) "SELECT " return-statement " FROM " (format-table table))
     (apply-filters filters)
     (apply-sorts sorts)
     (apply-limit limit)
     (apply-offset offset)))
 
-(defn lowest-common-denominator [schema]
-  (sort (set (reduce #(concat %1 (second %2)) [] schema))))
+(defn build-union-all [queries]
+  (clj-str/join " UNION ALL " (map #(str "(" % ")") queries)))
 
-(defn seq-contains? [coll item]
-  (some #(= % item) coll))
+(defn build-table-listing []
+  (build-select nil "table_name" "information_schema.tables" [[:= :table_schema "public"]] nil nil nil))
 
-(defn build-return-for-table [table columns lcd-columns]
-  [table (clj-str/join ", " (cons (str (format-value table) " AS table_name") (map #(if (seq-contains? columns %) (format-column %) (str "NULL AS " (format-column %))) lcd-columns)))])
-
-(defn build-returns-for-tables [schema]
-  (let [lcd-columns (lowest-common-denominator schema)]
-    (into
-      {}
-      (map
-        (fn [[table columns]]
-          (build-return-for-table table columns lcd-columns))
-        schema))))
-
-(defn union-selects [selects]
-  (clj-str/join " UNION ALL " (map #(str "(" % ")") selects)))
-
-(defn build-select-all-query [schema filters sorts limit offset return]
-  (let [returns (build-returns-for-tables schema)
-        selects (map (fn [[table ret]] (build-select-query table filters nil nil nil ret)) returns)
-        temp-name "filtered"
-        with (str "WITH " temp-name " AS (" (union-selects selects) ")")]
-    (str with " " (build-select-query temp-name nil sorts limit offset return))))
-
-(defn build-table-listing-query []
-  (build-select-query "information_schema.tables" [[:= :table_schema "public"]] nil nil nil "table_name"))
-
-(defn build-schema-query []
-  (build-select-query (str (add-as "information_schema.columns" "columns") ", " (build-subquery (build-table-listing-query) "tables")) [[:= :columns.table_name :tables.table_name]] nil nil nil "tables.table_name, column_name"))
+(defn build-column-listing []
+  (build-select nil "tables.table_name, column_name" (str "information_schema.columns AS columns, " (build-subquery (build-table-listing) "tables")) [[:= :columns.table_name :tables.table_name]] nil nil nil))
 
 (defprotocol SqlQueryBuilder
-  (insert-query [this table item])
-  (update-query [this table item])
-  (delete-query [this table filters])
-  (select-query [this table filters sorts limit offset])
-  (select-all-query [this schema filters sorts limit offset])
-  (count-query [this table filters])
-  (count-all-query [this schema filters])
-  (schema-query [this]))
+  (insert [this table item])
+  (update [this table item])
+  (delete [this table filters])
+  (select [this withs returns table filters sorts limit offet])
+  (select-all [this withs table filters sorts limit offset])
+  (count-all [this withs table filters])
+  (union-all [this queries])
+  (column-listing [this]))
 
 (deftype PostgresQueryBuilder []
   SqlQueryBuilder
-  (insert-query [this table item] (build-insert-query table item))
-  (update-query [this table item] (build-update-query table item))
-  (delete-query [this table filters] (build-delete-query table filters))
-  (select-query [this table filters sorts limit offset] (build-select-query table filters sorts limit offset "*"))
-  (select-all-query [this schema filters sorts limit offset] (build-select-all-query schema filters sorts limit offset "*"))
-  (count-query [this table filters] (build-select-query table filters nil nil nil "COUNT(*)"))
-  (count-all-query [this schema filters] (build-select-all-query schema filters nil nil nil "COUNT(*)"))
-  (schema-query [this] (build-schema-query)))
+  (insert [this table item] (build-insert table item))
+  (update [this table item] (build-update table item))
+  (delete [this table filters] (build-delete table filters))
+  (select [this withs returns table filters sorts limit offset] (build-select withs (build-return-statement returns) table filters sorts limit offset))
+  (select-all [this withs table filters sorts limit offset] (build-select withs "*" table filters sorts limit offset))
+  (count-all [this withs table filters] (build-select withs "COUNT(*)" table filters nil nil nil))
+  (union-all [this queries] (build-union-all queries))
+  (column-listing [this] (build-column-listing))
+  )
 
 (defn new-postgres-query-builder []
   (PostgresQueryBuilder.))

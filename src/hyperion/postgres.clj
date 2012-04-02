@@ -1,11 +1,12 @@
 (ns hyperion.postgres
   (:use
-    [hyperion.core]
+    [hyperion.core :only [Datastore new?]]
     [hyperion.query-gen])
   (:require
     [clojure.java.jdbc :as sql]
     [clojure.java.jdbc.internal :as sql-internal]
-    [clojure.string :as clj-str]))
+    [clojure.string :as clj-str]
+    [clojure.set :as clj-set]))
 
 (defn do-query [conn query]
   (sql/with-connection conn
@@ -35,14 +36,14 @@
 (defn insert-record [query-builder record]
   (let [table-name (:kind record)
         record (dissoc record :kind)
-        query (insert-query query-builder table-name record)]
+        query (insert query-builder table-name record)]
     [table-name query]))
 
 (defn update-record [query-builder record]
   (let [[table-name id] (destructure-key (:key record))
         record (assoc record :id id)
         record (dissoc record :kind :key)
-        query (update-query query-builder table-name record)]
+        query (update query-builder table-name record)]
     [table-name query]))
 
 (defn save-record [ds record]
@@ -57,7 +58,7 @@
   (doall (map #(save-record ds %) records)))
 
 (defn delete-record [ds table-name id]
-  (let [query (delete-query (.query-builder ds) table-name [[:= :id id]])]
+  (let [query (delete (.query-builder ds) table-name [[:= :id id]])]
     (do-command (.conn ds) query)))
 
 (defn delete-records [ds keys]
@@ -66,17 +67,12 @@
       (delete-record ds table-name id))))
 
 (defn count-records-by-kind [ds kind filters]
-  (let [query (count-query (.query-builder ds) kind filters)
-        results (do-query (.conn ds) query)]
-    (:count (first results))))
-
-(defn count-records-by-all-kinds [ds filters]
-  (let [query (count-all-query (.query-builder ds) (.schema ds) filters)
+  (let [query (count-all (.query-builder ds) nil kind filters)
         results (do-query (.conn ds) query)]
     (:count (first results))))
 
 (defn find-records-by-kind [ds kind filters sorts limit offset]
-  (let [query (select-query (.query-builder ds) kind filters sorts limit offset)
+  (let [query (select-all (.query-builder ds) nil kind filters sorts limit offset)
         results (do-query (.conn ds) query)]
     (map #(apply-kind-and-key % kind) results)))
 
@@ -85,18 +81,63 @@
         records (find-records-by-kind ds table-name [[:= :id id]] nil nil nil)]
     (first records)))
 
-(defn clean-record [record schema]
-  (let [table-name (:table_name record)
-        record (select-keys record (get schema table-name))]
+(defn- build-schema-and-distinct-columns [column-listing]
+  (let [schema (reduce #(assoc %1 (keyword (:table_name %2)) []) {} column-listing)]
+    (loop [[{:keys [table_name column_name]} & more] column-listing schema schema dist-cols #{}]
+      (if (nil? table_name)
+        [schema (sort dist-cols)]
+        (let [table (keyword table_name)
+              col (keyword column_name)
+              schema (update-in schema [table] #(conj % (keyword col)))
+              dist-cols (conj dist-cols col)]
+          (recur more schema dist-cols))))))
+
+(defn get-schema-and-distinct-columns [ds]
+  (let [column-listing-query (column-listing (.query-builder ds))
+        results (do-query (.conn ds) column-listing-query)]
+    (build-schema-and-distinct-columns results)))
+
+(defn seq-contains? [coll item]
+  (some #(= % item) coll))
+
+(defn- build-padded-returns [table-name cols dist-cols]
+  (let [diff (clj-set/difference (set dist-cols) (set cols))]
+    (cons
+      [(name table-name) :table_name]
+      (map #(if (seq-contains? diff %) [nil %] %) dist-cols))))
+
+(defn- build-padded-select [query-builder table cols dist-cols filters]
+  (let [returns (build-padded-returns table cols dist-cols)]
+    (select query-builder nil returns table filters nil nil nil)))
+
+(defn build-filtered-union-by-all-kinds [qb schema dist-cols filters]
+  (let [table-select-queries (map (fn [[table cols]] (build-padded-select qb table cols dist-cols filters)) schema)]
+    (union-all qb table-select-queries)))
+
+(defn clean-padding-and-apply-keys [record schema]
+  (let [table-name (keyword (:table_name record))
+        record (select-keys record (table-name schema))]
     (apply-kind-and-key record table-name)))
 
 (defn find-records-by-all-kinds [ds filters sorts limit offset]
-  (let [schema (.schema ds)
-        query (select-all-query (.query-builder ds) schema filters sorts limit offset)
+  (let [qb (.query-builder ds)
+        [schema dist-cols] (get-schema-and-distinct-columns ds)
+        filtered-union (build-filtered-union-by-all-kinds qb schema dist-cols filters)
+        with-name "filtered"
+        query (select-all qb [[with-name filtered-union]] with-name nil sorts limit offset)
         results (do-query (.conn ds) query)]
-    (map #(clean-record % schema) results)))
+    (map #(clean-padding-and-apply-keys % schema) results)))
 
-(deftype SqlDatastore [conn schema query-builder]
+(defn count-records-by-all-kinds [ds filters]
+  (let [qb (.query-builder ds)
+        [schema dist-cols] (get-schema-and-distinct-columns ds)
+        filtered-union (build-filtered-union-by-all-kinds qb schema dist-cols filters)
+        with-name "filtered"
+        query (count-all qb [[with-name filtered-union]] with-name nil)
+        results (do-query (.conn ds) query)]
+    (:count (first results))))
+
+(deftype SqlDatastore [conn query-builder]
   Datastore
   (ds-save [this record] (save-record this record))
   (ds-save* [this records] (save-records this records))
@@ -107,17 +148,5 @@
   (ds-find-by-kind [this kind filters sorts limit offset] (find-records-by-kind this kind filters sorts limit offset))
   (ds-find-all-kinds [this filters sorts limit offset] (find-records-by-all-kinds this filters sorts limit offset)))
 
-(defn- build-schema [columns]
-  (let [schema (reduce #(assoc %1 (:table_name %2) []) {} columns)]
-    (reduce
-      (fn [schema {:keys [table_name column_name]}]
-        (update-in schema [table_name] #(conj % (keyword column_name))))
-        schema
-        columns)))
-
 (defn new-postgres-datastore [conn]
-  (let [query-gen (new-postgres-query-builder)
-        schema-query (schema-query query-gen)
-        results (do-query conn schema-query)
-        schema (build-schema results)]
-  (SqlDatastore. conn schema query-gen)))
+  (SqlDatastore. conn (new-postgres-query-builder)))
