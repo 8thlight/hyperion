@@ -1,4 +1,6 @@
-(ns hyperion.query-gen
+(ns hyperion.postgres-query-builder
+  (:use
+    [hyperion.query-builder])
   (:require
     [clojure.string :as clj-str]))
 
@@ -60,9 +62,6 @@
     query
     (str query " OFFSET " offset)))
 
-(defn build-subquery [query name]
-  (str "(" query ") AS " name))
-
 (defn build-with [[name query]]
   (str name " AS (" query  ")"))
 
@@ -107,24 +106,17 @@
 (defn build-union-all [queries]
   (clj-str/join " UNION ALL " (map #(str "(" % ")") queries)))
 
+(defn build-subquery [query name]
+  (str "(" query ") AS " name))
+
 (defn build-table-listing []
   (build-select nil "table_name" "information_schema.tables" [[:= :table_schema "public"]] nil nil nil))
 
 (defn build-column-listing []
   (build-select nil "tables.table_name, column_name" (str "information_schema.columns AS columns, " (build-subquery (build-table-listing) "tables")) [[:= :columns.table_name :tables.table_name]] nil nil nil))
 
-(defprotocol SqlQueryBuilder
-  (insert [this table item])
-  (update [this table item])
-  (delete [this table filters])
-  (select [this withs returns table filters sorts limit offet])
-  (select-all [this withs table filters sorts limit offset])
-  (count-all [this withs table filters])
-  (union-all [this queries])
-  (column-listing [this]))
-
 (deftype PostgresQueryBuilder []
-  SqlQueryBuilder
+  QueryBuilder
   (insert [this table item] (build-insert table item))
   (update [this table item] (build-update table item))
   (delete [this table filters] (build-delete table filters))
@@ -132,8 +124,7 @@
   (select-all [this withs table filters sorts limit offset] (build-select withs "*" table filters sorts limit offset))
   (count-all [this withs table filters] (build-select withs "COUNT(*)" table filters nil nil nil))
   (union-all [this queries] (build-union-all queries))
-  (column-listing [this] (build-column-listing))
-  )
+  (column-listing [this] (build-column-listing)))
 
 (defn new-postgres-query-builder []
   (PostgresQueryBuilder.))
