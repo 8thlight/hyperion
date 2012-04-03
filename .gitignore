@@ -5,6 +5,6 @@
 /native
 /.lein-failures
 /checkouts
-/.lein-deps-sum
+*.lein-deps-sum
 .idea
 *.iml
