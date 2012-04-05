@@ -1,6 +1,6 @@
-(ns hyperion.postgres-query-builder
+(ns hyperion.postgres-qb
   (:use
-    [hyperion.query-builder])
+    [hyperion.sql.query-builder])
   (:require
     [clojure.string :as clj-str]))
 

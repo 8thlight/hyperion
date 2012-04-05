@@ -1,4 +1,4 @@
-(ns hyperion.query-executor)
+(ns hyperion.sql.query-executor)
 
 (defprotocol QueryExecutor
   (do-query [this query])

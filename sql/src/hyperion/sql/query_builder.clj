@@ -1,4 +1,4 @@
-(ns hyperion.query-builder)
+(ns hyperion.sql.query-builder)
 
 (defprotocol QueryBuilder
   (insert [this table item])

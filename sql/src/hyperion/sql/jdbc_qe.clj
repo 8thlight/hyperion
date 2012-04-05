@@ -1,6 +1,6 @@
-(ns hyperion.jdbc-query-executor
+(ns hyperion.sql.jdbc-qe
   (:use
-    [hyperion.query-executor])
+    [hyperion.sql.query-executor])
   (:require
     [clojure.java.jdbc :as sql]
     [clojure.java.jdbc.internal :as sql-internal]))

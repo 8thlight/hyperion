@@ -1,8 +1,8 @@
-(ns hyperion.sql-datastore
+(ns hyperion.sql.datastore
   (:use
     [hyperion.core :only [Datastore new?]]
-    [hyperion.query-builder]
-    [hyperion.query-executor])
+    [hyperion.sql.query-builder]
+    [hyperion.sql.query-executor])
   (:require
     [clojure.string :as clj-str]
     [clojure.set :as clj-set]))
