@@ -53,6 +53,7 @@
         (let [av (get a field)
               bv (get b field)]
           (cond
+            (and (nil? av) (nil? bv)) 0
             (nil? av) 1
             (nil? bv) -1
             :else (.compareTo av bv)))))))
@@ -61,9 +62,11 @@
   (let [compare-fns (map ->compare-fn sorts)]
     (proxy [java.util.Comparator] []
       (compare [a b]
-        (let [compare-results (map (fn [compare-fn] (compare-fn a b)) compare-fns)
-              result (some #(if (zero? %) false %) compare-results)]
-          (if (nil? result) 0 result))))))
+        (or
+          (some
+            #(if (zero? %) false %)
+            (map (fn [compare-fn] (compare-fn a b)) compare-fns))
+          0)))))
 
 (defn- apply-sorts [sorts records]
   (if (empty? sorts)
