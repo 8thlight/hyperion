@@ -17,6 +17,7 @@
 (defmethod format-value java.lang.String [val] (str "'" val "'"))
 (defmethod format-value clojure.lang.Keyword [val] (name val))
 (defmethod format-value clojure.lang.Sequential [val] (str "(" (clj-str/join ", " (map format-value val)) ")"))
+(defmethod format-value java.util.Date [val] (format-value (str val)))
 (defmethod format-value nil [val] "NULL")
 (defmethod format-value :default [val] (str val))
 
@@ -62,7 +63,7 @@
     query
     (str query " OFFSET " offset)))
 
-(defn build-with [name query]
+(defn build-with [[name query]]
   (str (format-table name) " AS (" query  ")"))
 
 (defn build-withs [withs]

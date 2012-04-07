@@ -45,7 +45,11 @@
         (should-not= nil (:key record))))
 
     (it "assigned keys are unique"
-      (should= 10 (count (set (map #(:key (save {:kind "testing" :data %})) (range 10)))))))
+      (should= 10 (count (set (map #(:key (save {:kind "testing" :data %})) (range 10))))))
+
+    (it "saves date types"
+      (let [record (save {:kind :testing :mydate (java.util.Date.)})]
+        (should= (:mydate record) (:mydate (find-by-key (:key record)))))))
 
   (context "delete"
     (it "deletes records"

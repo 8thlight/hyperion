@@ -48,6 +48,13 @@
   (with returns {:t1 [["t1" :table_name :text] :item1 :item2 [nil :item3 :some]]
                  :t2 [["t2" :table_name :text] [nil :item1 :int] :item2 [nil :item3 :some]]
                  :t3 [["t3" :table_name :text] [nil :item1 :int] [nil :item2 :thing] :item3]})
+  (context "keys"
+    (it "applies a key with the table name and id with kind as a string"
+      (should= "table-1" (build-key "table" 1)))
+
+    (it "applies a key with the table name and id with kind as a keyword"
+      (should= "table-1" (build-key :table 1))))
+
 
   (context "find by all kinds"
     (it "calls select all with the correct params"

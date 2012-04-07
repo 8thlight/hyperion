@@ -7,8 +7,12 @@
     [clojure.string :as clj-str]
     [clojure.set :as clj-set]))
 
+(defmulti format-table type)
+(defmethod format-table clojure.lang.Keyword [table] (name table))
+(defmethod format-table :default [table] table)
+
 (defn build-key [table-name id]
-  (str table-name "-" id))
+  (str (format-table table-name) "-" id))
 
 (defn destructure-key [key]
   (let [index (.lastIndexOf key "-")
