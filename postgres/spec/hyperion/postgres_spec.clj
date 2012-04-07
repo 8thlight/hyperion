@@ -13,7 +13,7 @@
      :subname "hyperion"})
   (before
     (sql/with-connection @connection
-      (sql/create-table :testing [:id :serial] [:int :integer] [:data :text])
+      (sql/create-table :testing [:id :serial] [:int :integer] [:data :text] [:mydate :date])
       (sql/create-table :test [:id :serial] [:int :integer] [:bint :integer] [:bdata :text])
       (sql/create-table :other_testing [:id :serial] [:int :integer] [:data :text]))
     (reset! DS (new-postgres-datastore @connection)))
@@ -122,8 +122,7 @@
 
     (it "finds by all kinds (find-all-kinds)"
       (should= [1 1 12 23 34 44 45 56] (sort (map :int (find-all-kinds))))
-      (should= [34 44 45 56] (map :int (find-all-kinds :filters [:> :int 30] :sorts [:int :asc])))
-        )
+      (should= [34 44 45 56] (map :int (find-all-kinds :filters [:> :int 30] :sorts [:int :asc]))))
 
     (it "counts by all kinds (count-all-kinds)"
       (should= 8 (count-all-kinds))

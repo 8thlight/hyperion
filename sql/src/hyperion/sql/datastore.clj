@@ -70,21 +70,21 @@
         records (find-records-by-kind ds table-name [[:= :id id]] nil nil nil)]
     (first records)))
 
-(defn- build-schema-and-distinct-columns [column-listing]
+(defn parse-column-listing [column-listing]
   (let [schema (reduce #(assoc %1 (keyword (:table_name %2)) []) {} column-listing)]
-    (loop [[{:keys [table_name column_name]} & more] column-listing schema schema dist-cols #{}]
+    (loop [[{:keys [table_name column_name data_type]} & more] column-listing schema schema dist-cols (sorted-set)]
       (if (nil? table_name)
-        [schema (sort dist-cols)]
+        [schema dist-cols]
         (let [table (keyword table_name)
-              col (keyword column_name)
-              schema (update-in schema [table] #(conj % (keyword col)))
+              col [(keyword column_name) (keyword data_type)]
+              schema (update-in schema [table] #(conj % col))
               dist-cols (conj dist-cols col)]
           (recur more schema dist-cols))))))
 
 (defn get-schema-and-distinct-columns [ds]
   (let [column-listing-query (column-listing (.query-builder ds))
         results (do-query (.query-executor ds) column-listing-query)]
-    (build-schema-and-distinct-columns results)))
+    (parse-column-listing results)))
 
 (defn seq-contains? [coll item]
   (some #(= % item) coll))
@@ -92,20 +92,23 @@
 (defn- build-padded-returns [table-name cols dist-cols]
   (let [diff (clj-set/difference (set dist-cols) (set cols))]
     (cons
-      [(name table-name) :table_name]
-      (map #(if (seq-contains? diff %) [nil %] %) dist-cols))))
+      [(name table-name) :table_name :text]
+      (map #(if (seq-contains? diff %) (cons nil %) (first %)) dist-cols))))
 
 (defn- build-padded-select [query-builder table cols dist-cols filters]
   (let [returns (build-padded-returns table cols dist-cols)]
     (select query-builder nil returns table filters nil nil nil)))
 
-(defn build-filtered-union-by-all-kinds [qb schema dist-cols filters]
+(defn- build-filtered-union-by-all-kinds [qb schema dist-cols filters]
   (let [table-select-queries (map (fn [[table cols]] (build-padded-select qb table cols dist-cols filters)) schema)]
     (union-all qb table-select-queries)))
 
+(defn col-names [cols]
+  (map first cols))
+
 (defn clean-padding-and-apply-keys [record schema]
   (let [table-name (keyword (:table_name record))
-        record (select-keys record (table-name schema))]
+        record (select-keys record (col-names (table-name schema)))]
     (apply-kind-and-key record table-name)))
 
 (defn find-records-by-all-kinds [ds filters sorts limit offset]

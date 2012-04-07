@@ -62,20 +62,26 @@
     query
     (str query " OFFSET " offset)))
 
-(defn build-with [[name query]]
-  (str name " AS (" query  ")"))
+(defn build-with [name query]
+  (str (format-table name) " AS (" query  ")"))
 
 (defn build-withs [withs]
   (when-not (empty? withs)
     (str "WITH " (clj-str/join ", " (map build-with withs)) " ")))
 
+(defn type-cast [value type]
+  (if (nil? type)
+    value
+    (str value "::" (format-column type))))
+
+(defn build-return [return]
+  (if (coll? return)
+    (let [[value name type] return]
+      (str (type-cast (format-value value) type) " AS " (format-column name)))
+    (format-value return)))
+
 (defn build-return-statement [returns]
-  (clj-str/join ", " (map
-    (fn [return]
-      (if (coll? return)
-        (str (format-value (first return)) " AS " (format-value (second return)))
-        (format-value return)))
-    returns)))
+  (clj-str/join ", " (map build-return returns)))
 
 (defn build-insert [table item]
   (let [table-name (format-table table)
@@ -113,7 +119,7 @@
   (build-select nil "table_name" "information_schema.tables" [[:= :table_schema "public"]] nil nil nil))
 
 (defn build-column-listing []
-  (build-select nil "tables.table_name, column_name" (str "information_schema.columns AS columns, " (build-subquery (build-table-listing) "tables")) [[:= :columns.table_name :tables.table_name]] nil nil nil))
+  (build-select nil "tables.table_name, column_name, data_type" (str "information_schema.columns AS columns, " (build-subquery (build-table-listing) "tables")) [[:= :columns.table_name :tables.table_name]] nil nil nil))
 
 (deftype PostgresQueryBuilder []
   QueryBuilder
