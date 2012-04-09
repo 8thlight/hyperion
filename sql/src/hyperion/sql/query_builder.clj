@@ -8,5 +8,6 @@
   (select-all [this withs table filters sorts limit offset])
   (count-all [this withs table filters])
   (union-all [this queries])
-  (column-listing [this]))
+  (column-listing [this])
+  (type-cast [this value type]))
 

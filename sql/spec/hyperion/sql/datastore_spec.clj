@@ -2,42 +2,15 @@
   (:use
     [speclj.core]
     [hyperion.sql.datastore]
-    [hyperion.sql.query-builder]
+    [hyperion.sql.query-builder-fn]
     [hyperion.sql.query-executor]))
-
-(deftype QueryBuilderFn [sel sel-all un-all col-listing]
-  QueryBuilder
-  (insert [this table item])
-  (update [this table item])
-  (delete [this table filters])
-  (select [this withs returns table-name filters sorts limit offset]
-    (sel withs returns table-name filters sorts limit offset))
-  (select-all [this withs table-name filters sorts limit offset]
-    (sel-all withs table-name filters sorts limit offset))
-  (count-all [this withs table filters])
-  (union-all [this queries]
-    (un-all queries))
-  (column-listing [this]
-    (col-listing)))
-
-(defn noop [& args])
-
-(defn new-query-builder-fn [{:keys [select select-all union-all column-listing]
-                             :or {select noop
-                                  select-all noop
-                                  union-all noop
-                                  column-listing noop}}]
-  (QueryBuilderFn. select select-all union-all column-listing))
 
 (deftype QueryExecutorFn [querier mutator]
   QueryExecutor
   (do-query [this query] (querier query))
   (do-command [this query] (mutator query)))
 
-
-(defn new-query-executor-fn [{:keys [querier mutator]
-                              :or {querier noop
-                                   mutator noop}}]
+(defn new-query-executor-fn [{:keys [querier mutator]}]
   (QueryExecutorFn. querier mutator))
 
 (describe "Sql Datastore"
@@ -60,7 +33,7 @@
     (it "calls select all with the correct params"
       (let [result (atom nil)
             sel-all (fn [& args] (reset! result args))
-            qb (new-query-builder-fn {:select-all sel-all :union-all (fn [queries] :union-ret)})
+            qb (new-query-builder-fn {:select-all sel-all :union-all (fn [queries] :union-ret) :column-listing (fn [select-fn])})
             qe (new-query-executor-fn {:querier (fn [query] @col-listing)})
             ds (new-sql-datastore qe qb)
             _ (find-records-by-all-kinds ds :filters :sorts :limit :offset)
@@ -75,7 +48,7 @@
     (it "calls select with the correct params"
       (let [results (atom [])
             sel (fn [& args] (swap! results conj args))
-            qb (new-query-builder-fn {:select sel :union-all #(doall %)})
+            qb (new-query-builder-fn {:select sel :union-all #(doall %) :select-all (fn [& args]) :column-listing (fn [select-fn])})
             qe (new-query-executor-fn {:querier (fn [query] @col-listing)})
             ds (new-sql-datastore qe qb)
             _ (find-records-by-all-kinds ds :filters nil nil nil)]
