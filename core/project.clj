@@ -1,6 +1,7 @@
-(defproject hyperion/hyperion-core "1.0.2"
+(def config (load-file "../config.clj"))
+
+(defproject hyperion/hyperion-core (:version config)
   :description "A library for storing data."
-  :dependencies [[org.clojure/clojure "1.4.0-beta1"]
-                 [hyperion/hyperion-core "1.0.1"]]
-  :dev-dependencies [[speclj "2.1.1"]]
+  :dependencies [[org.clojure/clojure ~(:clojure-version config)]]
+  :dev-dependencies [[speclj ~(:speclj-version config)]]
   :test-path "spec")
