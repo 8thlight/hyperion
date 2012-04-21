@@ -116,10 +116,20 @@
 (defn build-union-all [queries]
   (clj-str/join " UNION ALL " (map #(str "(" % ")") queries)))
 
+(defn- build-subquery [query name]
+  (str "(" query ") AS " name))
+
+(defn- build-table-listing [database select-fn]
+  (select-fn nil [:table_name] :information_schema.tables [[:= :table_schema database]] nil nil nil))
+
+(defn column-listing [database select-fn]
+  (select-fn nil [:tables.table_name :column_name :data_type] (str "information_schema.columns AS columns, " (build-subquery (build-table-listing database select-fn) "tables")) [[:= :columns.table_name :tables.table_name]] nil nil nil))
+
 (def sql-query-builder-fns {:insert build-insert
                            :update build-update
                            :delete build-delete
                            :select select
                            :select-all select-all
                            :count-all count-all
-                           :union-all build-union-all})
+                           :union-all build-union-all
+                           :column-listing column-listing})

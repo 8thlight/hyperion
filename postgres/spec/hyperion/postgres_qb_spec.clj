@@ -5,7 +5,7 @@
     [hyperion.postgres-qb :only [new-postgres-query-builder]]))
 
 (describe "Postgres Query Builder"
-  (with qb (new-postgres-query-builder))
+  (with qb (new-postgres-query-builder "hyperion"))
 
   (context "select"
     (it "builds returns with a column names"
@@ -39,5 +39,5 @@
 
   (context "column listing"
     (it "builds the column listing query"
-      (should= "SELECT tables.table_name, column_name, data_type FROM information_schema.columns AS columns, (SELECT table_name FROM information_schema.tables WHERE table_schema = 'public') AS tables WHERE columns.table_name = tables.table_name"
+      (should= "SELECT tables.table_name, column_name, data_type FROM information_schema.columns AS columns, (SELECT table_name FROM information_schema.tables WHERE table_schema = 'hyperion') AS tables WHERE columns.table_name = tables.table_name"
         (column-listing @qb)))))

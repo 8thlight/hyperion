@@ -80,10 +80,14 @@
       (should= :queries queries)))
 
   (it "calls the given column listing function"
-    (let [column-fn (fn [select] (select :withs :returns :table-name :filters :sorts :limit :offset))
+    (let [database-ret (atom nil)
+          column-fn (fn [database select]
+                      (reset! database-ret database)
+                      (select :withs :returns :table-name :filters :sorts :limit :offset))
           type-fn (fn [& args])
-          qb (new-query-builder-fn {:column-listing column-fn :select (fn [& args] args) :type-cast type-fn})
+          qb (new-query-builder-fn {:database "data" :column-listing column-fn :select (fn [& args] args) :type-cast type-fn})
           [withs returns table-name filters sorts limit offset type-cast] (column-listing qb)]
+      (should= @database-ret "data")
       (should= :withs withs)
       (should= :returns returns)
       (should= :table-name table-name)

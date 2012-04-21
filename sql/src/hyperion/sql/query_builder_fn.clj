@@ -3,7 +3,7 @@
     [hyperion.sql.query-builder]))
 
 
-(deftype QueryBuilderFn [ins upd del sel sel-all count un-all col-listing type-fn]
+(deftype QueryBuilderFn [database ins upd del sel sel-all count un-all col-listing type-fn]
   QueryBuilder
   (insert [this table item]
     (ins table item))
@@ -20,9 +20,7 @@
   (union-all [this queries]
     (un-all queries))
   (column-listing [this]
-    (col-listing (fn [& args] (apply select this args))))
-  (type-cast [this value type]
-    (type-fn value type)))
+    (col-listing database (fn [& args] (apply select this args)))))
 
-(defn new-query-builder-fn [{:keys [insert update delete select select-all count-all union-all column-listing type-cast]}]
-  (QueryBuilderFn. insert update delete select select-all count-all union-all column-listing type-cast))
+(defn new-query-builder-fn [{:keys [database insert update delete select select-all count-all union-all column-listing type-cast]}]
+  (QueryBuilderFn. database insert update delete select select-all count-all union-all column-listing type-cast))
