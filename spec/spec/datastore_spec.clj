@@ -4,6 +4,7 @@
     [hyperion.core :refer :all]
     [hyperion.memory :refer [new-memory-datastore]]
     [hyperion.postgres :refer [new-postgres-datastore]]
+    [hyperion.mysql :refer [new-mysql-datastore]]
     [clojure.java.jdbc :as sql]))
 
 (defn datastore-specification [name before-expr after-expr]
@@ -132,6 +133,10 @@
 (def pg-connection {:subprotocol "postgresql"
                     :subname "hyperion"})
 
+(def mysql-connection {:subprotocol "mysql"
+                       :subname "//localhost:3306/hyperion"
+                       :user "root"})
+
 (datastore-specification
   "Postgres"
   (fn []
@@ -142,6 +147,20 @@
     (reset! DS (new-postgres-datastore pg-connection "public")))
   (fn []
    (sql/with-connection pg-connection
+      (sql/drop-table :testing)
+      (sql/drop-table :test)
+      (sql/drop-table :other_testing))))
+
+(datastore-specification
+  "MySQL"
+  (fn []
+   (sql/with-connection mysql-connection
+      (sql/create-table :testing [:id :serial "PRIMARY KEY"] [:inti :integer] [:data :text] [:mydate :date])
+      (sql/create-table :test [:id :serial "PRIMARY KEY"] [:inti :integer] [:bint :integer] [:bdata :text])
+      (sql/create-table :other_testing [:id :serial "PRIMARY KEY"] [:inti :integer] [:data :text]))
+    (reset! DS (new-mysql-datastore mysql-connection "hyperion")))
+  (fn []
+   (sql/with-connection mysql-connection
       (sql/drop-table :testing)
       (sql/drop-table :test)
       (sql/drop-table :other_testing))))

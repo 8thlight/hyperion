@@ -18,11 +18,18 @@
         [:birthdate :date]
         [:inti :int]
         [:data "VARCHAR(32)"]
+        :table-spec "ENGINE=InnoDB" "")
+      (sql/create-table
+        :other_testing
+        [:id :serial "PRIMARY KEY"]
+        [:inti :int]
+        [:data "VARCHAR(32)"]
         :table-spec "ENGINE=InnoDB" ""))
     (reset! DS (new-mysql-datastore @connection "hyperion")))
   (after
     (sql/with-connection @connection
-      (sql/drop-table :testing)))
+      (sql/drop-table :testing)
+      (sql/drop-table :other_testing)))
 
   (context "save"
     (it "saves a map with kind as a string and returns it"
@@ -76,7 +83,8 @@
                             {:kind "testing" :inti 45 :data "forty5"}
                             {:kind "testing" :inti 1 :data "the one"}
                             {:kind "testing" :inti 44 :data "forty4"}]))
-    (before @test-data)
+    (with other-test-data (save {:kind "other_testing" :inti 56 :data "fifty6"}))
+    (before @test-data @other-test-data)
 
     (it "applies filters to find-by-kind with ints"
       (should= #{1 12 23} (set (map :inti (find-by-kind "testing" :filters [:< :inti 25]))))
@@ -121,4 +129,22 @@
         (should= [12 23] (map :inti (find-by-kind "testing" :sorts [:inti :asc] :limit 2 :offset 2)))
         (should= [34 44] (map :inti (find-by-kind "testing" :sorts [:inti :asc] :limit 2 :offset 4))))
 
-    ))
+      (it "counts by kind"
+        (should= 7 (count-by-kind "testing"))
+        (should= 4 (count-by-kind "testing" :filters [:> :inti 20])))
+
+      (it "finds by all kinds (find-all-kinds)"
+        (should= [1 1 12 23 34 44 45 56] (sort (map :inti (find-all-kinds))))
+        (should= [34 44 45 56] (map :inti (find-all-kinds :filters [:> :inti 30] :sorts [:inti :asc]))))
+
+      (it "counts by all kinds (count-all-kinds)"
+        (should= 8 (count-all-kinds))
+        (should= 4 (count-all-kinds :filters [:> :inti 30] :sorts [:inti :asc])))
+
+      (it "finds all records by kind"
+        (should= (sort (map :key @test-data)) (sort (map :key (find-by-kind "testing")))))
+
+      (it "finds the items by key"
+        (let [one (save {:kind "testing" :data "my stuff"})]
+          (should= one (find-by-key (:key one)))))))
+

@@ -8,8 +8,14 @@
 (defn- create-key []
   (str (java.util.UUID/randomUUID)))
 
+(defn format-kind [kind]
+  (if (isa? (type kind) clojure.lang.Keyword)
+    (name kind)
+    kind))
+
 (defn- save-record [ds record]
-  (let [record (if (new? record) (assoc record :key (create-key)) record)]
+  (let [record (if (new? record) (assoc record :key (create-key)) record)
+        record (update-in record [:kind] (fn [kind] (format-kind kind)))]
     (dosync
       (alter (.store ds) assoc (:key record) record))
     record))

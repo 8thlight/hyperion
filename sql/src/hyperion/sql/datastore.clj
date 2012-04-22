@@ -27,7 +27,7 @@
     (assoc record :kind table-name :key (build-key table-name id))))
 
 (defn insert-record [query-builder record]
-  (let [table-name (:kind record)
+  (let [table-name (format-table (:kind record))
         record (dissoc record :kind)
         query (insert query-builder table-name record)]
     [table-name query]))

@@ -30,7 +30,7 @@
 
     (it "saves a map with kind as a symbol and returns it"
       (let [record (save {:kind :testing :data "hello"})]
-        (should= :testing (:kind record))
+        (should= "testing" (:kind record))
         (should= "hello" (:data record))))
 
     (it "assigns key to new records"
