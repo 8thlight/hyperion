@@ -12,7 +12,13 @@
   (before
     (sql/with-connection @connection
       (sql/create-table
-        :testing [:id :serial "PRIMARY KEY"] [:name "VARCHAR(32)"] [:birthdate :date] :table-spec "ENGINE=InnoDB" ""))
+        :testing
+        [:id :serial "PRIMARY KEY"]
+        [:name "VARCHAR(32)"]
+        [:birthdate :date]
+        [:inti :int]
+        [:data "VARCHAR(32)"]
+        :table-spec "ENGINE=InnoDB" ""))
     (reset! DS (new-mysql-datastore @connection "hyperion")))
   (after
     (sql/with-connection @connection
@@ -40,4 +46,73 @@
         (should= "testing-1" (:key record))))
 
     (it "assigned keys are unique"
-      (should= 10 (count (set (map #(:key (save {:kind "testing" :name %})) (range 10))))))))
+      (should= 10 (count (set (map #(:key (save {:kind "testing" :name %})) (range 10)))))))
+
+  (context "save*"
+    (it "can save many records"
+      (let [inf-records (map #(hash-map :kind "testing" :name (str %)) (iterate inc 0))
+            saved (save* (take 10 inf-records))]
+        (should= 10 (count (set (map :key saved))))
+        (should= 10 (count (find-by-kind "testing")))
+        (should= (map str (range 10)) (sort (map :name (find-by-kind "testing")))))))
+
+  (context "delete"
+    (it "deletes records"
+      (let [one (save {:kind "testing" :name "jim"})]
+        (delete one)
+        (should= nil (find-by-key (:key one))))))
+
+  (context "searching"
+    (with test-data (save* [{:kind "testing" :inti 1  :data "one"}
+                            {:kind "testing" :inti 12 :data "twelve"}
+                            {:kind "testing" :inti 23 :data "twenty3"}
+                            {:kind "testing" :inti 34 :data "thirty4"}
+                            {:kind "testing" :inti 45 :data "forty5"}
+                            {:kind "testing" :inti 1 :data "the one"}
+                            {:kind "testing" :inti 44 :data "forty4"}]))
+    (before @test-data)
+
+    (it "applies filters to find-by-kind with ints"
+      (should= #{1 12 23} (set (map :inti (find-by-kind "testing" :filters [:< :inti 25]))))
+      (should= #{1 12 23} (set (map :inti (find-by-kind "testing" :filters [:<= :inti 23]))))
+      (should= #{34 44 45} (set (map :inti (find-by-kind "testing" :filters [:> :inti 25]))))
+      (should= #{34 44 45} (set (map :inti (find-by-kind "testing" :filters [:>= :inti 34]))))
+      (should= #{34} (set (map :inti (find-by-kind "testing" :filters [:= :inti 34]))))
+      (should= #{1 12 23 44 45} (set (map :inti (find-by-kind "testing" :filters [:!= :inti 34]))))
+      (should= #{12 34} (set (map :inti (find-by-kind "testing" :filters [:in :inti [12 34]]))))
+      (should= #{} (set (map :inti (find-by-kind "testing" :filters [[:< :inti 24] [:> :inti 25]]))))
+      (should= #{1 44 45} (set (map :inti (find-by-kind "testing" :filters [[:!= :inti 12] [:!= :inti 23] [:!= :inti 34]])))))
+
+      (it "applies filters to find-by-kind with strings"
+        (should= #{"one" "forty4" "forty5"} (set (map :data (find-by-kind "testing" :filters [:< :data "qux"]))))
+        (should= #{"one" "forty4" "forty5"} (set (map :data (find-by-kind "testing" :filters [:<= :data "one"]))))
+        (should= #{"the one" "twelve" "twenty3" "thirty4"} (set (map :data (find-by-kind "testing" :filters [:> :data "qux"]))))
+        (should= #{"twelve" "twenty3" "thirty4"} (set (map :data (find-by-kind "testing" :filters [:>= :data "thirty4"]))))
+        (should= #{"one"} (set (map :data (find-by-kind "testing" :filters [:= :data "one"]))))
+        (should= #{"the one" "twelve" "twenty3" "thirty4" "forty4" "forty5"} (set (map :data (find-by-kind "testing" :filters [:!= :data "one"]))))
+        (should= #{"one" "twelve"} (set (map :data (find-by-kind "testing" :filters [:in :data ["one" "twelve"]]))))
+        (should= #{} (set (map :data (find-by-kind "testing" :filters [[:> :data "qux"] [:< :data "qux"]]))))
+        (should= #{"the one" "thirty4"  "forty4" "forty5"} (set (map :data (find-by-kind "testing" :filters [[:!= :data "one"] [:!= :data "twelve"] [:!= :data "twenty3"]])))))
+
+      (it "applies sorts to find-by-kind"
+        (should= [1 1 12 23 34 44 45] (map :inti (find-by-kind "testing" :sorts [:inti :asc])))
+        (should= [45 44 34 23 12 1 1] (map :inti (find-by-kind "testing" :sorts [:inti :desc])))
+        (should= [44 45 1 1 34 12 23] (map :inti (find-by-kind "testing" :sorts [:data :asc])))
+        (should= [23 12 34 1 1 45 44] (map :inti (find-by-kind "testing" :sorts [:data :desc])))
+        (should= ["one" "the one" "twelve" "twenty3" "thirty4" "forty4" "forty5"] (map :data (find-by-kind "testing" :sorts [[:inti :asc] [:data :asc]])))
+        (should= [44 45 1 1 34 12 23] (map :inti (find-by-kind "testing" :sorts [[:data :asc] [:inti :asc]]))))
+
+      (it "sorts treat nil as last"
+        (let [no-inti (save {:kind "testing" :inti nil :data "mo"})
+              no-data (save {:kind "testing" :inti 25 :data nil})]
+          (should= no-inti (last (find-by-kind "testing" :sorts [:inti :asc])))
+          (should= no-inti (first (find-by-kind "testing" :sorts [:inti :desc])))
+          (should= no-data (last (find-by-kind "testing" :sorts [:data :asc])))
+          (should= no-data (first (find-by-kind "testing" :sorts [:data :desc])))))
+
+      (it "applies limit and offset to find-by-kind"
+        (should= [1 1] (map :inti (find-by-kind "testing" :sorts [:inti :asc] :limit 2)))
+        (should= [12 23] (map :inti (find-by-kind "testing" :sorts [:inti :asc] :limit 2 :offset 2)))
+        (should= [34 44] (map :inti (find-by-kind "testing" :sorts [:inti :asc] :limit 2 :offset 4))))
+
+    ))
