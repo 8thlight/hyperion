@@ -46,7 +46,13 @@
         (should= "testing-1" (:key record))))
 
     (it "assigned keys are unique"
-      (should= 10 (count (set (map #(:key (save {:kind "testing" :name %})) (range 10)))))))
+      (should= 10 (count (set (map #(:key (save {:kind "testing" :name %})) (range 10))))))
+
+    (it "saves date types"
+      (let [date-without-timestamp (java.util.Date. 50, 3, 20)
+            record (save {:kind :testing :birthdate date-without-timestamp})]
+        (should= date-without-timestamp (:birthdate record))
+        (should= date-without-timestamp (:birthdate (find-by-key (:key record)))))))
 
   (context "save*"
     (it "can save many records"
