@@ -9,6 +9,7 @@
 
 (deftype FakeDatastore [calls responses]
   Datastore
+  (ds-map->entity [this record] (stub-call this "ds-map->entity" record))
   (ds-save [this record] (stub-call this "ds-save" record))
   (ds-delete [this key] (stub-call this "ds-delete" key))
   (ds-count-by-kind [this kind filters] (stub-call this "ds-count-by-kind" kind filters))
