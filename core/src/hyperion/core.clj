@@ -1,6 +1,8 @@
 (ns hyperion.core
   (:require
-    [clojure.string :as str]))
+    [clojure.string :as str])
+  (:import
+    [java.util Date]))
 
 (defn ->options
   "Takes keyword argument and converts them to a map.  If the args are prefixed with a map, the rest of the
@@ -23,10 +25,11 @@
   (ds-count-by-kind [this kind filters])
   (ds-count-all-kinds [this filters])
   (ds-find-by-key [this key])
+  (ds-find-by-keys [this keys])
   (ds-find-by-kind [this kind filters sorts limit offset])
   (ds-find-all-kinds [this filters sorts limit offset])
-  (ds-entity->map [this entity])
-  (ds-map->entity [this record]))
+  (ds-native->entity [this entity])
+  (ds-entity->native [this record]))
 
 (defn ds []
   (if (bound? #'*ds*)
@@ -95,18 +98,18 @@
 
 ; ----- Entity <-> Record Translation ---------------------
 
-(def #^{:dynamic true} *entities* (ref {}))
+(def #^{:dynamic true} *entity-specs* (ref {}))
 
-(defmulti entity->record kind)
+(defmulti native->entity kind)
 
-(defmethod entity->record nil [entity]
+(defmethod native->entity nil [entity]
   nil)
 
-(defn known-entity->record
+(defn native->specced-entity
   ([entity]
     (let [kind (->kind entity)
-          spec (get @*entities* kind)]
-      (known-entity->record entity kind spec)))
+          spec (get @*entity-specs* kind)]
+      (native->specced-entity entity kind spec)))
   ([entity kind spec]
     (let [key (ds->string-key (ds) entity)
           record ((:*ctor* spec) key)]
@@ -116,65 +119,95 @@
             (let [field (keyword field)]
               (assoc record field (unpack-field (:unpacker (field spec)) value))))
           record
-          (ds-entity->map (ds) entity))))))
+          (ds-native->entity (ds) entity))))))
 
-(defn- unknown-entity->record [entity kind]
+(defn- native->unspecced-entity [entity kind]
   (after-load
     (reduce
       (fn [record entry] (assoc record (keyword (key entry)) (val entry)))
       {:kind kind :key (ds->string-key (ds) entity)}
-      (ds-entity->map (ds) entity))))
+      (ds-native->entity (ds) entity))))
 
-(defmethod entity->record :default [entity]
-  (let [kind (.getKind entity)
-        spec (get @*entities* kind)]
+(defmethod native->entity :default [entity]
+  (let [kind (ds->kind (ds) entity)
+        spec (get @*entity-specs* kind)]
     (if spec
-      (known-entity->record entity kind spec)
-      (unknown-entity->record entity kind))))
+      (native->specced-entity entity kind spec)
+      (native->unspecced-entity entity kind))))
 
 (defprotocol EntityRecord
-  (->entity [this]))
+  (->native [this]))
 
-(defn- unknown-record->entity [record kind]
-  (ds-map->entity (ds) record))
+(defn- unspecced-entity->native [record kind]
+  (ds-entity->native (ds) record))
 
-(defn known-record->entity
+(defn specced-entity->native
   ([record]
     (let [kind (:kind record)
-          spec (get @*entities* kind)]
-      (known-record->entity record kind spec)))
+          spec (get @*entity-specs* kind)]
+      (specced-entity->native record kind spec)))
   ([record kind spec]
-    (ds-map->entity (ds)
+    (ds-entity->native (ds)
       (reduce
         (fn [marshaled [field attrs]]
           (assoc marshaled field (pack-field (:packer (field spec)) (field record))))
-        {}
+        {:key (:key record) :kind (:kind record)}
         (dissoc spec :*ctor*)))))
 
 (extend-type clojure.lang.APersistentMap
   EntityRecord
-  (->entity [record]
+  (->native [record]
     (let [kind (:kind record)
-          spec (get @*entities* kind)]
+          spec (get @*entity-specs* kind)]
       (if spec
-        (known-record->entity record kind spec)
-        (unknown-record->entity record kind)))))
+        (specced-entity->native record kind spec)
+        (unspecced-entity->native record kind)))))
+
+; ----- Timestamps ----------------------------------------
+
+(defn- with-created-at [record spec]
+  (if (and (or (contains? spec :created-at) (contains? record :created-at)) (= nil (:created-at record)))
+    (assoc record :created-at (Date.))
+    record))
+
+(defn- with-updated-at [record spec]
+  (if (or (contains? spec :updated-at) (contains? record :updated-at))
+    (assoc record :updated-at (Date.))
+    record))
+
+(defn with-updated-timestamps [record]
+  (let [spec (get @*entity-specs* (:kind record))]
+    (with-updated-at (with-created-at record spec) spec)))
 
 ; ----- Raw CRUD API --------------------------------------
+
+(defn- prepare-for-save [entity]
+  (-> entity
+    with-updated-timestamps
+    before-save
+    ->native))
 
 (defn save [record & args]
   (let [attrs (->options args)
         record (merge record attrs)
-;        record (with-updated-timestamps record)
-        record (before-save record)
-        entity (->entity record)]
-    (ds-save (ds) entity)))
+        entity (prepare-for-save record)
+        saved (ds-save (ds) entity)]
+    (native->entity saved)))
 
 (defn save* [records]
-  (ds-save* (ds) records))
+  (->> records
+    (map prepare-for-save)
+    (ds-save* (ds))
+    (map native->entity)))
 
 (defn find-by-key [key]
-  (ds-find-by-key (ds) (->key key)))
+  (native->entity
+    (ds-find-by-key (ds) (->key key))))
+
+(defn find-by-keys [key]
+  (map
+    native->entity
+    (ds-find-by-keys (ds) (filter identity (map ->key key)))))
 
 (defn reload [entity-or-key]
   (find-by-key entity-or-key))
@@ -217,15 +250,18 @@
         sorts))))
 
 (defn find-by-kind [kind & args]
-  (let [options (->options args)]
-    (ds-find-by-kind (ds) kind
-      (parse-filters (:filters options))
-      (parse-sorts (:sorts options))
-      (:limit options)
-      (:offset options))))
+  (let [options (->options args)
+        kind (name kind)]
+    (map native->entity
+      (ds-find-by-kind (ds) kind
+        (parse-filters (:filters options))
+        (parse-sorts (:sorts options))
+        (:limit options)
+        (:offset options)))))
 
 (defn count-by-kind [kind & args]
-  (let [options (->options args)]
+  (let [options (->options args)
+        kind (name kind)]
     (ds-count-by-kind (ds) kind (parse-filters (:filters options)))))
 
 (defn find-all-kinds [& args]
@@ -250,10 +286,10 @@
   (loop [matcher (re-matcher pattern value) result [] last-end 0]
     (if (.find matcher)
       (recur matcher
-          (conj result
-            (.substring value last-end (.start matcher))
-            (sub-fn (re-groups matcher)))
-          (.end matcher))
+        (conj result
+          (.substring value last-end (.start matcher))
+          (sub-fn (re-groups matcher)))
+        (.end matcher))
       (apply str (conj result (.substring value last-end))))))
 
 (defn spear-case [value]
@@ -283,7 +319,7 @@
     field-specs))
 
 (defn construct-entity-record [kind & args]
-  (let [spec (get @*entities* kind)
+  (let [spec (get @*entity-specs* kind)
         args (->options args)
         extras (apply dissoc args (keys spec))
         record ((:*ctor* spec) nil)]
@@ -299,10 +335,10 @@
   (let [field-map (map-fields fields)
         kind (spear-case class-sym)]
     `(do
-       (defrecord ~class-sym [~'kind ~'key])
-       (dosync (alter *entities* assoc ~kind (assoc ~field-map :*ctor* (fn [key#] (new ~class-sym ~kind key#)))))
-       (defn ~(symbol kind) [& args#] (apply construct-entity-record ~kind args#))
-       (extend-type ~class-sym EntityRecord (~'->entity [this#] (known-record->entity this#)))
-       (defmethod entity->record ~kind [entity#] (known-entity->record entity#)))))
+      (defrecord ~class-sym [~'kind ~'key])
+      (dosync (alter *entity-specs* assoc ~kind (assoc ~field-map :*ctor* (fn [key#] (new ~class-sym ~kind key#)))))
+      (defn ~(symbol kind) [& args#] (apply construct-entity-record ~kind args#))
+      (extend-type ~class-sym EntityRecord (~'->native [this#] (specced-entity->native this#)))
+      (defmethod native->entity ~kind [entity#] (native->specced-entity entity#)))))
 
 
