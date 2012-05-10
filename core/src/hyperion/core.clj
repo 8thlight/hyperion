@@ -1,16 +1,10 @@
 (ns hyperion.core
   (:require
     [clojure.string :as str])
-  (:import
-    [java.util Date]))
-
-(defn ->options
-  "Takes keyword argument and converts them to a map.  If the args are prefixed with a map, the rest of the
-  args are merged in."
-  [options]
-  (if (map? (first options))
-    (merge (first options) (apply hash-map (rest options)))
-    (apply hash-map options)))
+  (:use
+    [chee.string :only (gsub spear-case)]
+    [chee.datetime :only (now)]
+    [chee.util :only (->options)]))
 
 (declare #^{:dynamic true} *ds*)
 (def DS (atom nil))
@@ -167,12 +161,12 @@
 
 (defn- with-created-at [record spec]
   (if (and (or (contains? spec :created-at) (contains? record :created-at)) (= nil (:created-at record)))
-    (assoc record :created-at (Date.))
+    (assoc record :created-at (now))
     record))
 
 (defn- with-updated-at [record spec]
   (if (or (contains? spec :updated-at) (contains? record :updated-at))
-    (assoc record :updated-at (Date.))
+    (assoc record :updated-at (now))
     record))
 
 (defn with-updated-timestamps [record]
@@ -275,28 +269,6 @@
 (defn count-all-kinds [& args]
   (let [options (->options args)]
     (ds-count-all-kinds (ds) (parse-filters (:filters options)))))
-
-; ----- String Util ---------------------------------------
-
-(defn gsub
-  "Matches patterns and replaces those matches with a specified value.
-  Expects a string to run the operation on, a pattern in the form of a
-  regular expression, and a function that handles the replacing."
-  [value pattern sub-fn]
-  (loop [matcher (re-matcher pattern value) result [] last-end 0]
-    (if (.find matcher)
-      (recur matcher
-        (conj result
-          (.substring value last-end (.start matcher))
-          (sub-fn (re-groups matcher)))
-        (.end matcher))
-      (apply str (conj result (.substring value last-end))))))
-
-(defn spear-case [value]
-  (str/lower-case
-    (gsub
-      (str/replace (name value) "_" "-")
-      #"([a-z])([A-Z])" (fn [[_ lower upper]] (str lower "-" upper)))))
 
 ; ----- Entity Implementation -----------------------------
 

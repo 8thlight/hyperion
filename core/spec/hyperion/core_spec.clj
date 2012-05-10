@@ -5,7 +5,7 @@
     [hyperion.fake]
     [hyperion.memory]
     [clojure.string :only (upper-case)]
-    [util.datetime :exclude [before after]]))
+    [chee.datetime :exclude [before after]]))
 
 (defmacro check-call [ds name & params]
   `(let [call# (first @(.calls ~ds))]
