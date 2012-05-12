@@ -1,6 +1,8 @@
 (ns hyperion.gae.spec-helper
   (:use
-    [speclj.core])
+    [speclj.core]
+    [hyperion.core :only [*ds*]]
+    [hyperion.gae :only [new-gae-datastore]])
   (:import
     [com.google.appengine.tools.development.testing
      LocalServiceTestConfig
@@ -25,5 +27,6 @@
     (try
       (.setLevel (Logger/getLogger (.getName LocalDatastoreService)) (Level/OFF))
       (set-up-local-datastore)
-      (it)
+      (binding [*ds* (new-gae-datastore)]
+        (it))
       (finally (tear-down-local-datastore)))))
