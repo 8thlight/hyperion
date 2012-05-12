@@ -1,4 +1,4 @@
-(ns hyperion.gae_spec_helper
+(ns hyperion.gae.spec-helper
   (:use
     [speclj.core])
   (:import

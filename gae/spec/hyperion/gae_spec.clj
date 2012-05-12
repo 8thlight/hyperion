@@ -2,7 +2,7 @@
   (:use
     [speclj.core]
     [hyperion.core]
-    [hyperion.gae_spec_helper :only (with-local-datastore)]
+    [hyperion.gae.spec-helper :only (with-local-datastore)]
     [hyperion.gae :only (new-gae-datastore) :as gae]
     [clojure.string :only (upper-case)])
   (:import
