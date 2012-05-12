@@ -186,41 +186,41 @@
 
     (it "handles simple find-by-kind"
       (find-by-kind "thing")
-      (check-call @_ds "ds-find-by-kind" "thing" nil nil nil nil)
+      (check-call @_ds "ds-find-by-kind" "thing" nil nil nil nil {})
       (find-by-kind :thing)
-      (check-call @_ds "ds-find-by-kind" "thing" nil nil nil nil)
+      (check-call @_ds "ds-find-by-kind" "thing" nil nil nil nil {})
       (find-by-kind 'thing)
-      (check-call @_ds "ds-find-by-kind" "thing" nil nil nil nil))
+      (check-call @_ds "ds-find-by-kind" "thing" nil nil nil nil {}))
 
     (it "translates filters"
       (find-by-kind "thing" :filters [:= :a :b])
-      (check-call @_ds "ds-find-by-kind" "thing" [[:= :a :b]] nil nil nil)
+      (check-call @_ds "ds-find-by-kind" "thing" [[:= :a :b]] nil nil nil {})
       (find-by-kind "thing" :filters [["=" :a :b] ["eq" :x :y]])
-      (check-call @_ds "ds-find-by-kind" "thing" [[:= :a :b] [:= :x :y]] nil nil nil))
+      (check-call @_ds "ds-find-by-kind" "thing" [[:= :a :b] [:= :x :y]] nil nil nil {}))
 
     (it "translates sorts"
       (find-by-kind "thing" :sorts [:a :asc])
-      (check-call @_ds "ds-find-by-kind" "thing" nil [[:a :asc]] nil nil)
+      (check-call @_ds "ds-find-by-kind" "thing" nil [[:a :asc]] nil nil {})
       (find-by-kind "thing" :sorts [[:a "asc"] [:b :descending]])
-      (check-call @_ds "ds-find-by-kind" "thing" nil [[:a :asc] [:b :desc]] nil nil))
+      (check-call @_ds "ds-find-by-kind" "thing" nil [[:a :asc] [:b :desc]] nil nil {}))
 
     (it "pass along limit and offset"
       (find-by-kind "thing" :limit 5 :offset 6)
-      (check-call @_ds "ds-find-by-kind" "thing" nil nil 5 6))
+      (check-call @_ds "ds-find-by-kind" "thing" nil nil 5 6 {}))
 
     (it "can count-by-kind"
       (count-by-kind "thing" :filters ["eq" :a :b])
-      (check-call @_ds "ds-count-by-kind" "thing" [[:= :a :b]])
+      (check-call @_ds "ds-count-by-kind" "thing" [[:= :a :b]] {})
       (count-by-kind :thing :filters ["eq" :a :b])
-      (check-call @_ds "ds-count-by-kind" "thing" [[:= :a :b]]))
+      (check-call @_ds "ds-count-by-kind" "thing" [[:= :a :b]] {}))
 
     (it "can find-all-kinds "
       (find-all-kinds :filters ["eq" :a :b] :sorts [:c "ascending"] :limit 32 :offset 43)
-      (check-call @_ds "ds-find-all-kinds" [[:= :a :b]] [[:c :asc]] 32 43))
+      (check-call @_ds "ds-find-all-kinds" [[:= :a :b]] [[:c :asc]] 32 43 {}))
 
     (it "can count-all-kinds "
       (count-all-kinds :filters ["eq" :a :b])
-      (check-call @_ds "ds-count-all-kinds" [[:= :a :b]]))
+      (check-call @_ds "ds-count-all-kinds" [[:= :a :b]] {}))
     )
 
   (context "with memorystore"

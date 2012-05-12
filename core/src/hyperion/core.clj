@@ -16,12 +16,12 @@
   (ds-save [this record])
   (ds-save* [this records])
   (ds-delete [this keys])
-  (ds-count-by-kind [this kind filters])
-  (ds-count-all-kinds [this filters])
+  (ds-count-by-kind [this kind filters options])
+  (ds-count-all-kinds [this filters options])
   (ds-find-by-key [this key])
   (ds-find-by-keys [this keys])
-  (ds-find-by-kind [this kind filters sorts limit offset])
-  (ds-find-all-kinds [this filters sorts limit offset])
+  (ds-find-by-kind [this kind filters sorts limit offset options])
+  (ds-find-all-kinds [this filters sorts limit offset options])
   (ds-native->entity [this entity])
   (ds-entity->native [this record]))
 
@@ -251,24 +251,29 @@
         (parse-filters (:filters options))
         (parse-sorts (:sorts options))
         (:limit options)
-        (:offset options)))))
+        (:offset options)
+        (dissoc options :filters :sorts :limit :offset)))))
+
+(defn find-all-kinds [& args]
+  (let [options (->options args)]
+    (map native->entity
+      (ds-find-all-kinds (ds)
+        (parse-filters (:filters options))
+        (parse-sorts (:sorts options))
+        (:limit options)
+        (:offset options)
+        (dissoc options :filters :sorts :limit :offset)))))
 
 (defn count-by-kind [kind & args]
   (let [options (->options args)
         kind (name kind)]
-    (ds-count-by-kind (ds) kind (parse-filters (:filters options)))))
-
-(defn find-all-kinds [& args]
-  (let [options (->options args)]
-    (ds-find-all-kinds (ds)
-      (parse-filters (:filters options))
-      (parse-sorts (:sorts options))
-      (:limit options)
-      (:offset options))))
+    (ds-count-by-kind (ds) kind (parse-filters (:filters options))
+      (dissoc options :filters :sorts :limit :offset))))
 
 (defn count-all-kinds [& args]
   (let [options (->options args)]
-    (ds-count-all-kinds (ds) (parse-filters (:filters options)))))
+    (ds-count-all-kinds (ds) (parse-filters (:filters options))
+      (dissoc options :filters :sorts :limit :offset))))
 
 ; ----- Entity Implementation -----------------------------
 
@@ -305,7 +310,7 @@
 
 (defmacro defentity [class-sym & fields]
   (let [field-map (map-fields fields)
-        kind (spear-case class-sym)]
+        kind (spear-case (name class-sym))]
     `(do
       (defrecord ~class-sym [~'kind ~'key])
       (dosync (alter *entity-specs* assoc ~kind (assoc ~field-map :*ctor* (fn [key#] (new ~class-sym ~kind key#)))))
