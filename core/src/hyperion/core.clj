@@ -50,6 +50,10 @@
 (defprotocol Packed
   (unpack [this]))
 
+(extend-type nil
+  Packed
+  (unpack [this] nil))
+
 (defn pack-field [packer value]
   (cond
     (sequential? value) (map #(pack-field packer %) value)

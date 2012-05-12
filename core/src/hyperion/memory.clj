@@ -123,4 +123,4 @@
 
 (defn new-memory-datastore
   ([] (MemoryDatastore. (ref {})))
-  ([stuff] (MemoryDatastore. (ref stuff))))
+  ([stuff] (MemoryDatastore. (ref stuff))))2

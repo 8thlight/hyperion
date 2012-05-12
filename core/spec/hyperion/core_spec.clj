@@ -29,24 +29,9 @@
   [field3 :default ".141592"]
   [field42 :default "value42"])
 
-;(defentity VarietyShow
-;  [short-blob :type ShortBlob]
-;  [blob :type Blob]
-;  [category :type Category]
-;  [email :type Email]
-;  [geo-pt :type GeoPt]
-;  [user :type User]
-;  [blob-key :type BlobKey]
-;  [link :type Link]
-;  [imhandle :type IMHandle]
-;  [address :type PostalAddress]
-;  [rating :type Rating]
-;  [phone :type PhoneNumber]
-;  [text :type Text]
-;  [other :type Key])
-
 (defentity CustomPacking
-  [bauble :packer #(apply str (reverse %)) :unpacker upper-case])
+  [bauble :packer #(apply str (reverse %)) :unpacker upper-case]
+  [thingy :unpacker true])
 
 (defentity Hooks
   [field]
@@ -334,6 +319,12 @@
           (should= "hello" (:bauble unsaved))
           (should= "olleh" (:bauble raw))
           (should= "OLLEH" (:bauble loaded))))
+
+      (it "can unpack nil"
+        (let [saved (save (custom-packing :thingy nil))
+              loaded (find-by-key (:key saved))]
+          (should= nil (:thingy saved))
+          (should= nil (:thingy loaded))))
 
       (context "Hooks"
         (it "has after create hook"
