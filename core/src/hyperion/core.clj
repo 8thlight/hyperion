@@ -37,7 +37,11 @@
   (or (:key thing) thing))
 
 (defn ->kind [thing]
-  (or (:kind thing) (ds->kind (ds) thing)))
+  (or
+    (if-let [kind (:kind thing)]
+      (name kind)
+      nil)
+    (ds->kind (ds) thing)))
 
 (defn kind [thing]
   (->kind thing))
@@ -98,6 +102,12 @@
 
 (def #^{:dynamic true} *entity-specs* (ref {}))
 
+(defn- spec-for [thing]
+  (cond
+    (nil? thing) nil
+    (map? thing) (spec-for (->kind thing))
+    :else (get @*entity-specs* (name thing))))
+
 (defmulti native->entity kind)
 
 (defmethod native->entity nil [entity]
@@ -106,7 +116,7 @@
 (defn native->specced-entity
   ([entity]
     (let [kind (->kind entity)
-          spec (get @*entity-specs* kind)]
+          spec (spec-for kind)]
       (native->specced-entity entity kind spec)))
   ([entity kind spec]
     (let [key (ds->string-key (ds) entity)
@@ -128,7 +138,7 @@
 
 (defmethod native->entity :default [entity]
   (let [kind (ds->kind (ds) entity)
-        spec (get @*entity-specs* kind)]
+        spec (spec-for kind)]
     (if spec
       (native->specced-entity entity kind spec)
       (native->unspecced-entity entity kind))))
@@ -137,26 +147,27 @@
   (->native [this]))
 
 (defn- unspecced-entity->native [record kind]
-  (ds-entity->native (ds) record))
+  (ds-entity->native (ds)
+    (assoc record :kind (->kind record))))
 
 (defn specced-entity->native
   ([record]
-    (let [kind (:kind record)
-          spec (get @*entity-specs* kind)]
+    (let [kind (->kind record)
+          spec (spec-for kind)]
       (specced-entity->native record kind spec)))
   ([record kind spec]
     (ds-entity->native (ds)
       (reduce
         (fn [marshaled [field attrs]]
           (assoc marshaled field (pack-field (:packer (field spec)) (field record))))
-        {:key (:key record) :kind (:kind record)}
+        {:key (:key record) :kind (->kind record)}
         (dissoc spec :*ctor*)))))
 
 (extend-type clojure.lang.APersistentMap
   EntityRecord
   (->native [record]
-    (let [kind (:kind record)
-          spec (get @*entity-specs* kind)]
+    (let [kind (->kind record)
+          spec (spec-for kind)]
       (if spec
         (specced-entity->native record kind spec)
         (unspecced-entity->native record kind)))))
@@ -174,7 +185,7 @@
     record))
 
 (defn with-updated-timestamps [record]
-  (let [spec (get @*entity-specs* (:kind record))]
+  (let [spec (spec-for record)]
     (with-updated-at (with-created-at record spec) spec)))
 
 ; ----- Raw CRUD API --------------------------------------
@@ -300,7 +311,7 @@
     field-specs))
 
 (defn construct-entity-record [kind & args]
-  (let [spec (get @*entity-specs* kind)
+  (let [spec (spec-for kind)
         args (->options args)
         extras (apply dissoc args (keys spec))
         record ((:*ctor* spec) nil)]

@@ -344,9 +344,20 @@
           (should= nil (:thingy saved))
           (should= nil (:thingy loaded))))
 
-
       (it "handles packing without using defentity constructor"
         (let [unsaved {:kind "packable" :widget "42" :bauble "hello" :thingy nil}
+              saved (save unsaved)
+              raw (get @(.store (ds)) (->key (:key saved)))
+              loaded (find-by-key (:key saved))]
+          (should= (Integer. 42) (:widget raw))
+          (should= "olleh" (:bauble raw))
+          (should= nil (:thingy raw))
+          (should= "42" (:widget loaded))
+          (should= "OLLEH" (:bauble loaded))
+          (should= nil (:thingy loaded))))
+
+      (it "handles packing without using defentity constructor and keyword as kind"
+        (let [unsaved {:kind :packable :widget "42" :bauble "hello" :thingy nil}
               saved (save unsaved)
               raw (get @(.store (ds)) (->key (:key saved)))
               loaded (find-by-key (:key saved))]
