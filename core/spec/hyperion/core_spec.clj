@@ -29,9 +29,19 @@
   [field3 :default ".141592"]
   [field42 :default "value42"])
 
-(defentity CustomPacking
+(defentity Packable
+  [widget :type Integer]
   [bauble :packer #(apply str (reverse %)) :unpacker upper-case]
   [thingy :unpacker true])
+
+(defmethod pack Integer [type value]
+  (if value
+    (Integer. (Integer/parseInt value))
+    nil))
+
+(extend-type Integer
+  Packed
+  (unpack [value] (if value (str value) nil)))
 
 (defentity Hooks
   [field]
@@ -308,11 +318,19 @@
             (should= [saved] (find-by-kind "hollow"))
             (let [saved2 (save (hollow))]
               (should= #{saved saved2} (set (find-by-kind "hollow"))))))
-
         )
 
+      (it "packed types fields"
+        (let [unsaved (packable :widget "42")
+              saved (save unsaved)
+              raw (get @(.store (ds)) (->key (:key saved)))
+              loaded (find-by-key (:key saved))]
+          (should= "42" (:widget unsaved))
+          (should= (Integer. 42) (:widget raw))
+          (should= "42" (:widget loaded))))
+
       (it "allows custom packing"
-        (let [unsaved (custom-packing :bauble "hello")
+        (let [unsaved (packable :bauble "hello")
               saved (save unsaved)
               raw (get @(.store (ds)) (->key (:key saved)))
               loaded (find-by-key (:key saved))]
@@ -321,9 +339,22 @@
           (should= "OLLEH" (:bauble loaded))))
 
       (it "can unpack nil"
-        (let [saved (save (custom-packing :thingy nil))
+        (let [saved (save (packable :thingy nil))
               loaded (find-by-key (:key saved))]
           (should= nil (:thingy saved))
+          (should= nil (:thingy loaded))))
+
+
+      (it "handles packing without using defentity constructor"
+        (let [unsaved {:kind "packable" :widget "42" :bauble "hello" :thingy nil}
+              saved (save unsaved)
+              raw (get @(.store (ds)) (->key (:key saved)))
+              loaded (find-by-key (:key saved))]
+          (should= (Integer. 42) (:widget raw))
+          (should= "olleh" (:bauble raw))
+          (should= nil (:thingy raw))
+          (should= "42" (:widget loaded))
+          (should= "OLLEH" (:bauble loaded))
           (should= nil (:thingy loaded))))
 
       (context "Hooks"
