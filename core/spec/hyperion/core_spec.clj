@@ -368,12 +368,6 @@
           (should= "OLLEH" (:bauble loaded))
           (should= nil (:thingy loaded))))
 
-      (it "can unpack strings"
-        (let [saved (save (packable :thingy "something"))
-              loaded (find-by-key (:key saved))]
-          (should= "something" (:thingy saved))
-          (should= "something" (:thingy loaded))))
-
       (context "Hooks"
         (it "has after create hook"
           (let [unsaved (hooks :field "waza!")]

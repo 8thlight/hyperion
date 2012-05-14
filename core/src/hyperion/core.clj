@@ -58,10 +58,6 @@
   Packed
   (unpack [this] nil))
 
-(extend-type java.lang.String
-  Packed
-  (unpack [this] this))
-
 (defn pack-field [packer value]
   (cond
     (sequential? value) (map #(pack-field packer %) value)
