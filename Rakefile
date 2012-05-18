@@ -64,7 +64,9 @@ task :clean => projects.map {|project| "#{project}:clean"}
 
 def clean(dir)
   lein_task(dir, 'clean')
-  sh "cd #{dir} && rm -rf lib classes pom.xml .lein-deps-sum"
+  rm_script = 'rm -rf lib classes pom.xml .lein-deps-sum'
+  sh "cd #{dir} && #{rm_script}"
+  sh rm_script
 end
 
 def deps(dir)
