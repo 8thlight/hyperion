@@ -51,11 +51,16 @@ namespace :gae do
   package('gae')
 end
 
-desc 'Run specs for all Hyperion Datastores'
-task :specs => ['core:specs', 'sql:specs', 'postgres:specs', 'mysql:specs', 'gae:specs']
+projects = [:core, :sql, :postgres, :mysql, :gae]
+
+desc 'Run the specs Hyperion'
+task :specs => projects.map {|project| "#{project}:specs"}
 
 desc 'Deploy Hyperion'
-task :deploy => ['core:deploy', 'sql:deploy', 'postgres:deploy', 'mysql:deploy', 'gae:deploy']
+task :deploy => projects.map {|project| "#{project}:deploy"}
+
+desc 'Clean Hyperion'
+task :clean => projects.map {|project| "#{project}:clean"}
 
 def clean(dir)
   lein_task(dir, 'clean')
