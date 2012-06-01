@@ -9,11 +9,6 @@
 (defmethod format-table clojure.lang.Keyword [table] (name table))
 (defmethod format-table :default [table] table)
 
-(defmulti format-column type)
-(defmethod format-column java.lang.String [val] val)
-(defmethod format-column clojure.lang.Keyword [val] (name val))
-(defmethod format-column clojure.lang.Sequential [val] (str "(" (clj-str/join ", " (map format-column val)) ")"))
-
 (defmulti format-value type)
 (defmethod format-value java.lang.String [val] (str "'" val "'"))
 (defmethod format-value clojure.lang.Keyword [val] (name val))
@@ -165,7 +160,7 @@
 (defn build-return [return]
   (if (coll? return)
     (let [[value name type] return]
-      (str (format-value value) " AS " (format-column name)))
+      (str (format-value value) " AS " (format-table name)))
     (format-value return)))
 
 (defn build-return-statement [returns]

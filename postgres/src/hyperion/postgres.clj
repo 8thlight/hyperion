@@ -82,11 +82,10 @@
   (when-not (empty? withs)
     (str "WITH " (clj-str/join ", " (map build-with withs)) " ")))
 
-
 (defn build-return [return type-cast-fn]
   (if (coll? return)
     (let [[value name type] return]
-      (str (type-cast-fn (format-value value) type) " AS " (format-column name)))
+      (str (type-cast-fn (format-value value) type) " AS " (format-table name)))
     (format-value return)))
 
 (defn build-return-statement [returns type-cast-fn]
