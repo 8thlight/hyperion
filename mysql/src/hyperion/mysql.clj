@@ -1,9 +1,9 @@
 (ns hyperion.mysql
   (:require
-    [hyperion.core :refer [Datastore new?]]
     [clojure.java.jdbc :as sql]
     [clojure.string :as clj-str]
-    [clojure.set :as clj-set]))
+    [clojure.set :as clj-set]
+    [hyperion.core :refer [Datastore new?]]))
 
 (defmulti format-table type)
 (defmethod format-table clojure.lang.Keyword [table] (name table))
@@ -21,6 +21,16 @@
 (defmethod format-value java.util.Date [val] (format-value (str val)))
 (defmethod format-value nil [val] "NULL")
 (defmethod format-value :default [val] (str val))
+
+(defn- format-type [pg-type]
+  (if (isa? (type pg-type) clojure.lang.Keyword)
+    (name pg-type)
+    pg-type))
+
+(defn- type-cast [value type]
+  (if (nil? type)
+    value
+    (str "CAST(" value " AS " (format-type type) ")")))
 
 (defn build-filter
   ([filter] (build-filter filter (format-value (first filter))))
@@ -221,16 +231,21 @@
 
 (deftype MySqlDatastore [conn database]
   Datastore
+  (ds->kind [this thing] (if (string? thing) thing nil))
+  (ds->ds-key [this thing] (if (string? thing) thing nil))
+  (ds->string-key [this thing] thing)
   (ds-save [this record] (save-record conn record))
   (ds-save* [this records] (save-records conn records))
   (ds-delete [this keys] (delete-records conn keys))
-  (ds-count-by-kind [this kind filters] (count-records-by-kind conn kind filters))
-  (ds-count-all-kinds [this filters] (count-records-by-all-kinds conn database filters))
+  (ds-count-by-kind [this kind filters options] (count-records-by-kind conn kind filters))
+  (ds-count-all-kinds [this filters options] (count-records-by-all-kinds conn database filters))
   (ds-find-by-key [this key] (find-by-key conn key))
-  (ds-find-by-kind [this kind filters sorts limit offset]
+  (ds-find-by-kind [this kind filters sorts limit offset options]
     (find-by-kind conn kind filters sorts limit offset))
-  (ds-find-all-kinds [this filters sorts limit offset]
-    (find-records-by-all-kinds conn database filters sorts limit offset)))
+  (ds-find-all-kinds [this filters sorts limit offset options]
+    (find-records-by-all-kinds conn database filters sorts limit offset))
+  (ds-native->entity [this entity] entity)
+  (ds-entity->native [this map] map))
 
 (defn new-mysql-datastore [conn database]
   (MySqlDatastore. conn database))

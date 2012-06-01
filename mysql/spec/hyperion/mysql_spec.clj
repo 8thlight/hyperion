@@ -9,7 +9,7 @@
   (with connection {:subprotocol "mysql"
                     :subname "//localhost:3306/hyperion"
                     :user "root"})
-  (before
+  (around [it]
     (sql/with-connection @connection
       (sql/create-table
         :testing
@@ -25,11 +25,14 @@
         [:inti :int]
         [:data "VARCHAR(32)"]
         :table-spec "ENGINE=InnoDB" ""))
-    (reset! DS (new-mysql-datastore @connection "hyperion")))
-  (after
-    (sql/with-connection @connection
-      (sql/drop-table :testing)
-      (sql/drop-table :other_testing)))
+    (reset! DS (new-mysql-datastore @connection "hyperion"))
+    (try
+      (it)
+      (catch Exception e)
+      (finally
+        (sql/with-connection @connection
+          (sql/drop-table :testing)
+          (sql/drop-table :other_testing)))))
 
   (context "save"
     (it "saves a map with kind as a string and returns it"

@@ -118,8 +118,7 @@
   (ds-find-by-kind [this kind filters sorts limit offset options] (find-records-by-kind this kind filters sorts limit offset))
   (ds-find-all-kinds [this filters sorts limit offset options] (find-records this filters sorts limit offset))
   (ds-native->entity [this entity] entity)
-  (ds-entity->native [this map] map)
-  )
+  (ds-entity->native [this map] map))
 
 (defn new-memory-datastore
   ([] (MemoryDatastore. (ref {})))
