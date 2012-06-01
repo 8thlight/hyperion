@@ -22,16 +22,6 @@
 (defmethod format-value nil [val] "NULL")
 (defmethod format-value :default [val] (str val))
 
-(defn- format-type [pg-type]
-  (if (isa? (type pg-type) clojure.lang.Keyword)
-    (name pg-type)
-    pg-type))
-
-(defn- type-cast [value type]
-  (if (nil? type)
-    value
-    (str "CAST(" value " AS " (format-type type) ")")))
-
 (defn build-filter
   ([filter] (build-filter filter (format-value (first filter))))
   ([filter op] (build-filter (format-value (second filter)) op (last filter)))
@@ -97,7 +87,7 @@
 
 (defn- apply-kind-and-key
   ([record] (apply-kind-and-key record (:kind record) (:id record)))
-  ([record table-name](apply-kind-and-key record table-name (:id record)))
+  ([record table-name] (apply-kind-and-key record table-name (:id record)))
   ([record table-name id]
     (assoc record :kind table-name :key (build-key table-name id))))
 
@@ -172,14 +162,14 @@
 (defn seq-contains? [coll item]
   (some #(= % item) coll))
 
-(defn build-return [return type-cast-fn]
+(defn build-return [return]
   (if (coll? return)
     (let [[value name type] return]
       (str (format-value value) " AS " (format-column name)))
     (format-value return)))
 
-(defn build-return-statement [returns type-cast-fn]
-  (clj-str/join ", " (map #(build-return % type-cast-fn) returns)))
+(defn build-return-statement [returns]
+  (clj-str/join ", " (map #(build-return %) returns)))
 
 (defn- build-padded-returns [table-name cols dist-cols]
   (let [diff (clj-set/difference (set dist-cols) (set cols))]
@@ -189,7 +179,7 @@
 
 (defn- build-padded-select [select-fn table cols dist-cols filters]
   (let [returns (build-padded-returns table cols dist-cols)
-        return-statement (build-return-statement returns type-cast)]
+        return-statement (build-return-statement returns)]
     (select-fn return-statement table filters nil nil nil)))
 
 (defn- build-union-all [queries]
