@@ -32,17 +32,13 @@ namespace :core do
   package('core')
 end
 
-namespace :sql do
-  package('sql')
-end
-
 namespace :postgres do
-  task :build => ['core:install', 'sql:install']
+  task :build => 'core:install'
   package('postgres')
 end
 
 namespace :mysql do
-  task :build => ['core:install', 'sql:install']
+  task :build => 'core:install'
   package('mysql')
 end
 
@@ -51,7 +47,7 @@ namespace :gae do
   package('gae')
 end
 
-projects = [:core, :sql, :postgres, :mysql, :gae]
+projects = [:core, :postgres, :mysql, :gae]
 
 desc 'Run the specs Hyperion'
 task :specs => projects.map {|project| "#{project}:specs"}

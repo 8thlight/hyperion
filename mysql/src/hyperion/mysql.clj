@@ -101,57 +101,52 @@
   ([record table-name id]
     (assoc record :kind table-name :key (build-key table-name id))))
 
-(defn- update-record [conn record]
+(defn- update-record [record]
   (let [[table-name id] (destructure-key (:key record))
         record (dissoc record :kind :key)
         select-query (build-select "*" table-name [[:= :id id]] nil nil nil)]
-    (sql/with-connection conn
-      (sql/update-values table-name ["id=?" id] record)
-      (let [record (sql/with-query-results results [select-query] (first results))]
-        (apply-kind-and-key record table-name id)))))
+    (sql/update-values table-name ["id=?" id] record)
+    (let [record (sql/with-query-results results [select-query] (first results))]
+      (apply-kind-and-key record table-name id))))
 
-(defn- insert-record [conn record]
+(defn- insert-record [record]
   (let [table-name (format-table (:kind record))
         record (dissoc record :kind)]
-    (sql/with-connection conn
-      (let [saved-record (first (sql/insert-records table-name record))
-            id (:generated_key saved-record)
-            select-query (build-select "*" table-name [[:= :id id]] nil nil nil)
-            record (sql/with-query-results results [select-query] (first results))]
-        (apply-kind-and-key record table-name id)))))
+    (let [saved-record (first (sql/insert-records table-name record))
+          id (:generated_key saved-record)
+          select-query (build-select "*" table-name [[:= :id id]] nil nil nil)
+          record (sql/with-query-results results [select-query] (first results))]
+      (apply-kind-and-key record table-name id))))
 
-(defn- save-record [conn record]
+(defn- save-record [record]
   (if (new? record)
-    (insert-record conn record)
-    (update-record conn record)))
+    (insert-record record)
+    (update-record record)))
 
-(defn- save-records [conn records]
-  (doall (map #(save-record conn %) records)))
+(defn- save-records [records]
+  (doall (map #(save-record %) records)))
 
-(defn- delete-record [conn key]
+(defn- delete-record [key]
   (let [[table-name id] (destructure-key key)]
-    (sql/with-connection conn
-      (sql/delete-rows table-name ["id=?" id]))))
+    (sql/delete-rows table-name ["id=?" id])))
 
-(defn- delete-records [conn keys]
+(defn- delete-records [keys]
   (doseq [key keys]
-    (delete-record conn key)))
+    (delete-record key)))
 
-(defn- find-by-kind [conn kind filters sorts limit offset]
+(defn- find-by-kind [kind filters sorts limit offset]
   (let [query (build-select "*" kind filters sorts limit offset)]
-    (sql/with-connection conn
-      (sql/with-query-results results [query]
-        (doall (map #(apply-kind-and-key % kind) results))))))
+    (sql/with-query-results results [query]
+      (doall (map #(apply-kind-and-key % kind) results)))))
 
-(defn- find-by-key [conn key]
+(defn- find-by-key [key]
   (let [[table-name id] (destructure-key key)]
-    (first (find-by-kind conn table-name [[:= :id id]] nil nil nil))))
+    (first (find-by-kind table-name [[:= :id id]] nil nil nil))))
 
-(defn- count-records-by-kind [conn kind filters]
+(defn- count-records-by-kind [kind filters]
   (let [query (build-select "COUNT(*)" kind filters nil nil nil)]
-    (sql/with-connection conn
-      (sql/with-query-results results [query]
-        ((keyword "count(*)") (first results))))))
+    (sql/with-query-results results [query]
+      ((keyword "count(*)") (first results)))))
 
 (defn parse-column-listing [column-listing]
   (let [schema (reduce #(assoc %1 (keyword (:table_name %2)) []) {} column-listing)]
@@ -164,16 +159,15 @@
               dist-cols (conj dist-cols col)]
           (recur more schema dist-cols))))))
 
-(defn- build-column-listing [select-fn database]
-  (let [table-listing-query (select-fn "table_name" :information_schema.tables [[:= :table_schema database]] nil nil nil)
+(defn- build-column-listing [select-fn database-name]
+  (let [table-listing-query (select-fn "table_name" :information_schema.tables [[:= :table_schema database-name]] nil nil nil)
         table-listing-subquery (str "(" table-listing-query ") AS tables")]
   (select-fn "tables.table_name, column_name, data_type" (str "information_schema.columns AS columns, " table-listing-subquery) [[:= :columns.table_name :tables.table_name]] nil nil nil)))
 
-(defn get-schema-and-distinct-columns [conn database]
-  (let [column-listing-query (build-column-listing build-select database)]
-    (sql/with-connection conn
-      (sql/with-query-results results [column-listing-query]
-        (parse-column-listing results)))))
+(defn get-schema-and-distinct-columns [database-name]
+  (let [column-listing-query (build-column-listing build-select database-name)]
+    (sql/with-query-results results [column-listing-query]
+      (parse-column-listing results))))
 
 (defn seq-contains? [coll item]
   (some #(= % item) coll))
@@ -213,39 +207,37 @@
         record (select-keys record (col-names (table-name schema)))]
     (apply-kind-and-key record table-name)))
 
-(defn- count-records-by-all-kinds [conn database filters]
-  (let [[schema dist-cols] (get-schema-and-distinct-columns conn database)
+(defn- count-records-by-all-kinds [database-name filters]
+  (let [[schema dist-cols] (get-schema-and-distinct-columns database-name)
         filtered-union (build-filtered-union-by-all-kinds build-select schema dist-cols filters)
         query (build-select "COUNT(*)" (str "(" filtered-union ") AS filtered") nil nil nil nil)]
-    (sql/with-connection conn
-      (sql/with-query-results results [query]
-        ((keyword "count(*)") (first results))))))
+    (sql/with-query-results results [query]
+      ((keyword "count(*)") (first results)))))
 
-(defn- find-records-by-all-kinds [conn database filters sorts limit offset]
-  (let [[schema dist-cols] (get-schema-and-distinct-columns conn database)
+(defn- find-records-by-all-kinds [database-name filters sorts limit offset]
+  (let [[schema dist-cols] (get-schema-and-distinct-columns database-name)
         filtered-union (build-filtered-union-by-all-kinds build-select schema dist-cols filters)
         query (build-select "*" (str "(" filtered-union ") AS filtered") nil sorts limit offset)]
-    (sql/with-connection conn
-      (sql/with-query-results results [query]
-        (map #(clean-padding-and-apply-keys % schema) (doall results))))))
+    (sql/with-query-results results [query]
+      (map #(clean-padding-and-apply-keys % schema) (doall results)))))
 
-(deftype MySqlDatastore [conn database]
+(deftype MySqlDatastore [database-name]
   Datastore
   (ds->kind [this thing] (if (string? thing) thing nil))
   (ds->ds-key [this thing] (if (string? thing) thing nil))
   (ds->string-key [this thing] thing)
-  (ds-save [this record] (save-record conn record))
-  (ds-save* [this records] (save-records conn records))
-  (ds-delete [this keys] (delete-records conn keys))
-  (ds-count-by-kind [this kind filters options] (count-records-by-kind conn kind filters))
-  (ds-count-all-kinds [this filters options] (count-records-by-all-kinds conn database filters))
-  (ds-find-by-key [this key] (find-by-key conn key))
+  (ds-save [this record] (save-record record))
+  (ds-save* [this records] (save-records records))
+  (ds-delete [this keys] (delete-records keys))
+  (ds-count-by-kind [this kind filters options] (count-records-by-kind kind filters))
+  (ds-count-all-kinds [this filters options] (count-records-by-all-kinds database-name filters))
+  (ds-find-by-key [this key] (find-by-key key))
   (ds-find-by-kind [this kind filters sorts limit offset options]
-    (find-by-kind conn kind filters sorts limit offset))
+    (find-by-kind kind filters sorts limit offset))
   (ds-find-all-kinds [this filters sorts limit offset options]
-    (find-records-by-all-kinds conn database filters sorts limit offset))
+    (find-records-by-all-kinds database-name filters sorts limit offset))
   (ds-native->entity [this entity] entity)
   (ds-entity->native [this map] map))
 
-(defn new-mysql-datastore [conn database]
-  (MySqlDatastore. conn database))
+(defn new-mysql-datastore [database-name]
+  (MySqlDatastore. database-name))

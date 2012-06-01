@@ -1,14 +1,14 @@
-(ns hyperion.mysql-spec
+(ns hyperion.postgres-spec
   (:require
     [speclj.core :refer :all]
     [hyperion.core :refer :all]
-    [hyperion.mysql :refer [new-mysql-datastore]]
+    [hyperion.postgres :refer [new-postgres-datastore]]
     [clojure.java.jdbc :as sql]))
 
-(describe "MySQL Datastore"
-  (with connection {:subprotocol "mysql"
-                    :subname "//localhost:3306/hyperion"
-                    :user "root"})
+(describe "Postgres Datastore"
+  (with connection {:subprotocol "postgresql"
+                    :subname "hyperion"})
+
   (around [it]
     (sql/with-connection @connection
       (try
@@ -18,15 +18,13 @@
           [:name "VARCHAR(32)"]
           [:birthdate :date]
           [:inti :int]
-          [:data "VARCHAR(32)"]
-          :table-spec "ENGINE=InnoDB" "")
+          [:data "VARCHAR(32)"])
         (sql/create-table
           :other_testing
           [:id :serial "PRIMARY KEY"]
           [:inti :int]
-          [:data "VARCHAR(32)"]
-          :table-spec "ENGINE=InnoDB" "")
-        (reset! DS (new-mysql-datastore "hyperion"))
+          [:data "VARCHAR(32)"])
+        (reset! DS (new-postgres-datastore "hyperion"))
         (it)
         (catch Exception e)
         (finally
