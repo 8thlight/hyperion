@@ -33,30 +33,42 @@ namespace :core do
 end
 
 namespace :postgres do
-  task :build => 'core:install'
+  task :build => ['core:install', 'dev:install']
   package('postgres')
 end
 
 namespace :mysql do
-  task :build => 'core:install'
+  task :build => ['core:install', 'dev:install']
   package('mysql')
 end
 
 namespace :gae do
-  task :build => 'core:install'
+  task :build => ['core:install', 'dev:install']
   package('gae')
 end
 
-projects = [:core, :postgres, :mysql, :gae]
+namespace :dev do
+  task :build => 'core:install'
+  package('dev')
+end
+
+PROJECTS = [:core, :postgres, :mysql, :gae, :dev]
+
+def create_task_for_all(task_name)
+  task task_name => PROJECTS.map {|project| "#{project}:#{task_name}"}
+end
 
 desc 'Run the specs Hyperion'
-task :specs => projects.map {|project| "#{project}:specs"}
+create_task_for_all(:specs)
 
 desc 'Deploy Hyperion'
-task :deploy => projects.map {|project| "#{project}:deploy"}
+create_task_for_all(:deploy)
 
 desc 'Clean Hyperion'
-task :clean => projects.map {|project| "#{project}:clean"}
+create_task_for_all(:clean)
+
+desc 'Install Hyperion'
+create_task_for_all(:install)
 
 def clean(dir)
   lein_task(dir, 'clean')

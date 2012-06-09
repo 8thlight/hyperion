@@ -7,7 +7,7 @@
     [clojure.string :as str]
     [hyperion.gae.types])
   (:import
-    [com.google.appengine.api.datastore Entity Query DatastoreServiceFactory Query$FilterOperator
+    [com.google.appengine.api.datastore Entity Entities Query DatastoreServiceFactory Query$FilterOperator
      Query$SortDirection FetchOptions$Builder EntityNotFoundException KeyFactory Key]))
 
 (defn ->kind [thing]
@@ -119,6 +119,26 @@
         result-map (.get service keys)]
     (map #(get result-map %) keys)))
 
+(defn- all-kinds [service]
+  (let [query (.prepare service (Query. Entities/KIND_METADATA_KIND))
+        fetching (build-fetch-options nil nil nil)]
+      (map #(.getName (.getKey %)) (.asIterable query fetching))))
+
+(defn- apply-limit [limit results]
+  (if limit
+    (take limit results)
+    results))
+
+(defn find-by-all-kinds [service filters sorts limit offset options]
+  (let [kinds (all-kinds service)
+        results-for-all-kinds (flatten (map #(find-by-kind service % filters sorts limit offset options) kinds))
+        non-nil-results (filter #(not (nil? %)) results-for-all-kinds)]
+    (apply-limit limit non-nil-results)))
+
+(defn count-by-all-kinds [service filters options]
+  (let [kinds (all-kinds service)]
+    (apply + (map #(count-by-kind service % filters options) kinds))))
+
 (deftype GaeDatastore [service]
   Datastore
   (ds->kind [this thing] (->kind thing))
@@ -128,13 +148,13 @@
   (ds-save* [this natives] (doall (for [native natives] (save-native service native))))
   (ds-delete [this keys] (delete-records service keys))
   (ds-count-by-kind [this kind filters options] (count-by-kind service kind filters options))
-  (ds-count-all-kinds [this filters options] (count-by-kind service nil filters options))
+  (ds-count-all-kinds [this filters options] (count-by-all-kinds service filters options))
   (ds-find-by-key [this key] (find-by-key service key))
   (ds-find-by-keys [this keys] (find-by-keys service keys))
   (ds-find-by-kind [this kind filters sorts limit offset options]
     (find-by-kind service kind filters sorts limit offset options))
   (ds-find-all-kinds [this filters sorts limit offset options]
-    (find-by-kind service nil filters sorts limit offset options))
+    (find-by-all-kinds service filters sorts limit offset options))
   (ds-native->entity [this native] (<-native native))
   (ds-entity->native [this entity] (->native entity)))
 

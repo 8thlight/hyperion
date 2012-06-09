@@ -10,23 +10,34 @@
 (defmethod format-table java.lang.String [val] val)
 (defmethod format-table clojure.lang.Keyword [val] (name val))
 
-(defmulti format-column type)
-(defmethod format-column java.lang.String [val] val)
-(defmethod format-column clojure.lang.Keyword [val] (name val))
-(defmethod format-column clojure.lang.Sequential [val] (str "(" (clj-str/join ", " (map format-column val)) ")"))
+(defprotocol FormattableType
+  (format-as-value [this]))
 
-(defmulti format-value type)
-(defmethod format-value java.lang.String [val] (str "'" val "'"))
-(defmethod format-value clojure.lang.Keyword [val] (name val))
-(defmethod format-value clojure.lang.Sequential [val] (str "(" (clj-str/join ", " (map format-value val)) ")"))
-(defmethod format-value java.util.Date [val] (format-value (str val)))
-(defmethod format-value nil [val] "NULL")
-(defmethod format-value :default [val] (str val))
+(extend-protocol FormattableType
+  java.lang.String
+  (format-as-value [this] (str "'" this "'"))
+
+  java.lang.Number
+  (format-as-value [this] (str this))
+
+  clojure.lang.Keyword
+  (format-as-value [this] (name this))
+
+  clojure.lang.Sequential
+  (format-as-value [this]
+    (str "(" (clj-str/join ", " (map format-as-value this)) ")"))
+
+  java.util.Date
+  (format-as-value [this]
+    (format-as-value (str this)))
+
+  nil
+  (format-as-value [this] "NULL"))
 
 (defn build-filter
-  ([filter] (build-filter filter (format-value (first filter))))
-  ([filter op] (build-filter (format-value (second filter)) op (last filter)))
-  ([col op val] (str col " " op " " (format-value val))))
+  ([filter] (build-filter filter (format-as-value (first filter))))
+  ([filter op] (build-filter (format-as-value (second filter)) op (last filter)))
+  ([col op val] (str col " " op " " (format-as-value val))))
 
 (defn- format-type [pg-type]
   (if (isa? (type pg-type) clojure.lang.Keyword)
@@ -57,7 +68,7 @@
 
 (defn sort->sql [sort]
   (let [order (case (second sort) :asc "ASC" :desc "DESC")]
-    (str (format-value (first sort)) " " order)))
+    (str (format-as-value (first sort)) " " order)))
 
 (defn apply-sorts [query sorts]
   (if (empty? sorts)
@@ -85,16 +96,16 @@
 (defn build-return [return type-cast-fn]
   (if (coll? return)
     (let [[value name type] return]
-      (str (type-cast-fn (format-value value) type) " AS " (format-table name)))
-    (format-value return)))
+      (str (type-cast-fn (format-as-value value) type) " AS " (format-table name)))
+    (format-as-value return)))
 
 (defn build-return-statement [returns type-cast-fn]
   (clj-str/join ", " (map #(build-return % type-cast-fn) returns)))
 
 (defn build-insert [table item]
   (let [table-name (format-table table)
-        column-names (format-value (keys item))
-        values (format-value (vals item))]
+        column-names (format-as-value (keys item))
+        values (format-as-value (vals item))]
     (str "INSERT INTO " table-name " " column-names " VALUES " values)))
 
 (defn build-update [table item]
@@ -108,6 +119,14 @@
   (let [table-name (format-table table)
         query (str "DELETE FROM " table-name)]
     (apply-filters query filters)))
+
+(defn build-select-no-with [return-statement table filters sorts limit offset]
+  (->
+    (str "SELECT " return-statement " FROM " (format-table table))
+    (apply-filters filters)
+    (apply-sorts sorts)
+    (apply-limit limit)
+    (apply-offset offset)))
 
 (defn- build-select [withs return-statement table filters sorts limit offset]
    (->
@@ -130,14 +149,11 @@
   (clj-str/join " UNION ALL " (map #(str "(" % ")") queries)))
 
 (defn- build-subquery [query name]
-  (str "(" query ") AS " name))
+  (str "(" query ") AS " (format-table name)))
 
-(defn- build-table-listing [database select-fn]
-  (select-fn nil [:table_name] :information_schema.tables [[:= :table_schema database]] nil nil nil))
-
-(defn column-listing [database select-fn]
-  (select-fn nil [:tables.table_name :column_name :data_type] (str "information_schema.columns AS columns, " (build-subquery (build-table-listing database select-fn) "tables")) [[:= :columns.table_name :tables.table_name]] nil nil nil))
-
+(defn- build-table-listing [select-fn]
+  (let [return-statement (build-return-statement [:table_name] type-cast)]
+    (build-select-no-with return-statement :information_schema.tables [[:= :table_schema "public"]] nil nil nil)))
 
 (defn build-key [table-name id]
   (str (format-table table-name) "-" id))
@@ -152,7 +168,7 @@
   ([record] (apply-kind-and-key record (:kind record) (:id record)))
   ([record table-name](apply-kind-and-key record table-name (:id record)))
   ([record table-name id]
-    (assoc record :kind table-name :key (build-key table-name id))))
+    (assoc record :kind (format-table table-name) :key (build-key table-name id))))
 
 (defn insert-record [record]
   (let [table-name (format-table (:kind record))
@@ -215,8 +231,12 @@
               dist-cols (conj dist-cols col)]
           (recur more schema dist-cols))))))
 
-(defn get-schema-and-distinct-columns [ds]
-  (let [column-listing-query (column-listing)]
+(defn column-listing [select-fn]
+  (let [return-statement (build-return-statement [:tables.table_name :column_name :data_type] type-cast)]
+    (build-select-no-with return-statement (str "information_schema.columns AS columns, " (build-subquery (build-table-listing select-fn) :tables)) [[:= :columns.table_name :tables.table_name]] nil nil nil)))
+
+(defn get-schema-and-distinct-columns []
+  (let [column-listing-query (column-listing build-select)]
     (sql/with-query-results
       results [column-listing-query]
       (parse-column-listing results))))
@@ -232,7 +252,7 @@
 
 (defn- build-padded-select [table cols dist-cols filters]
   (let [returns (build-padded-returns table cols dist-cols)]
-    (select nil returns table filters nil nil nil)))
+    (select nil returns table filters nil nil nil type-cast)))
 
 (defn- build-filtered-union-by-all-kinds [schema dist-cols filters]
   (let [table-select-queries (map (fn [[table cols]] (build-padded-select table cols dist-cols filters)) schema)]
@@ -246,7 +266,7 @@
         record (select-keys record (col-names (table-name schema)))]
     (apply-kind-and-key record table-name)))
 
-(defn find-records-by-all-kinds [ds filters sorts limit offset]
+(defn find-records-by-all-kinds [filters sorts limit offset]
   (let [[schema dist-cols] (get-schema-and-distinct-columns)
         filtered-union (build-filtered-union-by-all-kinds schema dist-cols filters)
         with-name "filtered"
@@ -264,7 +284,7 @@
       results [query]
       (:count (first results)))))
 
-(deftype PostgresDatastore [database]
+(deftype PostgresDatastore []
   Datastore
   (ds->kind [this thing] (if (string? thing) thing nil))
   (ds->ds-key [this thing] (if (string? thing) thing nil))
@@ -280,5 +300,5 @@
   (ds-native->entity [this entity] entity)
   (ds-entity->native [this map] map))
 
-(defn new-postgres-datastore [database]
-  (PostgresDatastore. database))
+(defn new-postgres-datastore []
+  (PostgresDatastore.))

@@ -84,7 +84,7 @@
   ([record] (apply-kind-and-key record (:kind record) (:id record)))
   ([record table-name] (apply-kind-and-key record table-name (:id record)))
   ([record table-name id]
-    (assoc record :kind table-name :key (build-key table-name id))))
+    (assoc record :kind (format-table table-name) :key (build-key table-name id))))
 
 (defn- update-record [record]
   (let [[table-name id] (destructure-key (:key record))

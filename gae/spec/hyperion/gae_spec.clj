@@ -2,6 +2,7 @@
   (:use
     [speclj.core]
     [hyperion.core]
+    [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
     [hyperion.gae.spec-helper :only (with-local-datastore)]
     [hyperion.gae :only (new-gae-datastore) :as gae]
     [clojure.string :only (upper-case)])
@@ -66,8 +67,11 @@
 (describe "Google AppEngine Datastore"
 
   (with-local-datastore)
-  (with _ds (new-gae-datastore))
-  (before (reset! DS @_ds))
+  (around [it]
+    (binding [*ds* (new-gae-datastore)]
+      (it)))
+
+  (it-behaves-like-a-datastore)
 
   (it "saves and loads a hollow entity"
     (let [unsaved (hollow)
