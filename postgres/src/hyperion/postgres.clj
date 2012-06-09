@@ -4,40 +4,10 @@
     [clojure.string :as clj-str]
     [clojure.set :as clj-set]
     [hyperion.core :refer [Datastore new?]]
+    [hyperion.sql.format :refer :all]
+    [hyperion.sql.key :refer :all]
+    [hyperion.sql.query-builder :refer :all]
     [clojure.java.jdbc.internal :as sql-internal]))
-
-(defmulti format-table type)
-(defmethod format-table java.lang.String [val] val)
-(defmethod format-table clojure.lang.Keyword [val] (name val))
-
-(defprotocol FormattableAsValue
-  (format-as-value [this]))
-
-(extend-protocol FormattableAsValue
-  java.lang.String
-  (format-as-value [this] (str "'" this "'"))
-
-  java.lang.Number
-  (format-as-value [this] (str this))
-
-  clojure.lang.Keyword
-  (format-as-value [this] (name this))
-
-  clojure.lang.Sequential
-  (format-as-value [this]
-    (str "(" (clj-str/join ", " (map format-as-value this)) ")"))
-
-  java.util.Date
-  (format-as-value [this]
-    (format-as-value (str this)))
-
-  nil
-  (format-as-value [this] "NULL"))
-
-(defn build-filter
-  ([filter] (build-filter filter (format-as-value (first filter))))
-  ([filter op] (build-filter (format-as-value (second filter)) op (last filter)))
-  ([col op val] (str col " " op " " (format-as-value val))))
 
 (defn- format-type [pg-type]
   (if (isa? (type pg-type) clojure.lang.Keyword)
@@ -49,26 +19,9 @@
     value
     (str value "::" (format-type type))))
 
-(defmulti filter->sql first)
-
-(defmethod filter->sql :!= [filter]
-  (build-filter filter "<>"))
-
-(defmethod filter->sql :contains? [filter]
-  (build-filter filter "IN"))
-
-(defmethod filter->sql :default [filter]
-  (build-filter filter))
-
-(defn apply-filters [query filters]
-  (if (empty? filters)
-    query
-    (let [where-clause (str "WHERE " (clj-str/join " AND " (map filter->sql filters)))]
-      (str query " " where-clause))))
-
 (defn sort->sql [sort]
   (let [order (case (second sort) :asc "ASC" :desc "DESC")]
-    (str (format-as-value (first sort)) " " order)))
+    (str (format-as-column (first sort)) " " order)))
 
 (defn apply-sorts [query sorts]
   (if (empty? sorts)
@@ -76,18 +29,8 @@
     (let [order-by-clause (str "ORDER BY " (clj-str/join ", " (map sort->sql sorts)))]
       (str query " " order-by-clause))))
 
-(defn apply-limit [query limit]
-  (if (nil? limit)
-    query
-    (str query " LIMIT " limit)))
-
-(defn apply-offset [query offset]
-  (if (nil? offset)
-    query
-    (str query " OFFSET " offset)))
-
 (defn build-with [[name query]]
-  (str (format-table name) " AS (" query  ")"))
+  (str (format-as-table name) " AS (" query  ")"))
 
 (defn build-withs [withs]
   (when-not (empty? withs)
@@ -96,33 +39,33 @@
 (defn build-return [return type-cast-fn]
   (if (coll? return)
     (let [[value name type] return]
-      (str (type-cast-fn (format-as-value value) type) " AS " (format-table name)))
-    (format-as-value return)))
+      (str (type-cast-fn (format-as-value value) type) " AS " (format-as-column name)))
+    (format-as-column return)))
 
 (defn build-return-statement [returns type-cast-fn]
   (clj-str/join ", " (map #(build-return % type-cast-fn) returns)))
 
 (defn build-insert [table item]
-  (let [table-name (format-table table)
-        column-names (format-as-value (keys item))
+  (let [table-name (format-as-table table)
+        column-names (format-as-column (keys item))
         values (format-as-value (vals item))]
     (str "INSERT INTO " table-name " " column-names " VALUES " values)))
 
 (defn build-update [table item]
-  (let [table-name (format-table table)
+  (let [table-name (format-as-table table)
         filters (map (fn [[col val]] [:= col val]) (dissoc item :id))
         set (clj-str/join ", " (map filter->sql filters))
         query (str "UPDATE " table-name " SET " set)]
     (apply-filters query [[:= :id (:id item)]])))
 
 (defn build-delete [table filters]
-  (let [table-name (format-table table)
+  (let [table-name (format-as-table table)
         query (str "DELETE FROM " table-name)]
     (apply-filters query filters)))
 
 (defn build-select-no-with [return-statement table filters sorts limit offset]
   (->
-    (str "SELECT " return-statement " FROM " (format-table table))
+    (str "SELECT " return-statement " FROM " (format-as-table table))
     (apply-filters filters)
     (apply-sorts sorts)
     (apply-limit limit)
@@ -130,7 +73,7 @@
 
 (defn- build-select [withs return-statement table filters sorts limit offset]
    (->
-    (str (build-withs withs) "SELECT " return-statement " FROM " (format-table table))
+    (str (build-withs withs) "SELECT " return-statement " FROM " (format-as-table table))
     (apply-filters filters)
     (apply-sorts sorts)
     (apply-limit limit)
@@ -149,29 +92,14 @@
   (clj-str/join " UNION ALL " (map #(str "(" % ")") queries)))
 
 (defn- build-subquery [query name]
-  (str "(" query ") AS " (format-table name)))
+  (str "(" query ") AS " (format-as-table name)))
 
 (defn- build-table-listing [select-fn]
   (let [return-statement (build-return-statement [:table_name] type-cast)]
     (build-select-no-with return-statement :information_schema.tables [[:= :table_schema "public"]] nil nil nil)))
 
-(defn build-key [table-name id]
-  (str (format-table table-name) "-" id))
-
-(defn destructure-key [key]
-  (let [index (.lastIndexOf key "-")
-        table-name (.substring key 0 index)
-        id (Integer/parseInt (.substring key (inc index) (.length key)))]
-    [table-name id]))
-
-(defn apply-kind-and-key
-  ([record] (apply-kind-and-key record (:kind record) (:id record)))
-  ([record table-name](apply-kind-and-key record table-name (:id record)))
-  ([record table-name id]
-    (assoc record :kind (format-table table-name) :key (build-key table-name id))))
-
 (defn insert-record [record]
-  (let [table-name (format-table (:kind record))
+  (let [table-name (format-as-table (:kind record))
         record (dissoc record :kind)
         query (build-insert table-name record)]
     [table-name query]))
@@ -249,8 +177,10 @@
           (recur more schema dist-cols))))))
 
 (defn column-listing [select-fn]
-  (let [return-statement (build-return-statement [:tables.table_name :column_name :data_type] type-cast)]
-    (build-select-no-with return-statement (str "information_schema.columns AS columns, " (build-subquery (build-table-listing select-fn) :tables)) [[:= :columns.table_name :tables.table_name]] nil nil nil)))
+  (let [projection (build-return-statement [:tables.table_name :column_name :data_type] type-cast)
+        table-listing-query (build-subquery (build-table-listing select-fn) :tables)]
+    (with-redefs [format-as-value format-as-column]
+      (build-select-no-with projection (str "information_schema.columns AS columns, " table-listing-query) [[:= :columns.table_name :tables.table_name]] nil nil nil))))
 
 (defn get-schema-and-distinct-columns []
   (let [column-listing-query (column-listing build-select)]

@@ -1,11 +1,65 @@
-(ns hyperion.sql.format)
+(ns hyperion.sql.format
+  (:require
+    [clojure.string :as str]))
 
-(defmulti format-table type)
-(defmethod format-table java.lang.String [val] val)
-(defmethod format-table clojure.lang.Keyword [val] (name val))
+(defprotocol FormattableAsTable
+  (format-as-table [this]))
 
-(defmulti format-value type)
-;(defmethod format-value clojure.lang.Sequential [val] (str "(" (clj-str/join ", " (map format-value val)) ")"))
-;(defmethod format-value java.util.Date [val] (format-value (str val)))
-;(defmethod format-value nil [val] "NULL")
-(defmethod format-value :default [val] (str val))
+(defprotocol FormattableAsColumn
+  (format-as-column [this]))
+
+(defprotocol FormattableAsOperator
+  (format-as-operator [this]))
+
+(defprotocol FormattableAsValue
+  (format-as-value [this]))
+
+(extend-type java.lang.String
+  FormattableAsTable
+  (format-as-table [this] this)
+
+  FormattableAsColumn
+  (format-as-column [this] this)
+
+  FormattableAsOperator
+  (format-as-operator [this] this)
+
+  FormattableAsValue
+  (format-as-value [this] (str "'" this "'")))
+
+(extend-type clojure.lang.Keyword
+  FormattableAsTable
+  (format-as-table [this] (format-as-table (name this)))
+
+  FormattableAsColumn
+  (format-as-column [this] (format-as-column (name this)))
+
+  FormattableAsOperator
+  (format-as-operator [this] (format-as-operator (name this)))
+
+  FormattableAsValue
+  (format-as-value [this] (format-as-value (name this))))
+
+(extend-type clojure.lang.Sequential
+  FormattableAsColumn
+  (format-as-column [this]
+    (str "(" (str/join ", " (map format-as-column this)) ")"))
+
+  FormattableAsValue
+  (format-as-value [this]
+    (str "(" (str/join ", " (map format-as-value this)) ")")))
+
+(extend-protocol FormattableAsValue
+  java.lang.Number
+  (format-as-value [this] (str this))
+
+  clojure.lang.Sequential
+  (format-as-value [this]
+    (str "(" (str/join ", " (map format-as-value this)) ")"))
+
+  java.util.Date
+  (format-as-value [this]
+    (format-as-value (str this)))
+
+  nil
+  (format-as-value [this] "NULL"))
