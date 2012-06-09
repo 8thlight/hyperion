@@ -86,37 +86,40 @@
               (should= #{1 44 45} (set (map :inti (find :filters [[:!= :inti 12] [:!= :inti 23] [:!= :inti 34]]))))
               (should= #{1 44 45} (set (map :inti (find :filters [[:not :inti 12] [:not :inti 23] [:not :inti 34]])))))
 
-           (it "applies filters to with strings"
-             (should= #{"one" "forty4" "forty5"} (set (map :data (find :filters [:< :data "qux"]))))
-             (should= #{"one" "forty4" "forty5"} (set (map :data (find :filters [:<= :data "one"]))))
-             (should= #{"the one" "twelve" "twenty3" "thirty4"} (set (map :data (find :filters [:> :data "qux"]))))
-             (should= #{"twelve" "twenty3" "thirty4"} (set (map :data (find :filters [:>= :data "thirty4"]))))
-             (should= #{"one"} (set (map :data (find :filters [:= :data "one"]))))
-             (should= #{"the one" "twelve" "twenty3" "thirty4" "forty4" "forty5"} (set (map :data (find :filters [:!= :data "one"]))))
-             (should= #{"one" "twelve"} (set (map :data (find :filters [:in :data ["one" "twelve"]]))))
-             (should= #{} (set (map :data (find :filters [[:> :data "qux"] [:< :data "qux"]]))))
-             (should= #{"the one" "thirty4"  "forty4" "forty5"} (set (map :data (find :filters [[:!= :data "one"] [:!= :data "twelve"] [:!= :data "twenty3"]])))))
+            (it "applies filters to with strings"
+              (should= #{"one" "forty4" "forty5"} (set (map :data (find :filters [:< :data "qux"]))))
+              (should= #{"one" "forty4" "forty5"} (set (map :data (find :filters [:<= :data "one"]))))
+              (should= #{"the one" "twelve" "twenty3" "thirty4"} (set (map :data (find :filters [:> :data "qux"]))))
+              (should= #{"twelve" "twenty3" "thirty4"} (set (map :data (find :filters [:>= :data "thirty4"]))))
+              (should= #{"one"} (set (map :data (find :filters [:= :data "one"]))))
+              (should= #{"the one" "twelve" "twenty3" "thirty4" "forty4" "forty5"} (set (map :data (find :filters [:!= :data "one"]))))
+              (should= #{"one" "twelve"} (set (map :data (find :filters [:in :data ["one" "twelve"]]))))
+              (should= #{} (set (map :data (find :filters [[:> :data "qux"] [:< :data "qux"]]))))
+              (should= #{"the one" "thirty4"  "forty4" "forty5"} (set (map :data (find :filters [[:!= :data "one"] [:!= :data "twelve"] [:!= :data "twenty3"]])))))
 
-           (it "applies sorts"
-             (should= [1 1 12 23 34 44 45] (map :inti (find :sorts [:inti :asc])))
-             (should= [45 44 34 23 12 1 1] (map :inti (find :sorts [:inti :desc])))
-             (should= [44 45 1 1 34 12 23] (map :inti (find :sorts [:data :asc])))
-             (should= [23 12 34 1 1 45 44] (map :inti (find :sorts [:data :desc])))
-             (should= ["one" "the one" "twelve" "twenty3" "thirty4" "forty4" "forty5"] (map :data (find-by-kind "testing" :sorts [[:inti :asc] [:data :asc]])))
-             (should= [44 45 1 1 34 12 23] (map :inti (find-by-kind "testing" :sorts [[:data :asc] [:inti :asc]]))))
+            (it "applies sorts"
+              (should= [1 1 12 23 34 44 45] (map :inti (find :sorts [:inti :asc])))
+              (should= [45 44 34 23 12 1 1] (map :inti (find :sorts [:inti :desc])))
+              (should= [44 45 1 1 34 12 23] (map :inti (find :sorts [:data :asc])))
+              (should= [23 12 34 1 1 45 44] (map :inti (find :sorts [:data :desc])))
+              (should= ["one" "the one" "twelve" "twenty3" "thirty4" "forty4" "forty5"] (map :data (find-by-kind "testing" :sorts [[:inti :asc] [:data :asc]])))
+              (should= [44 45 1 1 34 12 23] (map :inti (find-by-kind "testing" :sorts [[:data :asc] [:inti :asc]]))))
 
-           (it "sorts treat nil as last"
-             (let [no-inti (save {:kind "testing" :inti nil :data "mo"})
-                   no-data (save {:kind "testing" :inti 25 :data nil})]
-               (should= no-inti (last (find :sorts [:inti :asc])))
-               (should= no-inti (first (find :sorts [:inti :desc])))
-               (should= no-data (last (find :sorts [:data :asc])))
-               (should= no-data (first (find :sorts [:data :desc])))))
+            (it "sorts treat nil as last"
+              (let [no-inti (save {:kind "testing" :inti nil :data "mo"})
+                    no-data (save {:kind "testing" :inti 25 :data nil})]
+                (should= no-inti (last (find :sorts [:inti :asc])))
+                (should= no-inti (first (find :sorts [:inti :desc])))
+                (should= no-data (last (find :sorts [:data :asc])))
+                (should= no-data (first (find :sorts [:data :desc])))))
 
-    (it "applies limit and offset"
-      (should= [1 1] (map :inti (find :sorts [:inti :asc] :limit 2)))
-      (should= [12 23] (map :inti (find :sorts [:inti :asc] :limit 2 :offset 2)))
-      (should= [34 44] (map :inti (find :sorts [:inti :asc] :limit 2 :offset 4))))))))
+            (it "applies limit and offset"
+              (should= [1 1] (map :inti (find :sorts [:inti :asc] :limit 2)))
+              (should= [12 23] (map :inti (find :sorts [:inti :asc] :limit 2 :offset 2)))
+              (should= [34 44] (map :inti (find :sorts [:inti :asc] :limit 2 :offset 4)))
+              (should= [45 44] (map :inti (find :sorts [:inti :desc] :limit 2)))
+              (should= [34 23] (map :inti (find :sorts [:inti :desc] :limit 2 :offset 2)))
+              (should= [12 1] (map :inti (find :sorts [:inti :desc] :limit 2 :offset 4))))))))
 
     (it "counts by kind"
       (should= 7 (count-by-kind "testing"))
@@ -125,6 +128,11 @@
     (it "finds the items by key"
       (let [one (save {:kind "testing" :data "my stuff"})]
         (should= one (find-by-key (:key one)))))
+
+    (it "finds the items by keys"
+      (let [one (save {:kind "testing" :data "my stuff"})
+            two (save {:kind "testing" :data "my other stuff"})]
+        (should= [one two] (find-by-keys [(:key one) (:key two)]))))
 
     (context "with multiple kinds"
       (before

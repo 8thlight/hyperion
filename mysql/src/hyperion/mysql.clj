@@ -128,6 +128,23 @@
   (let [[table-name id] (destructure-key key)]
     (first (find-by-kind table-name [[:= :id id]] nil nil nil))))
 
+(defn sort-ids-by-table [keys]
+  (reduce
+    (fn [acc -key]
+      (let [[table-name id] (destructure-key -key)]
+        (update-in acc [table-name]
+          (fn [keys] (if (nil? keys) [id] (cons id keys))))))
+    {}
+    keys))
+
+(defn find-by-keys [keys]
+  (let [records
+        (for [[table-name ids] (sort-ids-by-table keys)]
+          (find-by-kind table-name [[:in :id ids]] nil nil nil))]
+    (->> records
+      (flatten)
+      (filter #(not (nil? %))))))
+
 (defn- count-records-by-kind [kind filters]
   (let [query (build-select "COUNT(*)" kind filters nil nil nil)]
     (sql/with-query-results results [query]
@@ -208,21 +225,17 @@
 
 (deftype MySqlDatastore [database-name]
   Datastore
-  (ds->kind [this thing] (if (string? thing) thing nil))
-  (ds->ds-key [this thing] (if (string? thing) thing nil))
-  (ds->string-key [this thing] thing)
   (ds-save [this record] (save-record record))
   (ds-save* [this records] (save-records records))
   (ds-delete [this keys] (delete-records keys))
   (ds-count-by-kind [this kind filters options] (count-records-by-kind kind filters))
   (ds-count-all-kinds [this filters options] (count-records-by-all-kinds database-name filters))
   (ds-find-by-key [this key] (find-by-key key))
+  (ds-find-by-keys [this keys] (find-by-keys keys))
   (ds-find-by-kind [this kind filters sorts limit offset options]
     (find-by-kind kind filters sorts limit offset))
   (ds-find-all-kinds [this filters sorts limit offset options]
-    (find-records-by-all-kinds database-name filters sorts limit offset))
-  (ds-native->entity [this entity] entity)
-  (ds-entity->native [this map] map))
+    (find-records-by-all-kinds database-name filters sorts limit offset)))
 
 (defn new-mysql-datastore [database-name]
   (MySqlDatastore. database-name))

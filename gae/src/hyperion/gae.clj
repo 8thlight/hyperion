@@ -10,11 +10,6 @@
     [com.google.appengine.api.datastore Entity Entities Query DatastoreServiceFactory Query$FilterOperator
      Query$SortDirection FetchOptions$Builder EntityNotFoundException KeyFactory Key]))
 
-(defn ->kind [thing]
-  (if (isa? (class thing) Entity)
-    (.getKind thing)
-    nil))
-
 (defn create-key [kind id]
   (if (number? id)
     (KeyFactory/createKey kind (long id))
@@ -50,16 +45,17 @@
 (defn <-native [native]
   (reduce
     (fn [entity entry] (assoc entity (keyword (key entry)) (val entry)))
-    {:kind (.getKind native) :key (key->string (.getKey native))}
+    {:kind (.getKind native)
+     :key (key->string (.getKey native))}
     (.getProperties native)))
 
-(defn save-native [service native]
-  (.put service native)
-  native)
+(defn save-native [service record]
+  (let [native (->native record)]
+    (.put service native)
+    (<-native native)))
 
 (defn delete-records [service keys]
   (.delete service (map ->key keys)))
-
 
 (def filter-operators {:= Query$FilterOperator/EQUAL
                        :< Query$FilterOperator/LESS_THAN
@@ -73,14 +69,14 @@
                       :desc Query$SortDirection/DESCENDING})
 
 (defn build-query [service kind filters sorts options]
-  (let [spec (get @*entity-specs* kind)]
-    (let [query (if kind (Query. (name kind)) (Query.))]
-      (doseq [[operator field value] filters]
-        (.addFilter query (name field) (get filter-operators operator)
-          (pack-field (:packer (get spec field)) value)))
-      (doseq [[field direction] sorts]
-        (.addSort query (name field) (get sort-directions direction)))
-      (.prepare service query))))
+  (let [spec (get @*entity-specs* kind)
+        query (Query. (name kind))]
+    (doseq [[operator field value] filters]
+      (.addFilter query (name field) (get filter-operators operator)
+        (pack-field (:packer (get spec field)) value)))
+    (doseq [[field direction] sorts]
+      (.addSort query (name field) (get sort-directions direction)))
+    (.prepare service query)))
 
 (defn build-fetch-options [limit offset options]
   (let [prefetch-size (:prefetch-size options)
@@ -96,11 +92,39 @@
       (when end-cursor (.endCursor fetch-options end-cursor))
       fetch-options)))
 
+(defn- ->compare-fn [spec]
+  (let [field (first spec)
+        multiplier (if (= :desc (second spec)) -1 1)]
+    (fn [a b]
+      (* multiplier
+        (let [av (get a field)
+              bv (get b field)]
+          (cond
+            (and (nil? av) (nil? bv)) 0
+            (nil? av) 1
+            (nil? bv) -1
+            :else (.compareTo av bv)))))))
+
+(defn- build-comparator [sorts]
+  (let [compare-fns (map ->compare-fn sorts)]
+    (proxy [java.util.Comparator] []
+      (compare [a b]
+        (or
+          (some
+            #(if (zero? %) false %)
+            (map (fn [compare-fn] (compare-fn a b)) compare-fns))
+          0)))))
+
+(defn apply-sorts [sorts records]
+  (if (empty? sorts)
+    records
+    (sort (build-comparator sorts) records)))
+
 (defn find-by-kind [service kind filters sorts limit offset options]
   (let [query (build-query service kind filters sorts options)
         fetching (build-fetch-options limit offset options)]
     (let [results (.asQueryResultIterator query fetching)]
-      (iterator-seq results))))
+      (apply-sorts sorts (map <-native (iterator-seq results))))))
 
 (defn count-by-kind [service kind filters options]
   (.countEntities
@@ -110,14 +134,15 @@
 (defn find-by-key [service value]
   (when-let [key (->key value)]
     (try
-      (.get service key)
+      (<-native (.get service key))
       (catch EntityNotFoundException e
         nil))))
 
 (defn find-by-keys [service ^Iterable keys]
   (let [keys (filter identity (map ->key keys))
-        result-map (.get service keys)]
-    (map #(get result-map %) keys)))
+        result-map (.get service keys)
+        from-native #(if (nil? %) % (<-native %))]
+    (map #(from-native (get result-map %)) keys)))
 
 (defn- all-kinds [service]
   (let [query (.prepare service (Query. Entities/KIND_METADATA_KIND))
@@ -131,9 +156,11 @@
 
 (defn find-by-all-kinds [service filters sorts limit offset options]
   (let [kinds (all-kinds service)
-        results-for-all-kinds (flatten (map #(find-by-kind service % filters sorts limit offset options) kinds))
-        non-nil-results (filter #(not (nil? %)) results-for-all-kinds)]
-    (apply-limit limit non-nil-results)))
+        results (flatten (map #(find-by-kind service % filters sorts limit offset options) kinds))]
+    (->> results
+      (filter #(not (nil? %)))
+      (apply-sorts sorts)
+      (apply-limit limit))))
 
 (defn count-by-all-kinds [service filters options]
   (let [kinds (all-kinds service)]
@@ -141,9 +168,6 @@
 
 (deftype GaeDatastore [service]
   Datastore
-  (ds->kind [this thing] (->kind thing))
-  (ds->ds-key [this thing] (->key thing))
-  (ds->string-key [this thing] (string->key thing))
   (ds-save [this native] (save-native service native))
   (ds-save* [this natives] (doall (for [native natives] (save-native service native))))
   (ds-delete [this keys] (delete-records service keys))
@@ -154,9 +178,7 @@
   (ds-find-by-kind [this kind filters sorts limit offset options]
     (find-by-kind service kind filters sorts limit offset options))
   (ds-find-all-kinds [this filters sorts limit offset options]
-    (find-by-all-kinds service filters sorts limit offset options))
-  (ds-native->entity [this native] (<-native native))
-  (ds-entity->native [this entity] (->native entity)))
+    (find-by-all-kinds service filters sorts limit offset options)))
 
 (defn new-gae-datastore
   ([] (GaeDatastore. (DatastoreServiceFactory/getDatastoreService)))

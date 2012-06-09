@@ -10,9 +10,6 @@
 (def DS (atom nil))
 
 (defprotocol Datastore
-  (ds->kind [this thing])
-  (ds->ds-key [this thing])
-  (ds->string-key [this thing])
   (ds-save [this record])
   (ds-save* [this records])
   (ds-delete [this keys])
@@ -21,9 +18,7 @@
   (ds-find-by-key [this key])
   (ds-find-by-keys [this keys])
   (ds-find-by-kind [this kind filters sorts limit offset options])
-  (ds-find-all-kinds [this filters sorts limit offset options])
-  (ds-native->entity [this entity])
-  (ds-entity->native [this record]))
+  (ds-find-all-kinds [this filters sorts limit offset options]))
 
 (defn ds []
   (if (bound? #'*ds*)
@@ -37,11 +32,8 @@
   (or (:key thing) thing))
 
 (defn ->kind [thing]
-  (or
-    (if-let [kind (:kind thing)]
-      (name kind)
-      nil)
-    (ds->kind (ds) thing)))
+  (if-let [kind (:kind thing)]
+    (name kind)))
 
 (defn kind [thing]
   (->kind thing))
@@ -119,25 +111,24 @@
           spec (spec-for kind)]
       (native->specced-entity entity kind spec)))
   ([entity kind spec]
-    (let [key (ds->string-key (ds) entity)
-          record ((:*ctor* spec) key)]
+    (let [record ((:*ctor* spec) entity)]
       (after-load
         (reduce
           (fn [record [field value]]
             (let [field (keyword field)]
               (assoc record field (unpack-field (:unpacker (field spec)) value))))
           record
-          (ds-native->entity (ds) entity))))))
+          entity)))))
 
 (defn- native->unspecced-entity [entity kind]
   (after-load
     (reduce
       (fn [record entry] (assoc record (keyword (key entry)) (val entry)))
-      {:kind kind :key (ds->string-key (ds) entity)}
-      (ds-native->entity (ds) entity))))
+      {:kind kind :key (:key entity)}
+      entity)))
 
 (defmethod native->entity :default [entity]
-  (let [kind (ds->kind (ds) entity)
+  (let [kind (->kind entity)
         spec (spec-for kind)]
     (if spec
       (native->specced-entity entity kind spec)
@@ -147,8 +138,7 @@
   (->native [this]))
 
 (defn- unspecced-entity->native [record kind]
-  (ds-entity->native (ds)
-    (assoc record :kind (->kind record))))
+  (assoc record :kind (->kind record)))
 
 (defn specced-entity->native
   ([record]
@@ -156,12 +146,11 @@
           spec (spec-for kind)]
       (specced-entity->native record kind spec)))
   ([record kind spec]
-    (ds-entity->native (ds)
-      (reduce
-        (fn [marshaled [field attrs]]
-          (assoc marshaled field (pack-field (:packer (field spec)) (field record))))
-        {:key (:key record) :kind (->kind record)}
-        (dissoc spec :*ctor*)))))
+    (reduce
+      (fn [marshaled [field attrs]]
+        (assoc marshaled field (pack-field (:packer (field spec)) (field record))))
+      {:key (:key record) :kind (->kind record)}
+      (dissoc spec :*ctor*))))
 
 (extend-type clojure.lang.APersistentMap
   EntityRecord
