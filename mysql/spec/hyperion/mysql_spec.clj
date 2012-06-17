@@ -1,9 +1,10 @@
 (ns hyperion.mysql-spec
+  (:use
+    [speclj.core]
+    [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
+    [hyperion.core :only [*ds*]]
+    [hyperion.mysql :only [new-mysql-datastore]])
   (:require
-    [speclj.core :refer :all]
-    [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
-    [hyperion.core :refer [*ds*]]
-    [hyperion.mysql :refer [new-mysql-datastore]]
     [clojure.java.jdbc :as sql]))
 
 (describe "MySQL Datastore"
@@ -17,6 +18,7 @@
           :testing
           [:id :serial "PRIMARY KEY"]
           [:name "VARCHAR(32)"]
+          [:first_name "VARCHAR(32)"]
           [:birthdate :date]
           [:inti :int]
           [:data "VARCHAR(32)"]
@@ -25,6 +27,8 @@
           :other_testing
           [:id :serial "PRIMARY KEY"]
           [:inti :int]
+          [:name "VARCHAR(32)"]
+          [:first_name "VARCHAR(32)"]
           [:data "VARCHAR(32)"]
           :table-spec "ENGINE=InnoDB" "")
         (binding [*ds* (new-mysql-datastore "hyperion")]

@@ -1,11 +1,13 @@
 (ns hyperion.postgres-spec
+  (:use
+    [speclj.core]
+    [hyperion.core :only [*ds*]]
+    [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
+    [hyperion.postgres :only [new-postgres-datastore]]
+    )
   (:require
     [clojure.string :as str]
-    [clojure.java.jdbc :as sql]
-    [speclj.core :refer :all]
-    [hyperion.core :refer [*ds*]]
-    [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
-    [hyperion.postgres :refer [new-postgres-datastore]]))
+    [clojure.java.jdbc :as sql]))
 
 (describe "Postgres Datastore"
   (with connection {:subprotocol "postgresql"
@@ -18,6 +20,7 @@
           :testing
           [:id :serial "PRIMARY KEY"]
           [:name "VARCHAR(32)"]
+          [:first_name "VARCHAR(32)"]
           [:birthdate :date]
           [:inti :int]
           [:data "VARCHAR(32)"])
@@ -25,6 +28,8 @@
           :other_testing
           [:id :serial "PRIMARY KEY"]
           [:inti :int]
+          [:name "VARCHAR(32)"]
+          [:first_name "VARCHAR(32)"]
           [:data "VARCHAR(32)"])
         (binding [*ds* (new-postgres-datastore)]
           (it))

@@ -1,7 +1,7 @@
 (ns hyperion.sql.key-spec
-  (:require
-    [speclj.core :refer :all]
-    [hyperion.sql.key :refer :all]))
+  (:use
+    [speclj.core]
+    [hyperion.sql.key]))
 
 (describe "Sql keys"
   (context "key building"
@@ -16,4 +16,14 @@
       (should= ["account", 1] (destructure-key "account-1")))
 
     (it "destructures multiple word table name"
-      (should= ["account-one-two", 1] (destructure-key "account-one-two-1")))))
+      (should= ["account-one-two", 1] (destructure-key "account-one-two-1")))
+
+    (context "improper data"
+      (it "handles no dash"
+        (should= ["something", nil] (destructure-key "something")))
+
+      (it "handles nil"
+        (should= ["", nil] (destructure-key nil)))
+
+      (it "handles empty string"
+        (should= ["", nil] (destructure-key ""))))))

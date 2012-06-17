@@ -1,12 +1,12 @@
 (ns hyperion.dev.spec
-  (:require
-    [speclj.core :refer :all]
-    [hyperion.core :refer :all]))
+  (:use
+    [speclj.core]
+    [hyperion.core]))
 
 (defn it-saves []
   (context "save"
     (it "saves a map with kind as a string and returns it"
-      (let [record (save {:kind "testing" :name "ann"})]
+      (let [record (save {:kind "testing" :name "ann" :key nil})]
         (should= "testing" (:kind record))
         (should= "ann" (:name record))))
 
@@ -16,10 +16,10 @@
         (should= "ann" (:name record))))
 
     (it "it saves an existing record"
-      (let [record1 (save {:kind "testing" :name "ann"})
+      (let [record1 (save {:kind "other-testing" :name "ann"})
             record2 (save (assoc record1 :name "james"))]
         (should= (:key record1) (:key record2))
-        (should= 1 (count (find-by-kind "testing")))))
+        (should= 1 (count (find-by-kind "other-testing")))))
 
     (it "assigns key to new records"
       (let [record (save {:kind "testing" :name "ann"})]
@@ -74,17 +74,17 @@
               (should (every? #(= "testing" (:kind %)) (find))))
 
             (it "applies filters to with ints"
-              (should= #{1 12 23} (set (map :inti (find :filters [:< :inti 25]))))
-              (should= #{1 12 23} (set (map :inti (find :filters [:<= :inti 23]))))
-              (should= #{34 44 45} (set (map :inti (find :filters [:> :inti 25]))))
-              (should= #{34 44 45} (set (map :inti (find :filters [:>= :inti 34]))))
-              (should= #{34} (set (map :inti (find :filters [:= :inti 34]))))
-              (should= #{1 12 23 44 45} (set (map :inti (find :filters [:!= :inti 34]))))
-              (should= #{12 34} (set (map :inti (find :filters [:in :inti [12 34]]))))
-              (should= #{12 34} (set (map :inti (find :filters [:contains? :inti [12 34]]))))
-              (should= #{} (set (map :inti (find :filters [[:< :inti 24] [:> :inti 25]]))))
-              (should= #{1 44 45} (set (map :inti (find :filters [[:!= :inti 12] [:!= :inti 23] [:!= :inti 34]]))))
-              (should= #{1 44 45} (set (map :inti (find :filters [[:not :inti 12] [:not :inti 23] [:not :inti 34]])))))
+              (should= #{1 12 23} (set (map #(int (:inti %)) (find :filters [:< :inti 25]))))
+              (should= #{1 12 23} (set (map #(int (:inti %)) (find :filters [:<= :inti 23]))))
+              (should= #{34 44 45} (set (map #(int (:inti %)) (find :filters [:> :inti 25]))))
+              (should= #{34 44 45} (set (map #(int (:inti %)) (find :filters [:>= :inti 34]))))
+              (should= #{34} (set (map #(int (:inti %)) (find :filters [:= :inti 34]))))
+              (should= #{1 12 23 44 45} (set (map #(int (:inti %)) (find :filters [:!= :inti 34]))))
+              (should= #{12 34} (set (map #(int (:inti %)) (find :filters [:in :inti [12 34]]))))
+              (should= #{12 34} (set (map #(int (:inti %)) (find :filters [:contains? :inti [12 34]]))))
+              (should= #{} (set (map #(int (:inti %)) (find :filters [[:< :inti 24] [:> :inti 25]]))))
+              (should= #{1 44 45} (set (map #(int (:inti %)) (find :filters [[:!= :inti 12] [:!= :inti 23] [:!= :inti 34]]))))
+              (should= #{1 44 45} (set (map #(int (:inti %)) (find :filters [[:not :inti 12] [:not :inti 23] [:not :inti 34]])))))
 
             (it "applies filters to with strings"
               (should= #{"one" "forty4" "forty5"} (set (map :data (find :filters [:< :data "qux"]))))
@@ -114,12 +114,18 @@
                 (should= no-data (first (find :sorts [:data :desc])))))
 
             (it "applies limit and offset"
-              (should= [1 1] (map :inti (find :sorts [:inti :asc] :limit 2)))
+              (should= [12 23 34 44 45] (map :inti (find :sorts [:inti :asc] :offset 2)))
               (should= [12 23] (map :inti (find :sorts [:inti :asc] :limit 2 :offset 2)))
               (should= [34 44] (map :inti (find :sorts [:inti :asc] :limit 2 :offset 4)))
               (should= [45 44] (map :inti (find :sorts [:inti :desc] :limit 2)))
               (should= [34 23] (map :inti (find :sorts [:inti :desc] :limit 2 :offset 2)))
-              (should= [12 1] (map :inti (find :sorts [:inti :desc] :limit 2 :offset 4))))))))
+              (should= [12 1] (map :inti (find :sorts [:inti :desc] :limit 2 :offset 4))))
+
+            (it "applies formating to filters with dashes"
+              (let [with-dashes (save {:kind "testing" :first-name "sam"})
+                    found-record (first (find :filters [[:= :first-name "sam"]]))]
+                (should= with-dashes found-record)
+                (should= "sam" (:first-name found-record))))))))
 
     (it "counts by kind"
       (should= 7 (count-by-kind "testing"))
@@ -129,6 +135,12 @@
       (let [one (save {:kind "testing" :data "my stuff"})]
         (should= one (find-by-key (:key one)))))
 
+    (it "returns nil for bad input to find-by-key"
+      (should= nil (find-by-key nil))
+      (should= nil (find-by-key ""))
+      (should= nil (find-by-key "asldjfa"))
+      (should= [] (find-by-kind "asldfjasd")))
+
     (it "finds the items by keys"
       (let [one (save {:kind "testing" :data "my stuff"})
             two (save {:kind "testing" :data "my other stuff"})]
@@ -136,14 +148,18 @@
 
     (context "with multiple kinds"
       (before
-        (save* [{:kind "other_testing" :inti 56 :data "fifty6"}]))
+        (save* [{:kind "other-testing" :inti 56 :data "fifty6"}
+                {:kind "other-testing" :inti 20 :data "twenty"}]))
 
       (it "finds by all kinds (find-all-kinds)"
-        (should= [1 1 12 23 34 44 45 56] (sort (map :inti (find-all-kinds))))
+        (should= [1 1 12 20 23 34 44 45 56] (map :inti (find-all-kinds :sorts [[:inti :asc]])))
+        (should= [1 1 12 20] (map :inti (find-all-kinds :sorts [[:inti :asc]] :limit 4)))
+        (should= [23 34 44 45 56] (map :inti (find-all-kinds :sorts [[:inti :asc]] :offset 4)))
+        (should= [44 45] (map :inti (find-all-kinds :offset 6 :limit 2 :sorts [[:inti :asc]])))
         (should= [34 44 45 56] (map :inti (find-all-kinds :filters [:> :inti 30] :sorts [:inti :asc]))))
 
       (it "counts by all kinds (count-all-kinds)"
-        (should= 8 (count-all-kinds))
+        (should= 9 (count-all-kinds))
         (should= 4 (count-all-kinds :filters [:> :inti 30] :sorts [:inti :asc])))
 
       (it "finds all records by kind"

@@ -1,8 +1,9 @@
 (ns hyperion.sql.query-builder
+  (:use
+    [hyperion.sql.key :only [build-key]]
+    [hyperion.sql.format])
   (:require
-    [clojure.string :as str]
-    [hyperion.sql.key :refer [build-key]]
-    [hyperion.sql.format :refer :all]))
+    [clojure.string :as str]))
 
 (defn- build-filter
   ([filter] (build-filter filter (first filter)))
@@ -24,20 +25,10 @@
   ([record] (apply-kind-and-key record (:kind record) (:id record)))
   ([record table-name](apply-kind-and-key record table-name (:id record)))
   ([record table-name id]
-    (dissoc (assoc record :kind (format-as-table table-name) :key (build-key table-name id)) :id)))
+    (dissoc (assoc record :kind (format-as-kind table-name) :key (build-key table-name id)) :id)))
 
 (defn apply-filters [query filters]
   (if (empty? filters)
     query
     (let [where-clause (str "WHERE " (str/join " AND " (map filter->sql filters)))]
       (str query " " where-clause))))
-
-(defn apply-limit [query limit]
-  (if (nil? limit)
-    query
-    (str query " LIMIT " limit)))
-
-(defn apply-offset [query offset]
-  (if (nil? offset)
-    query
-    (str query " OFFSET " offset)))

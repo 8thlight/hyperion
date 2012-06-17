@@ -1,13 +1,17 @@
 (ns hyperion.postgres
+  (:use
+    [hyperion.core :only [Datastore new?]]
+    [hyperion.sql.format]
+    [hyperion.sql.key]
+    [hyperion.sql.query-builder])
   (:require
     [clojure.java.jdbc :as sql]
     [clojure.string :as clj-str]
     [clojure.set :as clj-set]
-    [hyperion.core :refer [Datastore new?]]
-    [hyperion.sql.format :refer :all]
-    [hyperion.sql.key :refer :all]
-    [hyperion.sql.query-builder :refer :all]
-    [clojure.java.jdbc.internal :as sql-internal]))
+    [clojure.java.jdbc.internal :as sql-internal])
+  (:import
+    [org.postgresql.util PSQLException]
+    [java.util.regex Matcher Pattern]))
 
 (defn- format-type [pg-type]
   (if (isa? (type pg-type) clojure.lang.Keyword)
@@ -28,6 +32,16 @@
     query
     (let [order-by-clause (str "ORDER BY " (clj-str/join ", " (map sort->sql sorts)))]
       (str query " " order-by-clause))))
+
+(defn apply-limit [query limit]
+  (if (nil? limit)
+    query
+    (str query " LIMIT " limit)))
+
+(defn apply-offset [query offset]
+  (if (nil? offset)
+    query
+    (str query " OFFSET " offset)))
 
 (defn build-with [[name query]]
   (str (format-as-table name) " AS (" query  ")"))
@@ -91,16 +105,9 @@
 (defn build-union-all [queries]
   (clj-str/join " UNION ALL " (map #(str "(" % ")") queries)))
 
-(defn- build-subquery [query name]
-  (str "(" query ") AS " (format-as-table name)))
-
-(defn- build-table-listing [select-fn]
-  (let [return-statement (build-return-statement [:table_name] type-cast)]
-    (build-select-no-with return-statement :information_schema.tables [[:= :table_schema "public"]] nil nil nil)))
-
 (defn insert-record [record]
-  (let [table-name (format-as-table (:kind record))
-        record (dissoc record :kind)
+  (let [table-name (:kind record)
+        record (dissoc record :kind :key)
         query (build-insert table-name record)]
     [table-name query]))
 
@@ -117,7 +124,7 @@
             insert-record
             update-record) record)
         result (sql-internal/do-prepared-return-keys* query nil)]
-    (apply-kind-and-key result table-name)))
+    (apply-kind-and-key (format-record-from-database result) table-name)))
 
 (defn save-records [records]
   (doall (map #(save-record %) records)))
@@ -137,16 +144,28 @@
       results [query]
       (:count (first results)))))
 
+(def table-not-exist-pattern (Pattern/compile "ERROR: relation (.*) does not exist"))
+
+(defn table-not-exist-error? [e]
+  (let [message (.getMessage e)
+        matcher (.matcher table-not-exist-pattern message)]
+    (.find matcher)))
+
 (defn find-records-by-kind [kind filters sorts limit offset]
   (let [query (select-all nil kind filters sorts limit offset)]
+    (try
     (sql/with-query-results
       results [query]
-      (doall (map #(apply-kind-and-key % kind) results)))))
+      (doall (map #(apply-kind-and-key (format-record-from-database %) kind) results)))
+      (catch PSQLException e
+        (if (table-not-exist-error? e)
+          []
+          (throw e))))))
 
 (defn find-record-by-key [key]
-  (let [[table-name id] (destructure-key key)
-        records (find-records-by-kind table-name [[:= :id id]] nil nil nil)]
-    (first records)))
+  (let [[table-name id] (destructure-key key)]
+    (when-not (empty? table-name)
+      (first (find-records-by-kind table-name [[:= :id id]] nil nil nil)))))
 
 (defn sort-ids-by-table [keys]
   (reduce
@@ -176,17 +195,13 @@
               dist-cols (conj dist-cols col)]
           (recur more schema dist-cols))))))
 
-(defn column-listing [select-fn]
-  (let [projection (build-return-statement [:tables.table_name :column_name :data_type] type-cast)
-        table-listing-query (build-subquery (build-table-listing select-fn) :tables)]
-    (with-redefs [format-as-value format-as-column]
-      (build-select-no-with projection (str "information_schema.columns AS columns, " table-listing-query) [[:= :columns.table_name :tables.table_name]] nil nil nil))))
+(def column-listing-query
+ "SELECT \"tables\".\"table_name\", \"column_name\", \"data_type\" FROM \"information_schema\".\"columns\" AS \"columns\", (SELECT \"table_name\" FROM \"information_schema\".\"tables\" WHERE \"table_schema\" = 'public') AS \"tables\" WHERE \"columns\".\"table_name\" = \"tables\".\"table_name\"")
 
 (defn get-schema-and-distinct-columns []
-  (let [column-listing-query (column-listing build-select)]
-    (sql/with-query-results
-      results [column-listing-query]
-      (parse-column-listing results))))
+  (sql/with-query-results
+    results [column-listing-query]
+    (parse-column-listing results)))
 
 (defn seq-contains? [coll item]
   (some #(= % item) coll))
@@ -211,7 +226,7 @@
 (defn clean-padding-and-apply-keys [record schema]
   (let [table-name (keyword (:table_name record))
         record (select-keys record (col-names (table-name schema)))]
-    (apply-kind-and-key record table-name)))
+    (apply-kind-and-key (format-record-from-database record) table-name)))
 
 (defn find-records-by-all-kinds [filters sorts limit offset]
   (let [[schema dist-cols] (get-schema-and-distinct-columns)

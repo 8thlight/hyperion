@@ -1,9 +1,9 @@
 (ns hyperion.dev.memory-spec
-  (:require
-    [speclj.core :refer :all]
-    [hyperion.core :refer [*ds*]]
-    [hyperion.memory :refer [new-memory-datastore]]
-    [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]))
+  (:use
+    [speclj.core]
+    [hyperion.core :only [*ds*]]
+    [hyperion.memory :only [new-memory-datastore]]
+    [hyperion.dev.spec :only [it-behaves-like-a-datastore]]))
 
 (describe "In Memory datastore"
   (around [it]

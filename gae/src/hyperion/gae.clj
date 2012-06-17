@@ -154,12 +154,18 @@
     (take limit results)
     results))
 
+(defn- apply-offset [offset results]
+  (if offset
+    (drop offset results)
+    results))
+
 (defn find-by-all-kinds [service filters sorts limit offset options]
   (let [kinds (all-kinds service)
-        results (flatten (map #(find-by-kind service % filters sorts limit offset options) kinds))]
+        results (flatten (map #(find-by-kind service % filters nil nil nil options) kinds))]
     (->> results
       (filter #(not (nil? %)))
       (apply-sorts sorts)
+      (apply-offset offset)
       (apply-limit limit))))
 
 (defn count-by-all-kinds [service filters options]

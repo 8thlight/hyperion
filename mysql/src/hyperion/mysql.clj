@@ -1,12 +1,20 @@
 (ns hyperion.mysql
+  (:use
+    [chee.string :only [snake-case]]
+    [hyperion.core :only [Datastore new?]]
+    [hyperion.sql.format]
+    [hyperion.sql.key]
+    [hyperion.sql.query-builder])
   (:require
     [clojure.java.jdbc :as sql]
     [clojure.string :as clj-str]
     [clojure.set :as clj-set]
-    [hyperion.core :refer [Datastore new?]]
-    [hyperion.sql.format :refer :all]
-    [hyperion.sql.key :refer :all]
-    [hyperion.sql.query-builder :refer :all]))
+    [clojure.java.jdbc.internal :as sql-internal])
+  (:import
+    [com.mysql.jdbc.exceptions.jdbc4 MySQLSyntaxErrorException]
+    [java.util.regex Matcher Pattern]))
+
+(reset! quote "`")
 
 (defn sort->sql [sort]
   (let [field (format-as-column (first sort))]
@@ -22,35 +30,42 @@
     (let [order-by-clause (str "ORDER BY " (clj-str/join ", " (map sort->sql sorts)))]
       (str query " " order-by-clause))))
 
+(defn apply-limit-and-offset [query limit offset]
+  (if (and (nil? offset) (nil? limit))
+    query
+    (let [limit (or limit 18446744073709551615)
+          offset (or offset 0)]
+      (str query " LIMIT " offset "," limit))))
+
 (defn- build-select [return-statement table filters sorts limit offset]
    (->
     (str "SELECT " return-statement " FROM " (format-as-table table))
     (apply-filters filters)
     (apply-sorts sorts)
-    (apply-limit limit)
-    (apply-offset offset)))
+    (apply-limit-and-offset limit offset)))
 
 (defn- update-record [record]
   (let [[table-name id] (destructure-key (:key record))
         record (dissoc record :kind :key)
-        select-query (build-select "*" table-name [[:= :id id]] nil nil nil)]
-    (sql/update-values table-name ["id=?" id] record)
-    (let [record (sql/with-query-results results [select-query] (first results))]
-      (apply-kind-and-key record table-name id))))
+        record (format-record-for-database record)]
+    (sql/update-values (snake-case table-name) ["id=?" id] record)
+    [table-name id]))
 
-(defn- insert-record [record]
-  (let [table-name (format-as-table (:kind record))
-        record (dissoc record :kind)]
-    (let [saved-record (first (sql/insert-records table-name record))
-          id (:generated_key saved-record)
-          select-query (build-select "*" table-name [[:= :id id]] nil nil nil)
-          record (sql/with-query-results results [select-query] (first results))]
-      (apply-kind-and-key record table-name id))))
+(defn insert-record [record]
+  (let [table-name (:kind record)
+        record (dissoc record :kind :key)
+        record (format-record-for-database record)
+        result (first (sql/insert-records (snake-case table-name) record))]
+    [table-name (:generated_key result)]))
 
-(defn- save-record [record]
-  (if (new? record)
-    (insert-record record)
-    (update-record record)))
+(defn save-record [record]
+  (let [[table-name id]
+        ((if (new? record)
+           insert-record
+           update-record) record)
+        select-query (build-select "*" table-name [[:= :id id]] nil nil nil)
+        record (sql/with-query-results results [select-query] (first results))]
+    (apply-kind-and-key (format-record-from-database record) table-name id)))
 
 (defn- save-records [records]
   (doall (map #(save-record %) records)))
@@ -63,14 +78,27 @@
   (doseq [key keys]
     (delete-record key)))
 
+(def table-not-exist-pattern (Pattern/compile "Table (.*) doesn't exist"))
+
+(defn table-not-exist-error? [e]
+  (let [message (.getMessage e)
+        matcher (.matcher table-not-exist-pattern message)]
+    (.find matcher)))
+
 (defn- find-by-kind [kind filters sorts limit offset]
   (let [query (build-select "*" kind filters sorts limit offset)]
-    (sql/with-query-results results [query]
-      (doall (map #(apply-kind-and-key % kind) results)))))
+    (try
+      (sql/with-query-results results [query]
+        (doall (map #(apply-kind-and-key (format-record-from-database %) kind) results)))
+      (catch MySQLSyntaxErrorException e
+        (if (table-not-exist-error? e)
+          []
+          (throw e))))))
 
 (defn- find-by-key [key]
   (let [[table-name id] (destructure-key key)]
-    (first (find-by-kind table-name [[:= :id id]] nil nil nil))))
+    (when-not (empty? table-name)
+      (first (find-by-kind table-name [[:= :id id]] nil nil nil)))))
 
 (defn sort-ids-by-table [keys]
   (reduce
@@ -105,14 +133,11 @@
               dist-cols (conj dist-cols col)]
           (recur more schema dist-cols))))))
 
-(defn- build-column-listing [select-fn database-name]
-  (let [table-listing-query (select-fn "table_name" :information_schema.tables [[:= :table_schema database-name]] nil nil nil)
-        table-listing-subquery (str "(" table-listing-query ") AS tables")]
-    (with-redefs [format-as-value format-as-column]
-      (select-fn "tables.table_name, column_name, data_type" (str "information_schema.columns AS columns, " table-listing-subquery) [[:= :columns.table_name :tables.table_name]] nil nil nil))))
+(defn column-listing-query [database]
+  (str "SELECT `tables`.`table_name`, `column_name`, `data_type` FROM `information_schema`.`columns` AS `columns`, (SELECT `table_name` FROM `information_schema`.`tables` WHERE `table_schema` = " (format-as-value database) ") AS `tables` WHERE `columns`.`table_name` = `tables`.`table_name`"))
 
 (defn get-schema-and-distinct-columns [database-name]
-  (let [column-listing-query (build-column-listing build-select database-name)]
+  (let [column-listing-query (column-listing-query database-name)]
     (sql/with-query-results results [column-listing-query]
       (parse-column-listing results))))
 
@@ -152,21 +177,33 @@
 (defn clean-padding-and-apply-keys [record schema]
   (let [table-name (keyword (:table_name record))
         record (select-keys record (col-names (table-name schema)))]
-    (apply-kind-and-key record table-name)))
+    (apply-kind-and-key (format-record-from-database record) table-name)))
+
+(defn create-temp-table [name query]
+  (let [create-temp-table-query (str "CREATE TEMPORARY TABLE " name " " query)]
+    (sql-internal/do-prepared-return-keys* create-temp-table-query nil)))
+
+(defn drop-temp-table [name]
+  (let [drop-temp-table-query (str "DROP TABLE " name)]
+    (sql-internal/do-prepared-return-keys* drop-temp-table-query nil)))
+
+(defn- do-select-all [projection database-name filters sorts limit offset]
+  (let [[schema dist-cols] (get-schema-and-distinct-columns database-name)
+        filtered-union (build-filtered-union-by-all-kinds build-select schema dist-cols filters)
+        temp-table-name "filtered_union_for_find_by_all_kinds"
+        _ (create-temp-table temp-table-name filtered-union)
+        query (build-select projection temp-table-name nil sorts limit offset)
+        query-results (sql/with-query-results results [query] (doall results))]
+    (drop-temp-table temp-table-name)
+    [schema query-results]))
 
 (defn- count-records-by-all-kinds [database-name filters]
-  (let [[schema dist-cols] (get-schema-and-distinct-columns database-name)
-        filtered-union (build-filtered-union-by-all-kinds build-select schema dist-cols filters)
-        query (build-select "COUNT(*)" (str "(" filtered-union ") AS filtered") nil nil nil nil)]
-    (sql/with-query-results results [query]
-      ((keyword "count(*)") (first results)))))
+  (let [[schema results] (do-select-all "COUNT(*)" database-name filters nil nil nil)]
+    ((keyword "count(*)") (first results))))
 
 (defn- find-records-by-all-kinds [database-name filters sorts limit offset]
-  (let [[schema dist-cols] (get-schema-and-distinct-columns database-name)
-        filtered-union (build-filtered-union-by-all-kinds build-select schema dist-cols filters)
-        query (build-select "*" (str "(" filtered-union ") AS filtered") nil sorts limit offset)]
-    (sql/with-query-results results [query]
-      (map #(clean-padding-and-apply-keys % schema) (doall results)))))
+  (let [[schema results] (do-select-all "*" database-name filters sorts limit offset)]
+    (map #(clean-padding-and-apply-keys % schema) results)))
 
 (deftype MySqlDatastore [database-name]
   Datastore
