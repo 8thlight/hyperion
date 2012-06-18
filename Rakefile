@@ -95,7 +95,7 @@ def _install(dir)
 end
 
 def deploy(dir)
-  lein_task(dir, 'deploy')
+  lein_task(dir, 'push')
 end
 
 def lein_task(dir, task)
