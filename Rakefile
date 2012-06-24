@@ -32,6 +32,16 @@ namespace :core do
   package('core')
 end
 
+namespace :dev do
+  task :build => 'core:install'
+  package('dev')
+end
+
+namespace :sql do
+  task :build => 'core:install'
+  package('sql')
+end
+
 namespace :postgres do
   task :build => ['core:install', 'sql:install', 'dev:install']
   package('postgres')
@@ -42,9 +52,14 @@ namespace :mysql do
   package('mysql')
 end
 
-namespace :sql do
-  task :build => 'core:install'
-  package('sql')
+namespace :mysql do
+  task :build => ['core:install', 'sql:install', 'dev:install']
+  package('mysql')
+end
+
+namespace :sqlite do
+  task :build => ['core:install', 'sql:install', 'dev:install']
+  package('sqlite')
 end
 
 namespace :gae do
@@ -52,12 +67,7 @@ namespace :gae do
   package('gae')
 end
 
-namespace :dev do
-  task :build => 'core:install'
-  package('dev')
-end
-
-PROJECTS = [:core, :postgres, :mysql, :sql, :gae, :dev]
+PROJECTS = [:core, :dev, :sql, :postgres, :mysql, :sqlite, :gae]
 
 def create_task_for_all(task_name)
   task task_name => PROJECTS.map {|project| "#{project}:#{task_name}"}

@@ -1,4 +1,4 @@
-(ns hyperion.mysql
+(ns hyperion.sqlite
   (:use
     [hyperion.sql.query :only [add-to-query]]
     [hyperion.sql.query-builder]
@@ -7,10 +7,10 @@
   (:require
     [hyperion.sorting :as sort]))
 
-(deftype MysqlQB [database]
+(deftype SqliteQB []
   QueryBuilderStrategy
 
-  (quote-tick [this] "`")
+  (quote-tick [this] "\"")
 
   (apply-limit-and-offset [this query limit offset]
     (if (and (nil? offset) (nil? limit))
@@ -20,9 +20,9 @@
         (add-to-query query "LIMIT ?, ?" [offset limit]))))
 
   (table-listing-query [this]
-    (format "SELECT `table_name` FROM `information_schema`.`tables` WHERE `table_schema` = '%s'" database)))
+    "SELECT \"name\" AS \"table_name\" FROM \"sqlite_master\" WHERE \"type\" = 'table'"))
 
-(deftype MysqlDB []
+(deftype SqliteDB []
   DBStrategy
   (get-count [this result]
     (get result "COUNT(*)"))
@@ -30,7 +30,8 @@
   (process-result-record [this result given]
     (if (:id given)
       given
-      (assoc given :id (get result "GENERATED_KEY")))))
+      (assoc given :id (get result "last_insert_rowid()")))))
 
-(defn new-mysql-datastore [database]
-  (new-sql-datastore (MysqlDB.) (new-query-builder (MysqlQB. database))))
+(defn new-sqlite-datastore []
+  (clojure.lang.RT/loadClassForName "org.sqlite.JDBC")
+  (new-sql-datastore (SqliteDB.) (new-query-builder (SqliteQB.))))

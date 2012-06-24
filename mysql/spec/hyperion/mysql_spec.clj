@@ -1,42 +1,45 @@
 (ns hyperion.mysql-spec
   (:use
     [speclj.core]
+    [hyperion.sql.spec-helper]
     [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
     [hyperion.core :only [*ds*]]
-    [hyperion.mysql :only [new-mysql-datastore]])
-  (:require
-    [clojure.java.jdbc :as sql]))
+    [hyperion.sql.jdbc :only [execute-mutation]]
+    [hyperion.sql.query]
+    [hyperion.mysql :only [new-mysql-datastore]]))
+
+(def create-table-query
+  "CREATE TABLE %s (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    name VARCHAR(35),
+    first_name VARCHAR(35),
+    inti INTEGER,
+    data VARCHAR(32),
+    PRIMARY KEY (id)
+  )")
+
+(defn create-table [table-name]
+  (execute-mutation
+    (make-query (format create-table-query table-name))))
+
+(def drop-table-query "DROP TABLE IF EXISTS %s")
+
+(defn drop-table [table-name]
+  (execute-mutation
+    (make-query (format drop-table-query table-name))))
 
 (describe "MySQL Datastore"
-  (with connection {:subprotocol "mysql"
-                    :subname "//localhost:3306/hyperion"
-                    :user "root"})
+  (with-connection-and-rollback "jdbc:mysql://localhost:3306/hyperion?user=root")
+
   (around [it]
-    (sql/with-connection @connection
-      (try
-        (sql/create-table
-          :testing
-          [:id :serial "PRIMARY KEY"]
-          [:name "VARCHAR(32)"]
-          [:first_name "VARCHAR(32)"]
-          [:birthdate :date]
-          [:inti :int]
-          [:data "VARCHAR(32)"]
-          :table-spec "ENGINE=InnoDB" "")
-        (sql/create-table
-          :other_testing
-          [:id :serial "PRIMARY KEY"]
-          [:inti :int]
-          [:name "VARCHAR(32)"]
-          [:first_name "VARCHAR(32)"]
-          [:data "VARCHAR(32)"]
-          :table-spec "ENGINE=InnoDB" "")
-        (binding [*ds* (new-mysql-datastore "hyperion")]
-          (it))
-        (catch Exception e
-          (should-fail (str e)))
-        (finally
-          (sql/drop-table :testing)
-          (sql/drop-table :other_testing)))))
+    (try
+      (create-table "testing")
+      (create-table "other_testing")
+      (binding [*ds* (new-mysql-datastore "hyperion")]
+        (it))
+      (finally
+        (drop-table "testing")
+        (drop-table "other_testing")
+        )))
 
   (it-behaves-like-a-datastore))

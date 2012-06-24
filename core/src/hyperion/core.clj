@@ -1,6 +1,8 @@
 (ns hyperion.core
   (:require
-    [clojure.string :as str])
+    [clojure.string :as str]
+    [hyperion.sorting :as sort]
+    [hyperion.filtering :as filter])
   (:use
     [chee.string :only (gsub spear-case)]
     [chee.datetime :only (now)]
@@ -10,158 +12,208 @@
 (def DS (atom nil))
 
 (defprotocol Datastore
-  (ds-save [this record])
-  (ds-save* [this records])
-  (ds-delete [this keys])
-  (ds-count-by-kind [this kind filters options])
-  (ds-count-all-kinds [this filters options])
-  (ds-find-by-key [this key])
-  (ds-find-by-keys [this keys])
-  (ds-find-by-kind [this kind filters sorts limit offset options])
-  (ds-find-all-kinds [this filters sorts limit offset options]))
+  (ds-save [this records])
+  (ds-delete-by-id [this kind id])
+  (ds-delete-by-kind [this kind filters])
+  (ds-count-by-kind [this kind filters])
+  (ds-find-by-id [this kind id])
+  (ds-find-by-kind [this kind filters sorts limit offset])
+  (ds-all-kinds [this]))
 
 (defn ds []
   (if (bound? #'*ds*)
     *ds*
     (or @DS (throw (NullPointerException. "No Datastore bound (hyperion/*ds*) or installed (hyperion/DS).")))))
 
+(def #^{:dynamic true} *entity-specs* (ref {}))
+
+(defprotocol Packable
+  (pack [this value])
+  (unpack [this value]))
+
+(extend-protocol Packable
+  Object
+  (pack [this value] value)
+  (unpack [this value] value)
+
+  nil
+  (pack [this value] value)
+  (unpack [this value] value))
+
 (defn new? [record]
-  (nil? (:key record)))
+  (nil? (:id record)))
 
-(defn ->key [thing]
-  (or (:key thing) thing))
+(defprotocol AsKind
+  (->kind [this]))
 
-(defn ->kind [thing]
-  (if-let [kind (:kind thing)]
-    (name kind)))
+(extend-protocol AsKind
+  java.lang.String
+  (->kind [this] (spear-case this))
 
-(defn kind [thing]
-  (->kind thing))
+  clojure.lang.Keyword
+  (->kind [this] (->kind (name this)))
 
-; ----- Packing / Unpacking -------------------------------
+  clojure.lang.Symbol
+  (->kind [this] (->kind (name this)))
 
-(defmulti pack (fn [packer value] packer))
-(defmethod pack :default [packer value] value)
+  clojure.lang.IPersistentMap
+  (->kind [this] (->kind (:kind this)))
 
-(defprotocol Packed
-  (unpack [this]))
+  nil
+  (->kind [this] this))
 
-(extend-type nil
-  Packed
-  (unpack [this] nil))
+(defprotocol AsKeyword
+  (->keyword [this]))
 
-(defn pack-field [packer value]
-  (cond
-    (sequential? value) (map #(pack-field packer %) value)
-    (fn? packer) (packer value)
-    :else (pack packer value)))
+(extend-protocol AsKeyword
+  java.lang.String
+  (->keyword [this] (keyword this))
 
-(defn unpack-field [unpacker value]
-  (cond
-    (isa? (class value) java.util.List) (map #(unpack-field unpacker %) value)
-    (fn? unpacker) (unpacker value)
-    unpacker (unpack value)
-    :else value))
+  clojure.lang.Keyword
+  (->keyword [this] this)
+
+  nil
+  (->keyword [this] nil))
+
+(defprotocol AsField
+  (->field [this]))
+
+(extend-protocol AsField
+  java.lang.String
+  (->field [this] (keyword (spear-case this)))
+
+  clojure.lang.Keyword
+  (->field [this] (->field (name this)))
+
+  clojure.lang.Symbol
+  (->field [this] (->field (name this))))
+
+(defprotocol Specable
+  (spec-for [this]))
+
+(extend-protocol Specable
+  clojure.lang.IPersistentMap
+  (spec-for [this] (spec-for (->kind this)))
+
+  clojure.lang.Keyword
+  (spec-for [this] (get @*entity-specs* this))
+
+  java.lang.String
+  (spec-for [this] (spec-for (keyword this)))
+
+  nil
+  (spec-for [this] this))
+
+(defn- if-assoc [map key value]
+  (if value
+    (assoc map key value)
+    map))
 
 ; ----- Hooks ---------------------------------------------
 
-(defprotocol AfterCreate
-  (after-create [this]))
+(defmulti after-create #(->keyword (:kind %)))
+(defmethod after-create :default [record] record)
 
-(defprotocol BeforeSave
-  (before-save [this]))
+(defmulti before-save #(->keyword (:kind %)))
+(defmethod before-save :default [record] record)
 
-(defprotocol AfterLoad
-  (after-load [this]))
+(defmulti after-load #(->keyword (:kind %)))
+(defmethod after-load :default [record] record)
 
-(extend-type Object
-  AfterCreate
-  (after-create [this] this)
-  BeforeSave
-  (before-save [this] this)
-  AfterLoad
-  (after-load [this] this))
+; ----- Entity Implementation -----------------------------
 
-(extend-type nil
-  AfterCreate
-  (after-create [_] nil)
-  BeforeSave
-  (before-save [_] nil)
-  AfterLoad
-  (after-load [_] nil))
+(defmulti pack (fn [type value] type))
+(defmethod pack :default [type value] value)
 
-; ----- Entity <-> Record Translation ---------------------
+(defmulti unpack (fn [type value] type))
+(defmethod unpack :default [type value] value)
 
-(def #^{:dynamic true} *entity-specs* (ref {}))
+(defn- apply-type-packers [options]
+  (if-let [t (:type options)]
+    (-> (dissoc options :type)
+      (assoc :packer t)
+      (assoc :unpacker t))
+    options))
 
-(defn- spec-for [thing]
-  (cond
-    (nil? thing) nil
-    (map? thing) (spec-for (->kind thing))
-    :else (get @*entity-specs* (name thing))))
+(defn- map-fields [fields]
+  (reduce
+    (fn [spec [key & args]]
+      (let [options (->options args)
+            options (apply-type-packers options)]
+        (assoc spec (->field key) options)))
+    {}
+    fields))
 
-(defmulti native->entity kind)
+(defn- null-val-fn [field-spec value] value)
 
-(defmethod native->entity nil [entity]
-  nil)
-
-(defn native->specced-entity
-  ([entity]
-    (let [kind (->kind entity)
-          spec (spec-for kind)]
-      (native->specced-entity entity kind spec)))
-  ([entity kind spec]
-    (let [record ((:*ctor* spec) entity)]
-      (after-load
-        (reduce
-          (fn [record [field value]]
-            (let [field (keyword field)]
-              (assoc record field (unpack-field (:unpacker (field spec)) value))))
-          record
-          entity)))))
-
-(defn- native->unspecced-entity [entity kind]
-  (after-load
-    (reduce
-      (fn [record entry] (assoc record (keyword (key entry)) (val entry)))
-      {:kind kind :key (:key entity)}
-      entity)))
-
-(defmethod native->entity :default [entity]
-  (let [kind (->kind entity)
-        spec (spec-for kind)]
-    (if spec
-      (native->specced-entity entity kind spec)
-      (native->unspecced-entity entity kind))))
-
-(defprotocol EntityRecord
-  (->native [this]))
-
-(defn- unspecced-entity->native [record kind]
-  (assoc record :kind (->kind record)))
-
-(defn specced-entity->native
-  ([record]
+(defn create-entity
+  ([record] (create-entity record null-val-fn))
+  ([record val-fn]
     (let [kind (->kind record)
           spec (spec-for kind)]
-      (specced-entity->native record kind spec)))
-  ([record kind spec]
-    (reduce
-      (fn [marshaled [field attrs]]
-        (assoc marshaled field (pack-field (:packer (field spec)) (field record))))
-      {:key (:key record) :kind (->kind record)}
-      (dissoc spec :*ctor*))))
+      (after-create
+        (if spec
+          (reduce
+            (fn [entity [field spec]]
+              (assoc entity field (val-fn spec (field record))))
+            (if-assoc {} :kind kind)
+            spec)
+          (if-assoc record :kind kind))))))
 
-(extend-type clojure.lang.APersistentMap
-  EntityRecord
-  (->native [record]
-    (let [kind (->kind record)
-          spec (spec-for kind)]
-      (if spec
-        (specced-entity->native record kind spec)
-        (unspecced-entity->native record kind)))))
+(defn- apply-default [field-spec value]
+  (or value (:default field-spec)))
 
-; ----- Timestamps ----------------------------------------
+(defn create-entity-with-defaults
+  ([record] (create-entity-with-defaults record null-val-fn))
+  ([record val-fn]
+    (create-entity record #(->> %2 (apply-default %1) (val-fn %1)))))
+
+(defmacro defentity [class-sym & fields]
+  (let [field-map (map-fields fields)
+        kind (->kind class-sym)]
+    `(do
+      (dosync (alter *entity-specs* assoc ~(->keyword kind) ~field-map))
+      (defn ~(symbol kind) [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind))))))
+
+; ----- Packing / Unpacking -------------------------------
+
+(defn- packer-fn [packer]
+  (if (fn? packer)
+    packer
+    #(pack packer %)))
+
+(defn- unpacker-fn [packer]
+  (if (fn? packer)
+    packer
+    #(unpack packer %)))
+
+(defn- do-packing [packer value]
+  (if (coll? value)
+    (map #(packer %) value)
+    (packer value)))
+
+(defn- pack-field [field-spec value]
+  (do-packing (packer-fn (:packer field-spec)) value))
+
+(defn- unpack-field [field-spec value]
+  (do-packing (unpacker-fn (:unpacker field-spec)) value))
+
+(defn- normalize-fields [record]
+  (reduce
+    (fn [record [field value]]
+      (assoc record (->field field) value))
+    {}
+    record))
+
+(defn- unpack-entity [record]
+  (when record
+    (let [record (normalize-fields record)
+          entity (create-entity record unpack-field)]
+      (if-assoc entity :id (:id record)))))
+
+(defn- pack-entity [record]
+  (let [entity (create-entity-with-defaults record pack-field)]
+    (if-assoc entity :id (:id record))))
 
 (defn- with-created-at [record spec]
   (if (and (or (contains? spec :created-at) (contains? record :created-at)) (= nil (:created-at record)))
@@ -173,46 +225,34 @@
     (assoc record :updated-at (now))
     record))
 
-(defn with-updated-timestamps [record]
+(defn- with-updated-timestamps [record]
   (let [spec (spec-for record)]
-    (with-updated-at (with-created-at record spec) spec)))
+    (-> record
+      (with-created-at spec)
+      (with-updated-at spec))))
 
-; ----- Raw CRUD API --------------------------------------
+(defn- native->entity [native]
+  (-> native
+    unpack-entity
+    after-load))
 
 (defn- prepare-for-save [entity]
   (-> entity
+    pack-entity
     with-updated-timestamps
-    before-save
-    ->native))
+    before-save))
+
+; ----- API --------------------------------------
 
 (defn save [record & args]
   (let [attrs (->options args)
         record (merge record attrs)
         entity (prepare-for-save record)
-        saved (ds-save (ds) entity)]
+        saved (first (ds-save (ds) [entity]))]
     (native->entity saved)))
 
-(defn save* [records]
-  (->> records
-    (map prepare-for-save)
-    (ds-save* (ds))
-    (map native->entity)))
-
-(defn find-by-key [key]
-  (native->entity
-    (ds-find-by-key (ds) (->key key))))
-
-(defn find-by-keys [key]
-  (map
-    native->entity
-    (ds-find-by-keys (ds) (filter identity (map ->key key)))))
-
-(defn reload [entity-or-key]
-  (find-by-key entity-or-key))
-
-(defn delete [& keys] (ds-delete (ds) (map ->key keys)))
-
-; ----- Searching -----------------------------------------
+(defn save* [& records]
+  (doall (map native->entity (ds-save (ds) (map prepare-for-save records)))))
 
 (defn- ->filter-operator [operator]
   (case (name operator)
@@ -222,7 +262,7 @@
     (">" "gt") :>
     (">=" "gte") :>=
     ("!=" "not") :!=
-    ("contains?" "in") :contains?
+    ("contains?" "contains" "in?" "in") :contains?
     (throw (Exception. (str "Unknown filter operator: " operator)))))
 
 (defn- ->sort-direction [dir]
@@ -231,95 +271,88 @@
     ("desc" "descending") :desc
     (throw (Exception. (str "Unknown sort direction: " dir)))))
 
-(defn- parse-filters [filters]
-  (when filters
-    (let [filters (if (vector? (first filters)) filters (vector filters))]
-      (map
-        (fn [[operator field value]]
-          [(->filter-operator operator) field value])
-        filters))))
+; Protocol?
+(defn- ->seq [items]
+  (cond
+    (nil? items) []
+    (coll? (first items)) items
+    :else [items]))
+
+(defn- parse-filters [kind filters]
+  (let [spec (spec-for kind)
+        filters (->seq filters)]
+    (doall (map
+      (fn [[operator field value]]
+        (let [field (->field field)]
+          (filter/make-filter
+            (->filter-operator operator)
+            (->field field)
+            (pack-field (field spec) value))))
+      filters))))
 
 (defn- parse-sorts [sorts]
-  (when sorts
-    (let [sorts (if (vector? (first sorts)) sorts (vector sorts))]
-      (map
-        (fn [[field direction]]
-          [field (->sort-direction direction)])
-        sorts))))
+  (let [sorts (->seq sorts)]
+    (doall (map
+      (fn [[field direction]]
+        (sort/make-sort
+          (->field field)
+          (->sort-direction direction)))
+      sorts))))
+
+(defn- find-records-by-kind [kind filters sorts limit offset]
+  (map native->entity (ds-find-by-kind (ds) kind (parse-filters kind filters) sorts limit offset)))
+
+(defn find-by-id [kind id]
+  (native->entity
+    (ds-find-by-id (ds) (->kind kind) id)))
+
+(defn reload [entity]
+  (find-by-id (:kind entity) (:id entity)))
 
 (defn find-by-kind [kind & args]
   (let [options (->options args)
         kind (name kind)]
-    (map native->entity
-      (ds-find-by-kind (ds) kind
-        (parse-filters (:filters options))
-        (parse-sorts (:sorts options))
-        (:limit options)
-        (:offset options)
-        (dissoc options :filters :sorts :limit :offset)))))
+    (find-records-by-kind kind
+      (:filters options)
+      (parse-sorts (:sorts options))
+      (:limit options)
+      (:offset options))))
 
 (defn find-all-kinds [& args]
-  (let [options (->options args)]
-    (map native->entity
-      (ds-find-all-kinds (ds)
-        (parse-filters (:filters options))
-        (parse-sorts (:sorts options))
-        (:limit options)
-        (:offset options)
-        (dissoc options :filters :sorts :limit :offset)))))
+  (let [options (->options args)
+        kinds (ds-all-kinds (ds))
+        sorts (parse-sorts (:sorts options))
+        filters (:filters options)
+        results (flatten (map #(find-records-by-kind % filters nil nil nil) kinds))]
+    (->> results
+      (filter #(not (nil? %)))
+      (sort/sort-results (parse-sorts (:sorts options)))
+      (filter/offset-results (:offset options))
+      (filter/limit-results (:limit options)))))
+
+(defn- count-records-by-kind [kind filters]
+  (ds-count-by-kind (ds) kind (parse-filters kind filters)))
 
 (defn count-by-kind [kind & args]
   (let [options (->options args)
         kind (name kind)]
-    (ds-count-by-kind (ds) kind (parse-filters (:filters options))
-      (dissoc options :filters :sorts :limit :offset))))
+    (count-records-by-kind kind (:filters options))))
+
+(defn- count-records-by-all-kinds [filters]
+  (let [kinds (ds-all-kinds (ds))
+        results (flatten (map #(count-records-by-kind % filters) kinds))]
+    (apply + results)))
 
 (defn count-all-kinds [& args]
   (let [options (->options args)]
-    (ds-count-all-kinds (ds) (parse-filters (:filters options))
-      (dissoc options :filters :sorts :limit :offset))))
+    (count-records-by-all-kinds (:filters options))))
 
-; ----- Entity Implementation -----------------------------
+(defn delete-by-id [kind id]
+  (ds-delete-by-id (ds) (->kind kind) id)
+  nil)
 
-(defn- map-fields [fields]
-  (reduce
-    (fn [spec [key & args]]
-      (let [attrs (apply hash-map args)
-            attrs (if-let [t (:type attrs)] (assoc (dissoc attrs :type) :packer t :unpacker t) attrs)]
-        (assoc spec (keyword key) attrs)))
-    {}
-    fields))
-
-(defn- extract-defaults [field-specs]
-  (reduce
-    (fn [map [field spec]]
-      (if-let [default (:default spec)]
-        (assoc map field default)
-        map))
-    {}
-    field-specs))
-
-(defn construct-entity-record [kind & args]
-  (let [spec (spec-for kind)
-        args (->options args)
-        extras (apply dissoc args (keys spec))
-        record ((:*ctor* spec) nil)]
-    (after-create
-      (merge
-        (reduce
-          (fn [record [key attrs]] (assoc record key (or (key args) (:default attrs))))
-          record
-          (dissoc spec :*ctor*))
-        extras))))
-
-(defmacro defentity [class-sym & fields]
-  (let [field-map (map-fields fields)
-        kind (spear-case (name class-sym))]
-    `(do
-      (defrecord ~class-sym [~'kind ~'key])
-      (dosync (alter *entity-specs* assoc ~kind (assoc ~field-map :*ctor* (fn [key#] (new ~class-sym ~kind key#)))))
-      (defn ~(symbol kind) [& args#] (apply construct-entity-record ~kind args#))
-      (extend-type ~class-sym EntityRecord (~'->native [this#] (specced-entity->native this#)))
-      (defmethod native->entity ~kind [entity#] (native->specced-entity entity#)))))
-
-
+(defn delete-by-kind [kind & args]
+  (let [options (->options args)
+        kind (->kind kind)]
+    (ds-delete-by-kind (ds) kind (parse-filters kind (:filters options)))
+    nil))

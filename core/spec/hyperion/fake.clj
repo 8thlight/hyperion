@@ -5,17 +5,18 @@
 (defn- stub-call [ds name & params]
   (swap! (.calls ds) conj [name params])
   (let [result (first @(.responses ds))]
-    (swap! (.responses ds) rest)))
+    (swap! (.responses ds) rest)
+    result))
 
 (deftype FakeDatastore [calls responses]
   Datastore
-  (ds-save [this record] (stub-call this "ds-save" record))
-  (ds-delete [this key] (stub-call this "ds-delete" key))
-  (ds-count-by-kind [this kind filters options] (stub-call this "ds-count-by-kind" kind filters options))
-  (ds-count-all-kinds [this filters options] (stub-call this "ds-count-all-kinds" filters options))
-  (ds-find-by-key [this key] (stub-call this "ds-find-by-key" key))
-  (ds-find-by-kind [this kind filters sorts limit offset options] (stub-call this "ds-find-by-kind" kind filters sorts limit offset options))
-  (ds-find-all-kinds [this filters sorts limit offset options] (stub-call this "ds-find-all-kinds" filters sorts limit offset options)))
+  (ds-save [this records] (stub-call this "ds-save" records))
+  (ds-delete-by-id [this kind id] (stub-call this "ds-delete-by-id" kind id))
+  (ds-delete-by-kind [this kind filters] (stub-call this "ds-delete-by-kind" kind filters))
+  (ds-count-by-kind [this kind filters] (stub-call this "ds-count-by-kind" kind filters))
+  (ds-find-by-id [this kind id] (stub-call this "ds-find-by-id" kind id))
+  (ds-find-by-kind [this kind filters sorts limit offset] (stub-call this "ds-find-by-kind" kind filters sorts limit offset))
+  (ds-all-kinds [this] (stub-call this "ds-all-kinds")))
 
 (defn new-fake-datastore []
   (FakeDatastore. (atom []) (atom [])))

@@ -1,97 +1,41 @@
 (ns hyperion.sql.format
   (:use
-    [chee.string :refer [snake-case spear-case]])
+    [chee.string :only [snake-case spear-case]]
+    [hyperion.sql.key :only [build-key]])
   (:require
     [clojure.string :as str]))
 
-(def quote (atom "\""))
+(defn- add-quotes [s quote]
+  (str quote s quote))
 
-(defn add-quotes [s]
-  (str @quote s @quote))
+(defprotocol FormattableForDatabase
+  (table->db [this quote])
+  (column->db [this quote])
+  (operator->db [this])
+  (record->db [this])
+  (record<-db [this table] [this table id]))
 
-(defprotocol FormattableAsTable
-  (format-as-table [this]))
+(extend-protocol FormattableForDatabase
+  java.lang.String
+  (table->db [this quote]
+    (add-quotes (snake-case this) quote))
 
-(defprotocol FormattableAsColumn
-  (format-as-column [this]))
+  clojure.lang.Keyword
+  (operator->db [this] (name this))
 
-(defprotocol FormattableAsOperator
-  (format-as-operator [this]))
-
-(defprotocol FormattableAsValue
-  (format-as-value [this]))
-
-(defprotocol FormattableAsKind
-  (format-as-kind [this]))
-
-(extend-type java.lang.String
-  FormattableAsTable
-  (format-as-table [this] (add-quotes (snake-case this)))
-
-  FormattableAsColumn
-  (format-as-column [this] (add-quotes (snake-case this)))
-
-  FormattableAsOperator
-  (format-as-operator [this] this)
-
-  FormattableAsValue
-  (format-as-value [this] (str "'" this "'"))
-
-  FormattableAsKind
-  (format-as-kind [this] this))
-
-(extend-type clojure.lang.Keyword
-  FormattableAsTable
-  (format-as-table [this] (format-as-table (name this)))
-
-  FormattableAsColumn
-  (format-as-column [this] (format-as-column (name this)))
-
-  FormattableAsOperator
-  (format-as-operator [this] (format-as-operator (name this)))
-
-  FormattableAsValue
-  (format-as-value [this] (format-as-value (name this)))
-
-  FormattableAsKind
-  (format-as-kind [this] (format-as-kind (name this))))
-
-(extend-type clojure.lang.Sequential
-  FormattableAsColumn
-  (format-as-column [this]
-    (str "(" (str/join ", " (map format-as-column this)) ")"))
-
-  FormattableAsValue
-  (format-as-value [this]
-    (str "(" (str/join ", " (map format-as-value this)) ")")))
-
-(extend-protocol FormattableAsValue
-  java.lang.Number
-  (format-as-value [this] (str this))
+  (column->db [this quote]
+    (add-quotes (snake-case (name this)) quote))
 
   clojure.lang.Sequential
-  (format-as-value [this]
-    (str "(" (str/join ", " (map format-as-value this)) ")"))
+  (column->db [this quote]
+    (str "(" (str/join ", " (map #(column->db % quote) this)) ")"))
 
-  java.util.Date
-  (format-as-value [this] (format-as-value (str this)))
+  clojure.lang.IPersistentMap
+  (record->db [this]
+    (dissoc this :id :kind))
 
-  java.lang.Boolean
-  (format-as-value [this] (format-as-value (str this)))
-
-  nil
-  (format-as-value [this] "NULL"))
-
-(defn format-record-from-database [record]
-  (reduce
-    (fn [acc [key value]] (assoc acc (keyword (spear-case (name key))) value))
-    {}
-    record))
-
-(defn format-record-for-database [record]
-  (reduce
-    (fn [acc [key value]] (assoc acc (keyword (snake-case (name key))) value))
-    {}
-    record))
-
-
+  (record<-db
+    ([this table id]
+      (merge this {:kind table :id id}))
+    ([this table]
+      (assoc this :kind table))))

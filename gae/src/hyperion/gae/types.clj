@@ -1,6 +1,6 @@
 (ns hyperion.gae.types
   (:use
-    [hyperion.core :only [pack Packed]])
+    [hyperion.core :only [pack unpack]])
   (:import
     [com.google.appengine.api.datastore
      Key KeyFactory ShortBlob Blob Category Email GeoPt Link
@@ -30,11 +30,17 @@
     (= Key (class value)) value
     :else (KeyFactory/stringToKey value)))
 
+(defmethod unpack Key [_ value]
+  (KeyFactory/keyToString value))
+
 (defmethod pack ShortBlob [_ value]
   (cond
     (nil? value) nil
     (= ShortBlob (class value)) value
     :else (ShortBlob. value)))
+
+(defmethod unpack ShortBlob [_ value]
+  (.getBytes value))
 
 (defmethod pack Blob [_ value]
   (cond
@@ -42,11 +48,17 @@
     (= Blob (class value)) value
     :else (Blob. value)))
 
+(defmethod unpack Blob [_ value]
+  (.getBytes value))
+
 (defmethod pack Category [_ value]
   (cond
     (nil? value) nil
     (= Category (class value)) value
     :else (Category. value)))
+
+(defmethod unpack Category [_ value]
+  (.getCategory value))
 
 (defmethod pack Email [_ value]
   (cond
@@ -54,11 +66,17 @@
     (= Email (class value)) value
     :else (Email. value)))
 
+(defmethod unpack Email [_ value]
+  (.getEmail value))
+
 (defmethod pack GeoPt [_ value]
   (cond
     (nil? value) nil
     (= GeoPt (class value)) value
     :else (GeoPt. (:latitude value) (:longitude value))))
+
+(defmethod unpack GeoPt [_ value]
+  {:latitude (.getLatitude value) :longitude (.getLongitude value)})
 
 (defmethod pack User [_ value]
   (cond
@@ -66,17 +84,26 @@
     (= User (class value)) value
     :else (map->user value)))
 
+(defmethod unpack User [_ value]
+  (user->map value))
+
 (defmethod pack BlobKey [_ value]
   (cond
     (nil? value) nil
     (= BlobKey (class value)) value
     :else (BlobKey. value)))
 
+(defmethod unpack BlobKey [_ value]
+  (.getKeyString value))
+
 (defmethod pack Link [_ value]
   (cond
     (nil? value) nil
     (= Link (class value)) value
     :else (Link. value)))
+
+(defmethod unpack Link [_ value]
+  (.getValue value))
 
 (defn parse-im-protocol [protocol]
   (try
@@ -93,11 +120,17 @@
     (= IMHandle (class value)) value
     :else (IMHandle. (parse-im-protocol (:protocol value)) (:address value))))
 
+(defmethod unpack IMHandle [_ value]
+  {:protocol (.getProtocol value) :address (.getAddress value)})
+
 (defmethod pack PostalAddress [_ value]
   (cond
     (nil? value) nil
     (= PostalAddress (class value)) value
     :else (PostalAddress. value)))
+
+(defmethod unpack PostalAddress [_ value]
+  (.getAddress value))
 
 (defmethod pack Rating [_ value]
   (cond
@@ -105,11 +138,17 @@
     (= Rating (class value)) value
     :else (Rating. value)))
 
+(defmethod unpack Rating [_ value]
+  (.getRating value))
+
 (defmethod pack PhoneNumber [_ value]
   (cond
     (nil? value) nil
     (= PhoneNumber (class value)) value
     :else (PhoneNumber. value)))
+
+(defmethod unpack PhoneNumber [_ value]
+  (.getNumber value))
 
 (defmethod pack Text [_ value]
   (cond
@@ -117,65 +156,8 @@
     (= Text (class value)) value
     :else (Text. value)))
 
-(extend-type nil
-  Packed
-  (unpack [this] nil))
-
-(extend-type Key
-  Packed
-  (unpack [this] (KeyFactory/keyToString this)))
-
-(extend-type ShortBlob
-  Packed
-  (unpack [this] (.getBytes this)))
-
-(extend-type Blob
-  Packed
-  (unpack [this] (.getBytes this)))
-
-(extend-type Category
-  Packed
-  (unpack [this] (.getCategory this)))
-
-(extend-type Email
-  Packed
-  (unpack [this] (.getEmail this)))
-
-(extend-type GeoPt
-  Packed
-  (unpack [this] {:latitude (.getLatitude this) :longitude (.getLongitude this)}))
-
-(extend-type User
-  Packed
-  (unpack [this] (user->map this)))
-
-(extend-type BlobKey
-  Packed
-  (unpack [this] (.getKeyString this)))
-
-(extend-type Link
-  Packed
-  (unpack [this] (.getValue this)))
-
-(extend-type IMHandle
-  Packed
-  (unpack [this] {:protocol (.getProtocol this) :address (.getAddress this)}))
-
-(extend-type PostalAddress
-  Packed
-  (unpack [this] (.getAddress this)))
-
-(extend-type Rating
-  Packed
-  (unpack [this] (.getRating this)))
-
-(extend-type PhoneNumber
-  Packed
-  (unpack [this] (.getNumber this)))
-
-(extend-type Text
-  Packed
-  (unpack [this] (.getValue this)))
+(defmethod unpack Text [_ value]
+  (.getValue value))
 
 
 

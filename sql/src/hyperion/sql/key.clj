@@ -1,9 +1,7 @@
-(ns hyperion.sql.key
-  (:use
-    [hyperion.sql.format :only [format-as-kind]]))
+(ns hyperion.sql.key)
 
-(defn build-key [table-name id]
-  (str (format-as-kind table-name) "-" id))
+(defn build-key [table id]
+  (str table "-" id))
 
 (defn destructure-key [key]
   (if (nil? key)

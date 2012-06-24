@@ -2,10 +2,12 @@
   (:use
     [chee.string :only (gsub spear-case)]
     [chee.util :only (->options)]
-    [hyperion.core :only (Datastore *entity-specs* pack-field)])
+    [hyperion.core :only (Datastore *entity-specs*)])
   (:require
     [clojure.string :as str]
-    [hyperion.gae.types])
+    [hyperion.gae.types]
+    [hyperion.sorting :as sort]
+    [hyperion.filtering :as filter])
   (:import
     [com.google.appengine.api.datastore Entity Entities Query DatastoreServiceFactory Query$FilterOperator
      Query$SortDirection FetchOptions$Builder EntityNotFoundException KeyFactory Key]))
@@ -33,29 +35,26 @@
     (key? value) value
     (string? value) (string->key value)
     (nil? value) nil
-    :else (string->key (:key value))))
+    :else (string->key (:id value))))
 
 (defn ->native [entity]
-  (let [key (string->key (:key entity))
+  (let [key (string->key (:id entity))
         native (if key (Entity. key) (Entity. (:kind entity)))]
-    (doseq [[field value] (dissoc entity :kind :key)]
+    (doseq [[field value] (dissoc entity :kind :id)]
       (.setProperty native (name field) value))
     native))
 
 (defn <-native [native]
   (reduce
-    (fn [entity entry] (assoc entity (keyword (key entry)) (val entry)))
-    {:kind (.getKind native)
-     :key (key->string (.getKey native))}
+    (fn [record entry]
+      (assoc record (key entry) (val entry)))
+    {:kind (.getKind native) :id (key->string (.getKey native))}
     (.getProperties native)))
 
 (defn save-native [service record]
   (let [native (->native record)]
     (.put service native)
     (<-native native)))
-
-(defn delete-records [service keys]
-  (.delete service (map ->key keys)))
 
 (def filter-operators {:= Query$FilterOperator/EQUAL
                        :< Query$FilterOperator/LESS_THAN
@@ -68,123 +67,69 @@
 (def sort-directions {:asc Query$SortDirection/ASCENDING
                       :desc Query$SortDirection/DESCENDING})
 
-(defn build-query [service kind filters sorts options]
-  (let [spec (get @*entity-specs* kind)
-        query (Query. (name kind))]
-    (doseq [[operator field value] filters]
-      (.addFilter query (name field) (get filter-operators operator)
-        (pack-field (:packer (get spec field)) value)))
-    (doseq [[field direction] sorts]
-      (.addSort query (name field) (get sort-directions direction)))
+(defn- build-query [service kind filters sorts]
+  (let [query (Query. (name kind))]
+    (doseq [filter filters]
+      (.addFilter
+        query
+        (name (filter/field filter))
+        ((filter/operator filter) filter-operators)
+        (filter/value filter)))
+    (doseq [sort sorts]
+      (.addSort
+        query
+        (name (sort/field sort))
+        ((sort/order sort) sort-directions)))
     (.prepare service query)))
 
-(defn build-fetch-options [limit offset options]
-  (let [prefetch-size (:prefetch-size options)
-        chunk-size (:chunk-size options)
-        start-cursor (:start-cursor options)
-        end-cursor (:end-cursor options)]
-    (let [fetch-options (FetchOptions$Builder/withDefaults)]
-      (when limit (.limit fetch-options limit))
-      (when offset (.offset fetch-options offset))
-      (when prefetch-size (.prefetchSize fetch-options prefetch-size))
-      (when chunk-size (.checkSize fetch-options chunk-size))
-      (when start-cursor (.startCursor fetch-options start-cursor))
-      (when end-cursor (.endCursor fetch-options end-cursor))
-      fetch-options)))
+(defn- build-fetch-options [limit offset]
+  (let [fetch-options (FetchOptions$Builder/withDefaults)]
+    (when limit (.limit fetch-options limit))
+    (when offset (.offset fetch-options offset))
+    fetch-options))
 
-(defn- ->compare-fn [spec]
-  (let [field (first spec)
-        multiplier (if (= :desc (second spec)) -1 1)]
-    (fn [a b]
-      (* multiplier
-        (let [av (get a field)
-              bv (get b field)]
-          (cond
-            (and (nil? av) (nil? bv)) 0
-            (nil? av) 1
-            (nil? bv) -1
-            :else (.compareTo av bv)))))))
+(defn- find-by-kind [service kind filters sorts limit offset]
+  (let [query (build-query service kind filters sorts)
+        fetching (build-fetch-options limit offset)]
+    (map <-native (iterator-seq (.asQueryResultIterator query fetching)))))
 
-(defn- build-comparator [sorts]
-  (let [compare-fns (map ->compare-fn sorts)]
-    (proxy [java.util.Comparator] []
-      (compare [a b]
-        (or
-          (some
-            #(if (zero? %) false %)
-            (map (fn [compare-fn] (compare-fn a b)) compare-fns))
-          0)))))
+(defn- delete-records [service keys]
+  (.delete service (map ->key keys)))
 
-(defn apply-sorts [sorts records]
-  (if (empty? sorts)
-    records
-    (sort (build-comparator sorts) records)))
+(defn- delete-by-kind [service kind filters]
+  (let [query (build-query service kind filters nil)
+        records (iterator-seq (.asQueryResultIterator query))
+        keys (map #(.getKey %) records)]
+    (.delete service keys)))
 
-(defn find-by-kind [service kind filters sorts limit offset options]
-  (let [query (build-query service kind filters sorts options)
-        fetching (build-fetch-options limit offset options)]
-    (let [results (.asQueryResultIterator query fetching)]
-      (apply-sorts sorts (map <-native (iterator-seq results))))))
+(defn- count-by-kind [service kind filters]
+  (.countEntities (build-query service kind filters nil)))
 
-(defn count-by-kind [service kind filters options]
-  (.countEntities
-    (build-query service kind filters nil options)
-    (build-fetch-options nil nil options)))
-
-(defn find-by-key [service value]
+(defn- find-by-key [service value]
   (when-let [key (->key value)]
     (try
       (<-native (.get service key))
       (catch EntityNotFoundException e
         nil))))
 
-(defn find-by-keys [service ^Iterable keys]
-  (let [keys (filter identity (map ->key keys))
-        result-map (.get service keys)
-        from-native #(if (nil? %) % (<-native %))]
-    (map #(from-native (get result-map %)) keys)))
-
 (defn- all-kinds [service]
   (let [query (.prepare service (Query. Entities/KIND_METADATA_KIND))
-        fetching (build-fetch-options nil nil nil)]
+        fetching (build-fetch-options nil nil)]
       (map #(.getName (.getKey %)) (.asIterable query fetching))))
-
-(defn- apply-limit [limit results]
-  (if limit
-    (take limit results)
-    results))
-
-(defn- apply-offset [offset results]
-  (if offset
-    (drop offset results)
-    results))
-
-(defn find-by-all-kinds [service filters sorts limit offset options]
-  (let [kinds (all-kinds service)
-        results (flatten (map #(find-by-kind service % filters nil nil nil options) kinds))]
-    (->> results
-      (filter #(not (nil? %)))
-      (apply-sorts sorts)
-      (apply-offset offset)
-      (apply-limit limit))))
-
-(defn count-by-all-kinds [service filters options]
-  (let [kinds (all-kinds service)]
-    (apply + (map #(count-by-kind service % filters options) kinds))))
 
 (deftype GaeDatastore [service]
   Datastore
-  (ds-save [this native] (save-native service native))
-  (ds-save* [this natives] (doall (for [native natives] (save-native service native))))
-  (ds-delete [this keys] (delete-records service keys))
-  (ds-count-by-kind [this kind filters options] (count-by-kind service kind filters options))
-  (ds-count-all-kinds [this filters options] (count-by-all-kinds service filters options))
-  (ds-find-by-key [this key] (find-by-key service key))
-  (ds-find-by-keys [this keys] (find-by-keys service keys))
-  (ds-find-by-kind [this kind filters sorts limit offset options]
-    (find-by-kind service kind filters sorts limit offset options))
-  (ds-find-all-kinds [this filters sorts limit offset options]
-    (find-by-all-kinds service filters sorts limit offset options)))
+  (ds-save [this natives] (doall (map #(save-native service %) natives)))
+  (ds-delete-by-kind [this kind filters]
+    (delete-by-kind service kind filters))
+  (ds-delete-by-id [this kind id]
+    (.delete service [(->key id)]))
+  (ds-count-by-kind [this kind filters] (count-by-kind service kind filters))
+  (ds-find-by-id [this kind id]
+    (find-by-key service id))
+  (ds-find-by-kind [this kind filters sorts limit offset]
+    (find-by-kind service kind filters sorts limit offset))
+  (ds-all-kinds [this] (all-kinds service)))
 
 (defn new-gae-datastore
   ([] (GaeDatastore. (DatastoreServiceFactory/getDatastoreService)))

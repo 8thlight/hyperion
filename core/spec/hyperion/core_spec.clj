@@ -2,65 +2,155 @@
   (:use
     [speclj.core]
     [hyperion.core]
+    [hyperion.filtering :only [make-filter]]
+    [hyperion.sorting :only [make-sort]]
     [hyperion.fake]
-    [hyperion.memory]
     [clojure.string :only (upper-case)]
-    [chee.datetime :exclude [before after]]))
+    [chee.datetime :only [now before? seconds-ago between? seconds-from-now]]))
 
-(defmacro check-call [ds name & params]
-  `(let [call# (first @(.calls ~ds))]
-    (swap! (.calls ~ds) rest)
-    (should= ~name (first call#))
-    (should= '~params (second call#))))
+(defn check-call [ds index name params]
+  (let [call (get @(.calls ds) index)]
+    (should= name (first call))
+    (should= params (second call))))
+
+(defn check-first-call [ds name & params]
+  (check-call ds 0 name params))
+
+(defn check-second-call [ds name & params]
+  (check-call ds 1 name params))
+
+(defn check-third-call [ds name & params]
+  (check-call ds 2 name params))
+
+(def supported-filters
+  [[:= :=]
+   ["=" :=]
+   ["eq" :=]
+   [:!= :!=]
+   ["!=" :!=]
+   ["not" :!=]
+   [:> :>]
+   [">" :>]
+   ["gt" :>]
+   [:< :<]
+   ["<" :<]
+   ["lt" :<]
+   [:>= :>=]
+   [">=" :>=]
+   ["gte" :>=]
+   [:<= :<=]
+   ["<=" :<=]
+   ["lte" :<=]
+   [:contains? :contains?]
+   ["contains?" :contains?]
+   [:contains :contains?]
+   ["contains" :contains?]
+   [:in? :contains?]
+   ["in?" :contains?]
+   [:in :contains?]
+   ["in" :contains?]])
+
+(defn for-filters [test-fn]
+  (for [[filter normalized-filter] supported-filters]
+    (test-fn filter normalized-filter)))
+
+(defn it-parses-filters [call-fn assert-fn]
+  (list
+    (for-filters
+      (fn [filter normalized-filter]
+        (it (str "converts operator " filter " to " normalized-filter)
+            (let [filter-struct (make-filter normalized-filter :id 1)]
+              (call-fn "unknown" :filters [filter :id 1])
+              (assert-fn "unknown" [filter-struct])))))
+
+    (it "throws for unknown filter"
+      (should-throw Exception (call-fn "unknown" :filters [:foo :id 1])))
+
+    (it "converts the field to a keyword"
+      (let [filter-struct (make-filter := :id 1)]
+        (call-fn "unknown" :filters [:= "id" 1])
+        (assert-fn "unknown" [filter-struct])))
+
+    (it "packs values"
+      (let [filter-struct (make-filter := :widget 1)]
+        (call-fn "packable" :filters [:= :widget "1"])
+        (assert-fn "packable" [filter-struct])))
+
+    (it "handles multiple filters"
+      (let [filter-struct (make-filter := :id 1)
+            second-filter (make-filter :!= :id 2)]
+        (call-fn "unknown" :filters [[:= :id 1] [:!= :id 2]])
+        (assert-fn "unknown" [filter-struct second-filter])))))
+
+(defn it-calls-by-kind [call-fn assert-fn]
+  (list
+    (it "with kind as string"
+      (call-fn "one")
+      (assert-fn "one" []))
+
+    (it "with kind as keyword"
+      (call-fn :one)
+      (assert-fn "one" []))
+
+    (context "filters"
+      (it-parses-filters call-fn assert-fn))))
+
+(defn it-calls-by-id [call-fn assert-fn]
+  (list
+    (it "with kind as string"
+      (call-fn "one" 42)
+      (assert-fn "one" 42))
+
+    (it "with kind as keyword"
+      (call-fn :one 42)
+      (assert-fn "one" 42))))
 
 (defentity Hollow)
 
 (defentity OneField
   [field])
 
-(defentity ManyFields
+(defentity :many-fields
   [field1]
   [field2]
   [field42])
 
-(defentity ManyDefaultedFields
+(defn this-fn [here] here)
+
+(defentity :many-defaulted-fields
   [field1]
   [field2]
-  [field3 :default ".141592"]
-  [field42 :default "value42"])
+  [field3 :default ".141592" :packer this-fn]
+  [field42 :default "value42" :packer #(apply str (reverse %))])
 
-(defentity Packable
+(defentity "PACKABLE"
   [widget :type Integer]
-  [bauble :packer #(apply str (reverse %)) :unpacker upper-case]
+  [bauble :packer #(apply str (reverse %)) :unpacker #(if % (upper-case %) %)]
   [thingy :unpacker true])
 
-(defmethod pack Integer [type value]
-  (if value
-    (Integer. (Integer/parseInt value))
-    nil))
+(defmethod pack Integer [_ value]
+  (when value
+    (Integer. (Integer/parseInt value))))
 
-(extend-type Integer
-  Packed
-  (unpack [value] (if value (str value) nil)))
+(defmethod unpack Integer [_ value]
+  (when value
+    (str value)))
 
 (defentity Hooks
-  [field]
-  [create-message]
-  [save-message]
-  [load-message])
+  [field])
 
-(extend-type Hooks
-  AfterCreate
-  (after-create [this] (assoc this :create-message (str "created with: " (:field this))))
-  BeforeSave
-  (before-save [this] (assoc this :save-message (str "saving with: " (:field this))))
-  AfterLoad
-  (after-load [this] (assoc this :load-message (str "loaded with: " (:field this)))))
+(defmethod after-create :hooks [record]
+  (assoc record :create-message (str "created with: " (:field record))))
+
+(defmethod before-save :hooks [record]
+  (assoc record :save-message (str "saving with: " (:field record))))
+
+(defmethod after-load :hooks [record]
+  (assoc record :load-message (str "loaded with: " (:field record))))
 
 (defentity Timestamps
   [created-at]
   [updated-at])
-
 
 (describe "Datastore Core"
 
@@ -83,11 +173,7 @@
 
   (it "knows if a record is new"
     (should= true (new? {:kind "new"}))
-    (should= false (new? {:kind "old" :key "exists"})))
-
-  (it "resolves keys"
-    (should= "abc" (->key "abc"))
-    (should= "xyz" (->key {:key "xyz"})))
+    (should= false (new? {:kind "old" :id "exists"})))
 
   (it "translates filters"
     (should= := (#'hyperion.core/->filter-operator :=))
@@ -119,323 +205,241 @@
     (should= :desc (#'hyperion.core/->sort-direction "descending"))
     (should-throw Exception "Unknown sort direction: foo" (#'hyperion.core/->sort-direction "foo")))
 
-  (context "entity definition"
+  (context "with fake ds"
+    (around [it]
+      (binding [*ds* (new-fake-datastore)]
+        (it)))
 
-    (it "defines simple entities"
-      (let [instance (hollow)]
-        (should= Hollow (class instance))))
+    (context "save"
+      (it "saves records"
+        (save {:kind "one" :value 42})
+        (check-first-call (ds) "ds-save" [{:kind "one" :value 42}]))
 
-    (it "caches the entity definition"
-      (let [entities @(deref #'*entity-specs*)
-            hollow-entity (get entities "hollow")]
-        (should= 1 (count hollow-entity))
-        (should= true (fn? (:*ctor* hollow-entity)))))
+      (it "saves records with values as options"
+        (save {:kind "one"} :value 42)
+        (check-first-call (ds) "ds-save" [{:kind "one" :value 42}]))
 
-    (it "defines entity with one field"
-      (let [instance (one-field :field "value")]
-        (should= OneField (class instance))
-        (should= "value" (:field instance))))
+      (it "saves records with values as a map"
+        (save {:kind "one"} {:field "kia" :value 42})
+        (check-first-call (ds) "ds-save" [{:kind "one" :value 42 :field "kia"}]))
 
-    (it "caches the one-field definition"
-      (let [entities @(deref #'*entity-specs*)
-            entity-def (get entities "one-field")]
-        (should= 2 (count entity-def))
-        (should= true (fn? (:*ctor* entity-def)))
-        (should= {} (:field entity-def))))
+      (it "saves multiple entities at once"
+        (save* {:kind "one" :value 42} {:kind "two" :value 35})
+        (check-first-call (ds) "ds-save" [{:kind "one" :value 42} {:kind "two" :value 35}]))
 
-    (it "defines an entity with multiple field"
-      (let [instance (many-fields :field1 "value" :field2 "value2" :field42 "value42")]
-        (should= ManyFields (class instance))
-        (should= "value" (:field1 instance))
-        (should= "value2" (:field2 instance))
-        (should= "value42" (:field42 instance))))
+      (it "packs entities"
+        (save {:kind :packable :widget "42"})
+        (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :thingy nil :bauble ""}]))
 
-    (it "defines an entity with some fields with default values"
-      (let [instance (many-defaulted-fields :field1 "value" :field2 "value2")]
-        (should= "value" (:field1 instance))
-        (should= "value2" (:field2 instance))
-        (should= ".141592" (:field3 instance))
-        (should= "value42" (:field42 instance))))
+      (it "converts the kind to a string"
+        (save {:kind :one})
+        (check-first-call (ds) "ds-save" [{:kind "one"}])))
 
-    (it "extra fields in constructor are included"
-      (should= "foo" (:foo (many-fields :foo "foo")))
-      (should= "foo" (:foo (many-defaulted-fields :foo "foo"))))
-    )
+    (context "delete by id"
+      (it-calls-by-id
+        delete-by-id
+        (fn [kind id]
+          (check-first-call (ds) "ds-delete-by-id" kind id))))
 
-  (context "with fake datastore"
+    (context "delete by kind"
+      (it-calls-by-kind
+        delete-by-kind
+        (fn [kind filters]
+          (check-first-call (ds) "ds-delete-by-kind" kind filters))))
 
-    (with _ds (new-fake-datastore))
-    (before (reset! DS @_ds))
+    (context "count by kind"
+      (it-calls-by-kind
+        count-by-kind
+        (fn [kind filters]
+          (check-first-call (ds) "ds-count-by-kind" kind filters))))
 
-    (it "can find-by-key when given a record"
-      (find-by-key {:key "some-key"})
-      (check-call @_ds "ds-find-by-key" "some-key"))
+    (it "reloads"
+      (let [response {:thing 1}]
+        (reset! (.responses (ds)) [response])
+        (should= response (reload {:kind "kind" :id 1}))
+        (check-first-call (ds) "ds-find-by-id" "kind" 1)))
 
-    (it "can delete when given a record"
-      (delete {:key "some-key"})
-      (check-call @_ds "ds-delete" ["some-key"]))
+    (context "find by id"
+      (it-calls-by-id
+        find-by-id
+        (fn [kind id]
+          (check-first-call (ds) "ds-find-by-id" kind id))))
 
-    (it "reloads a record"
-      (reload {:key "some-key"})
-      (check-call @_ds "ds-find-by-key" "some-key"))
+    (context "find by kind"
+      (it "finds with only a kind"
+        (let [response [{:thing 1}]]
+          (reset! (.responses (ds)) [response])
+          (should= response (find-by-kind "hollow"))
+          (check-first-call (ds) "ds-find-by-kind" "hollow" [] [] nil nil)))
 
-    (it "handles simple find-by-kind"
-      (find-by-kind "thing")
-      (check-call @_ds "ds-find-by-kind" "thing" nil nil nil nil {})
-      (find-by-kind :thing)
-      (check-call @_ds "ds-find-by-kind" "thing" nil nil nil nil {})
-      (find-by-kind 'thing)
-      (check-call @_ds "ds-find-by-kind" "thing" nil nil nil nil {}))
+      (context "filters"
+        (it-parses-filters
+          find-by-kind
+          (fn [kind filters]
+            (check-first-call (ds) "ds-find-by-kind" kind filters [] nil nil))))
 
-    (it "translates filters"
-      (find-by-kind "thing" :filters [:= :a :b])
-      (check-call @_ds "ds-find-by-kind" "thing" [[:= :a :b]] nil nil nil {})
-      (find-by-kind "thing" :filters [["=" :a :b] ["eq" :x :y]])
-      (check-call @_ds "ds-find-by-kind" "thing" [[:= :a :b] [:= :x :y]] nil nil nil {}))
+      (context "sorts"
+        (for [[order normalized-order]
+               [[:asc :asc]
+                ["asc" :asc]
+                ["ascending" :asc]
+                [:desc :desc]
+                ["desc" :desc]
+                ["descending" :desc]]]
 
-    (it "translates sorts"
-      (find-by-kind "thing" :sorts [:a :asc])
-      (check-call @_ds "ds-find-by-kind" "thing" nil [[:a :asc]] nil nil {})
-      (find-by-kind "thing" :sorts [[:a "asc"] [:b :descending]])
-      (check-call @_ds "ds-find-by-kind" "thing" nil [[:a :asc] [:b :desc]] nil nil {}))
+          (it (str "converts order " order " to " normalized-order)
+            (let [sort-struct (make-sort :name normalized-order)]
+              (find-by-kind "unknown" :sorts [:name order])
+              (check-first-call (ds) "ds-find-by-kind" "unknown" [] [sort-struct] nil nil))))
 
-    (it "pass along limit and offset"
-      (find-by-kind "thing" :limit 5 :offset 6)
-      (check-call @_ds "ds-find-by-kind" "thing" nil nil 5 6 {}))
+          (it "throws for unknown order"
+            (should-throw Exception (find-by-kind "unknown" :sorts [:name :foo])))
 
-    (it "can count-by-kind"
-      (count-by-kind "thing" :filters ["eq" :a :b])
-      (check-call @_ds "ds-count-by-kind" "thing" [[:= :a :b]] {})
-      (count-by-kind :thing :filters ["eq" :a :b])
-      (check-call @_ds "ds-count-by-kind" "thing" [[:= :a :b]] {}))
+          (it "converts the field to a keyword"
+            (let [sort-struct (make-sort :name :desc)]
+              (find-by-kind "unknown" :sorts ["name" :desc])
+              (check-first-call (ds) "ds-find-by-kind" "unknown" [] [sort-struct] nil nil))))
 
-    (it "can find-all-kinds "
-      (find-all-kinds :filters ["eq" :a :b] :sorts [:c "ascending"] :limit 32 :offset 43)
-      (check-call @_ds "ds-find-all-kinds" [[:= :a :b]] [[:c :asc]] 32 43 {}))
+      (it "passes the limit"
+        (find-by-kind "unknown" :limit 1)
+        (check-first-call (ds) "ds-find-by-kind" "unknown" [] [] 1 nil))
 
-    (it "can count-all-kinds "
-      (count-all-kinds :filters ["eq" :a :b])
-      (check-call @_ds "ds-count-all-kinds" [[:= :a :b]] {}))
-    )
+      (it "passes the offset"
+        (find-by-kind "unknown" :offset 1)
+        (check-first-call (ds) "ds-find-by-kind" "unknown" [] [] nil 1)))
 
-  (context "with memorystore"
+    (context "find all kinds"
+      (it "calls all kinds"
+        (let [responses [["kind1" "kind2"] [] []]]
+          (reset! (.responses (ds)) responses)
+          (find-all-kinds)
+          (check-first-call (ds) "ds-all-kinds")
+          (check-second-call (ds) "ds-find-by-kind" "kind1" [] nil nil nil)
+          (check-third-call (ds) "ds-find-by-kind" "kind2" [] nil nil nil))))
 
-    (with _ds (new-memory-datastore))
-    (before (reset! DS @_ds))
+    (context "entities"
+      (it "saves the fields defined in the entity"
+        (let [unsaved {:kind "one-field" :field "field" :foo "foo"}]
+          (save unsaved)
+          (check-first-call (ds) "ds-save" [{:kind "one-field" :field "field"}])))
 
-    (it "saves records with values as options"
-      (let [saved (save {:kind "one"} :value 42)]
-        (should= 42 (:value saved))
-        (should= 42 (:value (find-by-key (:key saved))))))
+      (it "saves the id field if not defined on the entity"
+        (save {:kind "one-field" :field "field" :id 1})
+        (check-first-call (ds) "ds-save" [{:kind "one-field" :field "field" :id 1}]))
 
-    (context "and entities"
+      (context "packing"
+        (it "types"
+          (save {:kind :packable :widget "42"})
+          (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :bauble "" :thingy nil}]))
 
-      (it "saves and loads a hollow entity"
-        (let [unsaved (hollow)
-              saved (save unsaved)]
-          (should-not= nil (:key saved))
-          (let [loaded (find-by-key (:key saved))]
-            (should= (:key saved) (:key loaded)))))
+        (it "custom functions"
+          (save {:kind :packable :bauble "hello"})
+          (check-first-call (ds) "ds-save" [{:kind "packable" :widget nil :bauble "olleh" :thingy nil}]))
 
-      (it "can set values while saving"
-        (let [unsaved (one-field)
-              saved (save unsaved :field "kia")]
-          (should= "kia" (:field saved))
-          (should= "kia" (:field (find-by-key (:key saved))))))
+        (it "applies default values and packs them"
+          (save {:kind :many-defaulted-fields})
+            (check-first-call (ds) "ds-save" [{:kind "many-defaulted-fields"
+                                              :field1 nil
+                                              :field2 nil
+                                              :field3 ".141592"
+                                              :field42 "24eulav"}])))
 
-      (it "can set values using a map while saving"
-        (let [unsaved (one-field)
-              saved (save unsaved {:field "Hiya!"})]
-          (should= "Hiya!" (:field saved))
-          (should= "Hiya!" (:field (find-by-key (:key saved))))))
+      (context "unpacking"
+        (context "normalizes"
+          (it "attribues for unknown kind"
+            (reset! (.responses (ds)) [[{"KIND" "unknown" :some_WEIRD_Field :val}]])
+            (should= {:kind "unknown" :some-weird-field :val} (save {})))
 
-      (it "can update existing enitity"
-        (let [saved (save (one-field :field "giyup"))
-              updated (save saved :field "kia")]
-          (should= (:key saved) (:key updated))
-          (should= "kia" (:field updated))
-          (should= "kia" (:field (find-by-key (:key saved))))))
+          (it "kind for unknown kind"
+            (reset! (.responses (ds)) [[{:kind :UNknown}]])
+            (should= {:kind "unknown"} (save {})))
 
-      (it "can save multiple entities at once"
-        (let [result (save* [(hollow) (one-field :field 1)])]
-          (should= 2 (count result))
-          (should= Hollow (class (first result)))
-          (should= OneField (class (second result)))
-          (should= "hollow" (:kind (find-by-key (:key (first result)))))
-          (should= "one-field" (:kind (find-by-key (:key (second result)))))))
+          (it "attribues for known kind"
+            (reset! (.responses (ds)) [[{"KIND" "packable" :BAuble "val"}]])
+            (should= {:kind "packable" :bauble "VAL" :widget nil :thingy nil} (save {})))
 
-      (it "can delete an entity"
-        (let [saved (save (one-field :field "hi"))]
-          (delete saved)
-          (should= nil (find-by-key (:key saved)))))
+          (it "kind for known kind"
+            (reset! (.responses (ds)) [[{:kind :packable}]])
+            (should= {:kind "packable" :bauble nil :widget nil :thingy nil} (save {}))))
 
-      (it "only saves the fields defined in the entity"
-        (let [unsaved (one-field :foo "foo")
-              saved (save unsaved)
-              loaded (find-by-key (:key saved))
-              raw (get @(.store (ds)) (->key (:key saved)))]
-          (should= "foo" (:foo unsaved))
-          (should= nil (:foo saved))
-          (should= nil (:foo loaded))
-          (should= nil (:foo raw))
-          (should= false (contains? raw :foo))
-          (should= true (contains? raw :field))
-          (should= true (contains? loaded :field))))
+        (it "types"
+          (reset! (.responses (ds)) [[{:kind "packable" :widget 42}]])
+          (should= {:kind "packable" :bauble nil :widget "42" :thingy nil} (save {})))
 
-      (it "can find-by multiple keys at same time"
-        (let [one (save (one-field :field 1))
-              two (save (one-field :field 2))
-              three (save (one-field :field 3))]
-          (should= [one two three] (find-by-keys [(:key one) (:key two) (:key three)]))
-          (should= [three two one] (find-by-keys [(:key three) (:key two) (:key one)]))
-          (should= [one nil three] (find-by-keys [(:key one) "blah" (:key three)]))))
+        (it "unknown kinds"
+          (reset! (.responses (ds)) [[{:kind "unknown" :widget 42}]])
+          (should= {:kind "unknown" :widget 42} (save {})))
 
-      (it "find-by-key(s) doesn't raise error when passed nil-ish values"
-        (let [one (save (one-field :field 1))]
-          (should-not-throw (find-by-key nil))
-          (should= nil (find-by-key nil))
-          (should= nil (find-by-key ""))
-          (should= nil (find-by-key "bad key"))
-          (should= [] (find-by-keys [nil]))
-          (should= [one] (find-by-keys [nil (:key one)]))
-          (should= [] (find-by-keys nil))))
+        (it "custom functions"
+          (reset! (.responses (ds)) [[{:kind "packable" :bauble "hello"}]])
+          (should= {:kind "packable" :bauble "HELLO" :widget nil :thingy nil} (save {})))
 
-      (it "reloads entities"
-        (let [unsaved (one-field :field 1)
-              saved (save unsaved)]
-          (should= nil (reload unsaved))
-          (should= nil (reload "blah"))
-          (should= 1 (:field (reload saved)))
-          (save saved :field 2)
-          (should= 2 (:field (reload saved)))
-          (should= 2 (:field (reload (:key saved))))))
+        (it "does not apply default values"
+          (reset! (.responses (ds)) [[{:kind "many-defaulted-fields"}]])
+          (should= {:kind "many-defaulted-fields" :field1 nil :field2 nil :field3 nil :field42 nil} (save {})))
 
-      (context "searching"
+        (it "nil"
+          (reset! (.responses (ds)) [[nil]])
+          (should= nil (save {}))))
 
-        (it "finds by kind"
-          (should= [] (find-by-kind "hollow"))
-          (let [saved (save (hollow))]
-            (should= [saved] (find-by-kind "hollow"))
-            (let [saved2 (save (hollow))]
-              (should= #{saved saved2} (set (find-by-kind "hollow"))))))
-        )
+      (context "hooks"
+        (context "after create"
+          (it "known kind"
+            (let [unsaved (hooks :field "waza!")]
+              (should= "waza!" (:field unsaved))
+              (should= "created with: waza!" (:create-message unsaved))))
 
-      (it "packed types fields"
-        (let [unsaved (packable :widget "42")
-              saved (save unsaved)
-              raw (get @(.store (ds)) (->key (:key saved)))
-              loaded (find-by-key (:key saved))]
-          (should= "42" (:widget unsaved))
-          (should= (Integer. 42) (:widget raw))
-          (should= "42" (:widget loaded))))
-
-      (it "allows custom packing"
-        (let [unsaved (packable :bauble "hello")
-              saved (save unsaved)
-              raw (get @(.store (ds)) (->key (:key saved)))
-              loaded (find-by-key (:key saved))]
-          (should= "hello" (:bauble unsaved))
-          (should= "olleh" (:bauble raw))
-          (should= "OLLEH" (:bauble loaded))))
-
-      (it "can unpack nil"
-        (let [saved (save (packable :thingy nil))
-              loaded (find-by-key (:key saved))]
-          (should= nil (:thingy saved))
-          (should= nil (:thingy loaded))))
-
-      (it "handles packing without using defentity constructor"
-        (let [unsaved {:kind "packable" :widget "42" :bauble "hello" :thingy nil}
-              saved (save unsaved)
-              raw (get @(.store (ds)) (->key (:key saved)))
-              loaded (find-by-key (:key saved))]
-          (should= (Integer. 42) (:widget raw))
-          (should= "olleh" (:bauble raw))
-          (should= nil (:thingy raw))
-          (should= "42" (:widget loaded))
-          (should= "OLLEH" (:bauble loaded))
-          (should= nil (:thingy loaded))))
-
-      (it "handles packing without using defentity constructor and keyword as kind"
-        (let [unsaved {:kind :packable :widget "42" :bauble "hello" :thingy nil}
-              saved (save unsaved)
-              raw (get @(.store (ds)) (->key (:key saved)))
-              loaded (find-by-key (:key saved))]
-          (should= (Integer. 42) (:widget raw))
-          (should= "olleh" (:bauble raw))
-          (should= nil (:thingy raw))
-          (should= "42" (:widget loaded))
-          (should= "OLLEH" (:bauble loaded))
-          (should= nil (:thingy loaded))))
-
-      (context "Hooks"
-        (it "has after create hook"
-          (let [unsaved (hooks :field "waza!")]
-            (should= "waza!" (:field unsaved))
-            (should= "created with: waza!" (:create-message unsaved))))
+          (it "unknown kind"
+            (defmethod after-create :unknown-kind-after-create [record]
+              (assoc record :my-cool-field :value))
+            (reset! (.responses (ds)) [[{:kind "unknown-kind-after-create"}]])
+            (should= {:kind "unknown-kind-after-create" :my-cool-field :value} (save {}))))
 
         (it "has before save hook"
-          (let [saved (save (hooks :field "waza!"))
-                raw (get @(.store (ds)) (->key (:key saved)))]
-            (should= "saving with: waza!" (:save-message saved))
-            (should= "saving with: waza!" (:save-message raw))))
+          (save (hooks :field "waza!"))
+          (check-first-call (ds) "ds-save" [{:kind "hooks"
+                                            :field "waza!"
+                                            :create-message "created with: waza!"
+                                            :save-message "saving with: waza!"}]))
 
         (it "has after load hook"
-          (let [unsaved (hooks :field "waza!")
-                saved (save unsaved)
-                raw (get @(.store (ds)) (->key (:key saved)))
-                loaded (find-by-key (:key saved))]
-            (should= nil (:load-message unsaved))
-            (should= "loaded with: waza!" (:load-message saved))
-            (should= nil (:load-message raw))
-            (should= "loaded with: waza!" (:load-message loaded))))
-        )
+          (let [response [{:kind "hooks" :field "waza!"}]
+                _ (reset! (.responses (ds)) [response])
+                loaded (first (find-by-kind "hooks"))]
+            (should= "loaded with: waza!" (:load-message loaded)))))
 
       (context "Timestamps"
-
-        (it "are automatically populated on save"
-          (let [saved (save (timestamps))]
-            (should-not= nil (:created-at saved))
-            (should-not= nil (:updated-at saved))
-            (should (before? (seconds-ago 1) (:created-at saved)))
-            (should (before? (seconds-ago 1) (:updated-at saved)))))
-
-        (it "are automatically populated on save*"
-          (let [saved (first (save* [(timestamps)]))]
-            (should-not= nil (:created-at saved))
-            (should-not= nil (:updated-at saved))
-            (should (before? (seconds-ago 1) (:created-at saved)))
-            (should (before? (seconds-ago 1) (:updated-at saved)))))
+        (it "are automatically populated on save if the entity contains created-at and updated-at"
+          (let [mock-date (java.util.Date.)]
+            (binding [now (fn [] mock-date)]
+              (save (timestamps))
+              (check-first-call (ds) "ds-save" [{:kind "timestamps"
+                                                :created-at mock-date
+                                                :updated-at mock-date}]))))
 
         (it "are saved based on kind, not provided keys"
-          (let [saved (save {:kind "timestamps"})]
-            (should-not= nil (:created-at saved))
-            (should-not= nil (:updated-at saved))
-            (should (before? (seconds-ago 1) (:created-at saved)))
-            (should (before? (seconds-ago 1) (:updated-at saved)))))
+          (let [mock-date (java.util.Date.)]
+            (binding [now (fn [] mock-date)]
+              (save {:kind :timestamps})
+              (check-first-call (ds) "ds-save" [{:kind "timestamps"
+                                                :created-at mock-date
+                                                :updated-at mock-date}]))))
 
-        (it "dont update existing created-at"
-          (let [saved (save (timestamps))
-                key (->key (:key saved))
-                raw (get @(.store (ds)) key)
-                raw (assoc raw :created-at (seconds-ago 5))]
-            (dosync
-              (alter (.store (ds)) assoc key raw))
-            (let [resaved (save (find-by-key (:key saved)))
-                  loaded (find-by-key (:key resaved))]
-              (should= true (between? (:created-at loaded) (seconds-ago 6) (seconds-ago 4))))))
+        (it "does not update existing created-at"
+          (let [created-at (java.util.Date. 1988 11 1)
+                mock-date (java.util.Date.)]
+            (binding [now (fn [] mock-date)]
+              (save {:kind :timestamps :created-at created-at})
+              (should-not= created-at mock-date)
+              (check-first-call (ds) "ds-save" [{:kind "timestamps"
+                                                :created-at created-at
+                                                :updated-at mock-date}]))))
 
         (it "does update existing updated-at"
-          (let [saved (save (timestamps))
-                key (->key (:key saved))
-                raw (get @(.store (ds)) key)
-                raw (assoc raw :updated-at (seconds-ago 5))]
-            (dosync
-              (alter (.store (ds)) assoc key raw))
-            (let [resaved (save (find-by-key (:key saved)))
-                  loaded (find-by-key (:key resaved))]
-              (should= true (between? (:updated-at loaded) (seconds-ago 1) (seconds-from-now 1))))))
-        )
-      )
-    )
-  )
+          (let [existing-date (java.util.Date. 1988 11 1)
+                mock-date (java.util.Date.)]
+            (binding [now (fn [] mock-date)]
+              (save {:kind :timestamps :created-at existing-date :updated-at existing-date})
+              (check-first-call (ds) "ds-save" [{:kind "timestamps"
+                                                :created-at existing-date
+                                                :updated-at mock-date}]))))))))
