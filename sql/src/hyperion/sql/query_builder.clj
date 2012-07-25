@@ -10,8 +10,7 @@
 
 (defprotocol QueryBuilderStrategy
   (quote-tick [this])
-  (apply-limit-and-offset [this query limit offset])
-  (table-listing-query [this]))
+  (apply-limit-and-offset [this query limit offset]))
 
 (defn- sort->sql [s sort]
   (let [sql-order (case (sort/order sort) :asc "ASC" :desc "DESC")]
@@ -57,8 +56,7 @@
   (build-select [this projection table filters sorts limit offset])
   (build-insert [this table record])
   (build-update [this table id record])
-  (build-delete [this table filters])
-  (build-table-listing [this]))
+  (build-delete [this table filters]))
 
 (def ^:private insert-query "INSERT INTO %s %s VALUES %s")
 
@@ -95,10 +93,7 @@
   (build-delete [this table filters]
     (->
       (make-query (format delete-query (table->db table (quote-tick strategy))))
-      (apply-filters strategy filters)))
-
-  (build-table-listing [this]
-    (make-query (table-listing-query strategy))))
+      (apply-filters strategy filters))))
 
 (defn new-query-builder [strategy]
   (QB. strategy))

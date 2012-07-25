@@ -25,17 +25,17 @@
   (apply-limit-and-offset [this query limit offset]
     (-> query
       (apply-limit limit)
-      (apply-offset offset)))
-
-  (table-listing-query [this]
-    "SELECT \"table_name\" FROM \"information_schema\".\"tables\" WHERE \"table_schema\" = 'public'"))
+      (apply-offset offset))))
 
 (deftype PostgresDB []
   DBStrategy
   (get-count [this result]
     (get result "count"))
 
-  (process-result-record [this result given] result))
+  (process-result-record [this result given] result)
+
+  (table-listing-query [this]
+    "SELECT \"table_name\" FROM \"information_schema\".\"tables\" WHERE \"table_schema\" = 'public'"))
 
 (defn new-postgres-datastore []
   (clojure.lang.RT/loadClassForName "org.postgresql.Driver")

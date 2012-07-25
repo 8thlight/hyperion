@@ -2,6 +2,7 @@
   (:use
     [hyperion.core :only [Datastore new? ds-delete-by-kind ds-find-by-kind]]
     [hyperion.sql.query-builder]
+    [hyperion.sql.query :only [make-query]]
     [hyperion.sql.jdbc]
     [hyperion.sql.format :only [record->db record<-db]])
   (:require
@@ -9,7 +10,8 @@
 
 (defprotocol DBStrategy
   (get-count [this result])
-  (process-result-record [this result given]))
+  (process-result-record [this result given])
+  (table-listing-query [this]))
 
 (defn- update-record [qb kind record]
   (execute-write (build-update qb kind (:id record) (record->db record))))
@@ -51,7 +53,7 @@
       (map #(record<-db % kind) results)))
 
   (ds-all-kinds [this]
-    (let [results (execute-query (build-table-listing qb))]
+    (let [results (execute-query (make-query (table-listing-query db)))]
       (map #(get % "table_name") results))))
 
 (defn new-sql-datastore [db qb]

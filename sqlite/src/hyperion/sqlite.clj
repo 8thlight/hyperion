@@ -17,10 +17,7 @@
       query
       (let [limit (or limit 9223372036854775807)
             offset (or offset 0)]
-        (add-to-query query "LIMIT ?, ?" [offset limit]))))
-
-  (table-listing-query [this]
-    "SELECT \"name\" AS \"table_name\" FROM \"sqlite_master\" WHERE \"type\" = 'table'"))
+        (add-to-query query "LIMIT ?, ?" [offset limit])))))
 
 (deftype SqliteDB []
   DBStrategy
@@ -30,7 +27,10 @@
   (process-result-record [this result given]
     (if (:id given)
       given
-      (assoc given :id (get result "last_insert_rowid()")))))
+      (assoc given :id (get result "last_insert_rowid()"))))
+
+  (table-listing-query [this]
+    "SELECT \"name\" AS \"table_name\" FROM \"sqlite_master\" WHERE \"type\" = 'table'"))
 
 (defn new-sqlite-datastore []
   (clojure.lang.RT/loadClassForName "org.sqlite.JDBC")
