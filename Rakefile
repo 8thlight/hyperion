@@ -23,7 +23,7 @@ def package(name)
   end
 
   desc "Run #{name} specs"
-  task :specs => :build do
+  task :spec => :build do
     spec(name)
   end
 end
