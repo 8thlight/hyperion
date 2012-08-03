@@ -52,11 +52,6 @@ namespace :mysql do
   package('mysql')
 end
 
-namespace :mysql do
-  task :build => ['core:install', 'sql:install', 'dev:install']
-  package('mysql')
-end
-
 namespace :sqlite do
   task :build => ['core:install', 'sql:install', 'dev:install']
   package('sqlite')
