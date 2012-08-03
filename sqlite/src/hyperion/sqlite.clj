@@ -7,6 +7,8 @@
   (:require
     [hyperion.sorting :as sort]))
 
+(clojure.lang.RT/loadClassForName "org.sqlite.JDBC")
+
 (deftype SqliteQB []
   QueryBuilderStrategy
 
@@ -33,5 +35,4 @@
     "SELECT \"name\" AS \"table_name\" FROM \"sqlite_master\" WHERE \"type\" = 'table'"))
 
 (defn new-sqlite-datastore []
-  (clojure.lang.RT/loadClassForName "org.sqlite.JDBC")
   (new-sql-datastore (SqliteDB.) (new-query-builder (SqliteQB.))))

@@ -2,4 +2,4 @@ before_script:
   - mysql -e 'create database hyperion;'
   - psql -c 'create database hyperion;' -U postgres
 
-script: rake specs
+script: rake spec

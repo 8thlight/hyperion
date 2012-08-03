@@ -7,6 +7,8 @@
   (:require
     [hyperion.sorting :as sort]))
 
+(clojure.lang.RT/loadClassForName "org.postgresql.Driver")
+
 (defn- apply-limit [query limit]
   (if (nil? limit)
     query
@@ -38,5 +40,4 @@
     "SELECT \"table_name\" FROM \"information_schema\".\"tables\" WHERE \"table_schema\" = 'public'"))
 
 (defn new-postgres-datastore []
-  (clojure.lang.RT/loadClassForName "org.postgresql.Driver")
   (new-sql-datastore (PostgresDB.) (new-query-builder (PostgresQB.))))

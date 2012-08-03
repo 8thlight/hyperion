@@ -7,6 +7,8 @@
   (:require
     [hyperion.sorting :as sort]))
 
+(clojure.lang.RT/loadClassForName "com.mysql.jdbc.Driver")
+
 (deftype MysqlQB []
   QueryBuilderStrategy
 

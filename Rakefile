@@ -74,7 +74,7 @@ def create_task_for_all(task_name)
 end
 
 desc 'Run the specs Hyperion'
-create_task_for_all(:specs)
+create_task_for_all(:spec)
 
 desc 'Deploy Hyperion'
 create_task_for_all(:deploy)
