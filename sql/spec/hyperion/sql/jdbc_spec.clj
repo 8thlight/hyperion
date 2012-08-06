@@ -94,6 +94,9 @@
             (make-query "INSERT INTO test (name, age) VALUES ('Myles', 23)"))))
         (should= 2 (test-count)))
 
+    (it "returns the result of the body"
+      (should= {:thing "1"} (transaction {:thing "1"})))
+
     (it "rolls back nested transactions"
       (try
         (transaction

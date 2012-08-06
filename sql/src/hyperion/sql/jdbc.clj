@@ -123,8 +123,9 @@
       (without-auto-commit
         (.setTransactionIsolation (connection) java.sql.Connection/TRANSACTION_SERIALIZABLE)
         (try
-          (f)
-          (.commit (connection))
+          (let [result (f)]
+            (.commit (connection))
+            result)
           (catch Exception e
             (.rollback (connection))
             (throw e)))))))

@@ -2,7 +2,7 @@
   (:use
     [speclj.core]
     [hyperion.sql.connection :only [with-connection-url]]
-    [hyperion.sql.jdbc]))
+    [hyperion.sql.jdbc :only [rollback]]))
 
 (defn with-connection-and-rollback [url]
   (around [it]
