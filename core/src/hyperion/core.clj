@@ -188,7 +188,7 @@
     #(unpack packer %)))
 
 (defn- do-packing [packer value]
-  (if (coll? value)
+  (if (or (sequential? value) (isa? (class value) java.util.List))
     (map #(packer %) value)
     (packer value)))
 

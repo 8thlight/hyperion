@@ -1,18 +1,17 @@
 (ns hyperion.gae.types
-  (:use
-    [hyperion.core :only [pack unpack]])
-  (:import
-    [com.google.appengine.api.datastore
-     Key KeyFactory ShortBlob Blob Category Email GeoPt Link
-     IMHandle IMHandle$Scheme PostalAddress Rating PhoneNumber Text]
-    [com.google.appengine.api.users User]
-    [com.google.appengine.api.blobstore BlobKey]
-    [java.net URL]))
+  (:use [hyperion.core :only [pack unpack]])
+  (:import [com.google.appengine.api.datastore
+            Key KeyFactory ShortBlob Blob Category Email GeoPt Link
+            IMHandle IMHandle$Scheme PostalAddress Rating PhoneNumber Text]
+           [com.google.appengine.api.users User]
+           [com.google.appengine.api.blobstore BlobKey]
+           [java.net URL]))
 
 (defn map->user [values]
   (cond
-    (contains? values :federated-identity) (User. (:email values) (:auth-domain values) (:user-id values) (:federated-identity values))
-    (contains? values :user-id) (User. (:email values) (:auth-domain values) (:user-id values))
+    (nil? values) nil
+    (contains? values :federated-identity ) (User. (:email values) (:auth-domain values) (:user-id values) (:federated-identity values))
+    (contains? values :user-id ) (User. (:email values) (:auth-domain values) (:user-id values))
     :else (User. (:email values) (:auth-domain values))))
 
 (defn user->map [user]
@@ -31,7 +30,8 @@
     :else (KeyFactory/stringToKey value)))
 
 (defmethod unpack Key [_ value]
-  (KeyFactory/keyToString value))
+  (when value
+    (KeyFactory/keyToString value)))
 
 (defmethod pack ShortBlob [_ value]
   (cond
@@ -40,7 +40,8 @@
     :else (ShortBlob. value)))
 
 (defmethod unpack ShortBlob [_ value]
-  (.getBytes value))
+  (when value
+    (.getBytes value)))
 
 (defmethod pack Blob [_ value]
   (cond
@@ -49,7 +50,8 @@
     :else (Blob. value)))
 
 (defmethod unpack Blob [_ value]
-  (.getBytes value))
+  (when value
+    (.getBytes value)))
 
 (defmethod pack Category [_ value]
   (cond
@@ -58,7 +60,8 @@
     :else (Category. value)))
 
 (defmethod unpack Category [_ value]
-  (.getCategory value))
+  (when value
+    (.getCategory value)))
 
 (defmethod pack Email [_ value]
   (cond
@@ -67,7 +70,8 @@
     :else (Email. value)))
 
 (defmethod unpack Email [_ value]
-  (.getEmail value))
+  (when value
+    (.getEmail value)))
 
 (defmethod pack GeoPt [_ value]
   (cond
@@ -76,7 +80,8 @@
     :else (GeoPt. (:latitude value) (:longitude value))))
 
 (defmethod unpack GeoPt [_ value]
-  {:latitude (.getLatitude value) :longitude (.getLongitude value)})
+  (when value
+    {:latitude (.getLatitude value) :longitude (.getLongitude value)}))
 
 (defmethod pack User [_ value]
   (cond
@@ -94,7 +99,8 @@
     :else (BlobKey. value)))
 
 (defmethod unpack BlobKey [_ value]
-  (.getKeyString value))
+  (when value
+    (.getKeyString value)))
 
 (defmethod pack Link [_ value]
   (cond
@@ -103,7 +109,8 @@
     :else (Link. value)))
 
 (defmethod unpack Link [_ value]
-  (.getValue value))
+  (when value
+    (.getValue value)))
 
 (defn parse-im-protocol [protocol]
   (try
@@ -121,7 +128,8 @@
     :else (IMHandle. (parse-im-protocol (:protocol value)) (:address value))))
 
 (defmethod unpack IMHandle [_ value]
-  {:protocol (.getProtocol value) :address (.getAddress value)})
+  (when value
+    {:protocol (.getProtocol value) :address (.getAddress value)}))
 
 (defmethod pack PostalAddress [_ value]
   (cond
@@ -130,7 +138,8 @@
     :else (PostalAddress. value)))
 
 (defmethod unpack PostalAddress [_ value]
-  (.getAddress value))
+  (when value
+    (.getAddress value)))
 
 (defmethod pack Rating [_ value]
   (cond
@@ -139,7 +148,8 @@
     :else (Rating. value)))
 
 (defmethod unpack Rating [_ value]
-  (.getRating value))
+  (when value
+    (.getRating value)))
 
 (defmethod pack PhoneNumber [_ value]
   (cond
@@ -148,7 +158,8 @@
     :else (PhoneNumber. value)))
 
 (defmethod unpack PhoneNumber [_ value]
-  (.getNumber value))
+  (when value
+    (.getNumber value)))
 
 (defmethod pack Text [_ value]
   (cond
@@ -157,7 +168,8 @@
     :else (Text. value)))
 
 (defmethod unpack Text [_ value]
-  (.getValue value))
+  (when value
+    (.getValue value)))
 
 
 
