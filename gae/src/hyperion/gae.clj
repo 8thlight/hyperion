@@ -51,7 +51,7 @@
     {:kind (.getKind native) :id (key->string (.getKey native))}
     (.getProperties native)))
 
-(defn save-native [service record]
+(defn save-record [service record]
   (let [native (->native record)]
     (.put service native)
     (<-native native)))
@@ -119,7 +119,7 @@
 
 (deftype GaeDatastore [service]
   Datastore
-  (ds-save [this natives] (doall (map #(save-native service %) natives)))
+  (ds-save [this records] (doall (map #(save-record service %) records)))
   (ds-delete-by-kind [this kind filters]
     (delete-by-kind service kind filters))
   (ds-delete-by-id [this kind id]

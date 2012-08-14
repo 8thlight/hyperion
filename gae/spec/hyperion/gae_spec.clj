@@ -33,9 +33,6 @@
 (describe "Google AppEngine Datastore"
 
   (with-local-datastore)
-  (around [it]
-    (binding [*ds* (new-gae-datastore)]
-      (it)))
 
   (it-behaves-like-a-datastore)
 
