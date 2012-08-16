@@ -1,4 +1,4 @@
-(ns hyperion.dev.memory
+(ns hyperion.memory
   (:use
     [hyperion.core :only [Datastore new?]])
   (:require
@@ -46,7 +46,7 @@
         operator (->operator (filter/operator spec) value)]
     (fn [record] (operator (get record key)))))
 
-(defn- build-filter
+(defn build-filter
   ([kind filter-specs]
     (let [speced-filters (map spec->filter filter-specs)
           all-filters (cons #(= kind (:kind %)) speced-filters)]

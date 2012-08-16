@@ -3,7 +3,15 @@
             [hyperion.core :refer :all ]
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.riak.spec-helper :refer [with-testable-riak-datastore]]
-            [hyperion.riak :refer :all]))
+            [hyperion.riak :refer :all ]
+            [clojure.data.codec.base64 :refer (encode decode)])
+  (:import [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery IntValueQuery IntRangeQuery]))
+
+; Required Configuration:
+; Add the following to the riak_kv section of Riak's config.
+; {delete_mode, immediate}
+; This will force Riak to immediately delete keys, instead of keeping them around for a while
+; http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-October/006048.html
 
 (describe "Riak Datastore"
 
@@ -62,7 +70,7 @@
 
   (context "PBC client"
 
-    (with client (open-client :api :pbc))
+    (with client (open-client :api :pbc ))
     (after (try (.shutdown @client) (catch Exception e)))
 
     (it "creating a PBC client"
@@ -72,7 +80,7 @@
 
   (context "HTTP client"
 
-    (with client (open-client :api :http))
+    (with client (open-client :api :http ))
     (after (try (.shutdown @client) (catch Exception e)))
 
     (it "creating an HTTP client"
@@ -80,16 +88,106 @@
       (should-not-throw (.ping @client)))
     )
 
+  (context "Key"
+
+    (it "creates unique keys"
+      (should= 100 (count (into #{} (take 100 (repeatedly #(create-key "foo"))))))
+      (should= 100 (count (into #{} (take 100 (repeatedly #(create-key "bar")))))))
+
+    (it "can parse a key"
+      (let [key (String. (encode (.getBytes (str "foo:abc123"))))]
+        (should= ["foo" "abc123"] (decompose-key key))))
+
+    )
+
+  (context "Filters"
+
+    (it "identifies queriable filters"
+      (should= [[[:= :foo 1]] []] (optimize-filters [[:= :foo 1]]))
+      (should= [[[:>= :foo 1]] []] (optimize-filters [[:>= :foo 1]]))
+      (should= [[[:<= :foo 1]] []] (optimize-filters [[:<= :foo 1]])))
+
+    (it "identified non-queriable filters"
+      (should= [[] [[:!= :foo 1]]] (optimize-filters [[:!= :foo 1]]))
+      (should= [[] [[:contains? :foo [1 2 3]]]] (optimize-filters [[:contains? :foo [1 2 3]]])))
+
+    (it "optimized semi-queriable filters"
+      (should= [[[:<= :foo 1]] [[:!= :foo 1]]] (optimize-filters [[:< :foo 1]]))
+      (should= [[[:>= :foo 1]] [[:!= :foo 1]]] (optimize-filters [[:> :foo 1]])))
+
+    (it "default to key query"
+      (let [queries (filters->queries "hole-in-the" nil)
+            query (first queries)]
+        (should= 1 (count queries))
+        (should= BinRangeQuery (class query))
+        (should= "hole-in-the" (.getBucket query))
+        (should= "$key" (.getIndex query))
+        (should= "0" (.from query))
+        (should= "zzzzz" (.to query))))
+
+    (it "creates a bin :>= query"
+      (let [queries (filters->queries "hole-in-the" [[:>= :foo "bar"]])
+            query (first queries)]
+        (should= 1 (count queries))
+        (should= BinRangeQuery (class query))
+        (should= "hole-in-the" (.getBucket query))
+        (should= "foo_bin" (.getIndex query))
+        (should= "bar" (.from query))
+        (should= "zzzzz" (.to query))))
+
+    (it "creates a bin :<= query"
+      (let [queries (filters->queries "hole-in-the" [[:<= :foo "bar"]])
+            query (first queries)]
+        (should= 1 (count queries))
+        (should= BinRangeQuery (class query))
+        (should= "hole-in-the" (.getBucket query))
+        (should= "foo_bin" (.getIndex query))
+        (should= "0" (.from query))
+        (should= "bar" (.to query))))
+
+    (it "creates a bin := query"
+      (let [queries (filters->queries "hole-in-the" [[:= :foo "bar"]])
+            query (first queries)]
+        (should= 1 (count queries))
+        (should= BinValueQuery (class query))
+        (should= "hole-in-the" (.getBucket query))
+        (should= "foo_bin" (.getIndex query))
+        (should= "bar" (.getValue query))))
+
+    (it "creates a int :>= query"
+      (let [queries (filters->queries "hole-in-the" [[:>= :foo 42]])
+            query (first queries)]
+        (should= 1 (count queries))
+        (should= IntRangeQuery (class query))
+        (should= "hole-in-the" (.getBucket query))
+        (should= "foo_int" (.getIndex query))
+        (should= 42 (.from query))
+        (should= Integer/MAX_VALUE (.to query))))
+
+    (it "creates a int :<= query"
+      (let [queries (filters->queries "hole-in-the" [[:<= :foo 42]])
+            query (first queries)]
+        (should= 1 (count queries))
+        (should= IntRangeQuery (class query))
+        (should= "hole-in-the" (.getBucket query))
+        (should= "foo_int" (.getIndex query))
+        (should= Integer/MIN_VALUE (.from query))
+        (should= 42 (.to query))))
+
+    (it "creates a int := query"
+      (let [queries (filters->queries "hole-in-the" [[:= :foo 42]])
+            query (first queries)]
+        (should= 1 (count queries))
+        (should= IntValueQuery (class query))
+        (should= "hole-in-the" (.getBucket query))
+        (should= "foo_int" (.getIndex query))
+        (should= 42 (.getValue query))))
+    )
+
   (context "Live"
     (with-testable-riak-datastore)
 
-;    (it-behaves-like-a-datastore)
-
-    (it "it saves an existing record"
-      (let [record1 (save {:kind "other-testing" :name "ann"})
-            record2 (save (assoc record1 :name "james"))]
-        (should= (:id record1) (:id record2))
-        (should= 1 (count (find-by-kind "other-testing")))))
+    (it-behaves-like-a-datastore)
     )
   )
 
