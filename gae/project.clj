@@ -8,14 +8,12 @@
 
   ; leiningen 1
   :dev-dependencies [[speclj ~(:speclj-version config)]
-                     [hyperion/hyperion-dev ~(:version config)]
                      [com.google.appengine/appengine-testing "1.6.6"]
                      [com.google.appengine/appengine-api-stubs "1.6.6"]]
   :test-path "spec"
 
   ; leiningen 2
   :profiles {:dev {:dependencies [[speclj ~(:speclj-version config)]
-                                  [hyperion/hyperion-dev ~(:version config)]
                                   [com.google.appengine/appengine-testing "1.6.6"]
                                   [com.google.appengine/appengine-api-stubs "1.6.6"]]}}
   :test-paths ["spec/"]

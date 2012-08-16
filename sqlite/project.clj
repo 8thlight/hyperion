@@ -8,12 +8,10 @@
                  [sqlitejdbc "0.5.6"]]
 
   ; leiningen 1
-  :dev-dependencies [[speclj ~(:speclj-version config)]
-                     [hyperion/hyperion-dev ~(:version config)]]
+  :dev-dependencies [[speclj ~(:speclj-version config)]]
   :test-path "spec"
 
   ; leiningen 2
-  :profiles {:dev {:dependencies [[speclj ~(:speclj-version config)]
-                                  [hyperion/hyperion-dev ~(:version config)]]}}
+  :profiles {:dev {:dependencies [[speclj ~(:speclj-version config)]]}}
   :test-paths ["spec/"]
   :plugins [[speclj ~(:speclj-version config)]])
