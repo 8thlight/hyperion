@@ -4,7 +4,7 @@
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.riak.spec-helper :refer [with-testable-riak-datastore]]
             [hyperion.riak :refer :all ]
-            [clojure.data.codec.base64 :refer (encode decode)])
+            [clojure.data.codec.base64 :refer [encode decode]])
   (:import [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery IntValueQuery IntRangeQuery]))
 
 ; Required Configuration:

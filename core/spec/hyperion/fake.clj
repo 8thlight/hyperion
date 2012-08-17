@@ -11,10 +11,10 @@
 (deftype FakeDatastore [calls responses]
   Datastore
   (ds-save [this records] (stub-call this "ds-save" records))
-  (ds-delete-by-id [this kind id] (stub-call this "ds-delete-by-id" kind id))
+  (ds-delete-by-key [this key] (stub-call this "ds-delete-by-key" key))
   (ds-delete-by-kind [this kind filters] (stub-call this "ds-delete-by-kind" kind filters))
   (ds-count-by-kind [this kind filters] (stub-call this "ds-count-by-kind" kind filters))
-  (ds-find-by-id [this kind id] (stub-call this "ds-find-by-id" kind id))
+  (ds-find-by-key [this key] (stub-call this "ds-find-by-key" key))
   (ds-find-by-kind [this kind filters sorts limit offset] (stub-call this "ds-find-by-kind" kind filters sorts limit offset))
   (ds-all-kinds [this] (stub-call this "ds-all-kinds")))
 

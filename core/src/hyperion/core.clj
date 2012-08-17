@@ -13,10 +13,10 @@
 
 (defprotocol Datastore
   (ds-save [this records])
-  (ds-delete-by-id [this kind id])
+  (ds-delete-by-key [this key])
   (ds-delete-by-kind [this kind filters])
   (ds-count-by-kind [this kind filters])
-  (ds-find-by-id [this kind id])
+  (ds-find-by-key [this key])
   (ds-find-by-kind [this kind filters sorts limit offset])
   (ds-all-kinds [this]))
 
@@ -41,7 +41,7 @@
   (unpack [this value] value))
 
 (defn new? [record]
-  (nil? (:id record)))
+  (nil? (:key record)))
 
 (defprotocol AsKind
   (->kind [this]))
@@ -209,11 +209,11 @@
   (when record
     (let [record (normalize-fields record)
           entity (create-entity record unpack-field)]
-      (if-assoc entity :id (:id record)))))
+      (if-assoc entity :key (:key record)))))
 
 (defn- pack-entity [record]
   (let [entity (create-entity-with-defaults record pack-field)]
-    (if-assoc entity :id (:id record))))
+    (if-assoc entity :key (:key record))))
 
 (defn- with-created-at [record spec]
   (if (and (or (contains? spec :created-at) (contains? record :created-at)) (= nil (:created-at record)))
@@ -302,12 +302,12 @@
 (defn- find-records-by-kind [kind filters sorts limit offset]
   (map native->entity (ds-find-by-kind (ds) kind (parse-filters kind filters) sorts limit offset)))
 
-(defn find-by-id [kind id]
+(defn find-by-key [key]
   (native->entity
-    (ds-find-by-id (ds) (->kind kind) id)))
+    (ds-find-by-key (ds) key)))
 
 (defn reload [entity]
-  (find-by-id (:kind entity) (:id entity)))
+  (find-by-key (:key entity)))
 
 (defn find-by-kind [kind & args]
   (let [options (->options args)
@@ -347,8 +347,8 @@
   (let [options (->options args)]
     (count-records-by-all-kinds (:filters options))))
 
-(defn delete-by-id [kind id]
-  (ds-delete-by-id (ds) (->kind kind) id)
+(defn delete-by-key [key]
+  (ds-delete-by-key (ds) key)
   nil)
 
 (defn delete-by-kind [kind & args]

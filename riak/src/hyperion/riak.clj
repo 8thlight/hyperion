@@ -1,11 +1,11 @@
 (ns hyperion.riak
-  (:require [hyperion.core :refer (Datastore)]
+  (:require [hyperion.core :refer [Datastore]]
             [hyperion.memory :as memory]
             [hyperion.sorting :as sort]
             [hyperion.filtering :as filter]
-            [chee.util :refer (->options)]
-            [cheshire.core :refer (generate-string parse-string)]
-            [clojure.data.codec.base64 :refer (encode decode)]
+            [chee.util :refer [->options]]
+            [cheshire.core :refer [generate-string parse-string]]
+            [clojure.data.codec.base64 :refer [encode decode]]
             [clojure.string :as string]
             [clojure.set :refer [intersection]])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
@@ -105,17 +105,17 @@
 (defn json->record [json kind key]
   (assoc (parse-string json true)
     :kind kind
-    :id key))
+    :key key))
 
 (defn native->record [native kind id]
   (let [record (parse-string (String. (.getValue native)) true)]
     (assoc record
       :kind kind
-      :id (create-key kind id))))
+      :key (create-key kind id))))
 
 ; TODO - investigate using SMILE format of JSON to be faster.
 (defn- save-record [client record]
-  (let [key (or (:id record) (create-key (:kind record)))
+  (let [key (or (:key record) (create-key (:kind record)))
         [kind id] (decompose-key key)
         native (->native record kind id)
         response (.store client native store-options)
@@ -185,7 +185,7 @@
 
 (defn- delete-by-kind [client kind filters]
   (let [records (find-by-kind client kind filters nil nil nil)
-        ids (map #(second (decompose-key (:id %))) records)
+        ids (map #(second (decompose-key (:key %))) records)
         bucket (bucket-name kind)]
     (doseq [id ids] (delete-by-key client bucket id))))
 
@@ -198,9 +198,9 @@
   Datastore
   (ds-save [this records] (doall (map #(save-record client %) records)))
   (ds-delete-by-kind [this kind filters] (delete-by-kind client kind filters))
-  (ds-delete-by-id [this kind id] (delete-by-key client id))
+  (ds-delete-by-key [this key] (delete-by-key client key))
   (ds-count-by-kind [this kind filters] (count (find-by-kind client kind filters nil nil nil)))
-  (ds-find-by-id [this kind id] (find-by-key client id))
+  (ds-find-by-key [this key] (find-by-key client key))
   (ds-find-by-kind [this kind filters sorts limit offset] (find-by-kind client kind filters sorts limit offset))
   (ds-all-kinds [this] (find-all-kinds client)))
 

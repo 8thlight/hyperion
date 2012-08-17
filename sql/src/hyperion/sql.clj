@@ -1,12 +1,12 @@
 (ns hyperion.sql
-  (:use
-    [hyperion.core :only [Datastore new? ds-delete-by-kind ds-find-by-kind]]
-    [hyperion.sql.query-builder]
-    [hyperion.sql.query :only [make-query]]
-    [hyperion.sql.jdbc]
-    [hyperion.sql.format :only [record->db record<-db]])
-  (:require
-    [hyperion.filtering :as filter]))
+  (:require [clojure.string :as string]
+            [hyperion.core :refer [Datastore new? ds-delete-by-kind ds-find-by-kind]]
+            [hyperion.sql.query-builder :refer :all ]
+            [hyperion.sql.query :refer [make-query]]
+            [hyperion.sql.jdbc :refer :all ]
+            [hyperion.sql.format :refer [record->db record<-db]]
+            [hyperion.sql.key :refer [decompose-key]]
+            [hyperion.filtering :as filter]))
 
 (defprotocol DBStrategy
   (get-count [this result])
@@ -34,8 +34,9 @@
   (ds-save [this records]
     (doall (map #(save-record db qb %) records)))
 
-  (ds-delete-by-id [this kind id]
-    (ds-delete-by-kind this kind [(filter/make-filter := :id id)]))
+  (ds-delete-by-key [this key]
+    (let [[kind id] (decompose-key key)]
+      (ds-delete-by-kind this kind [(filter/make-filter := :id id)])))
 
   (ds-delete-by-kind [this kind filters]
     (execute-mutation (build-delete qb kind filters)))
@@ -44,11 +45,12 @@
     (let [results (execute-query (build-select qb "COUNT(*)" kind filters nil nil nil))]
       (get-count db (first results))))
 
-  (ds-find-by-id [this kind id]
-    (first (ds-find-by-kind this kind [(filter/make-filter := :id id)] nil nil nil)))
+  (ds-find-by-key [this key]
+    (let [[kind id] (decompose-key key)]
+      (first (ds-find-by-kind this kind [(filter/make-filter := :id id)] nil nil nil))))
 
   (ds-find-by-kind [this kind filters sorts limit offset]
-    (let [query (build-select qb "*"  kind filters sorts limit offset)
+    (let [query (build-select qb "*" kind filters sorts limit offset)
           results (execute-query query)]
       (map #(record<-db % kind) results)))
 
