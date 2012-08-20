@@ -29,17 +29,22 @@ ie.
     (open-client (new-riak-datastore :api :pbc))
 
 Options:
+
  :api - [:pbc :http] *required
 
 HTTP Options:
+
  :host :port :http-client :mapreduce-path :max-connections
  :retry-handler :riak-path :scheme :timeout :url
+
  See: http://basho.github.com/riak-java-client/1.0.5/com/basho/riak/client/raw/http/HTTPClientConfig.Builder.html
 
 PBC Options:
+
  :host :port :connection-timeout-millis
  :idle-connection-ttl-millis :initial-pool-size
  :pool-size :socket-buffer-size-kb
+
  See: http://basho.github.com/riak-java-client/1.0.5/com/basho/riak/client/raw/pbc/PBClientConfig.Builder.html
 
 ### Riak Configuration
