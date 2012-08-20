@@ -70,7 +70,7 @@
 
   (context "PBC client"
 
-    (with client (open-client :api :pbc ))
+    (with client (open-client :api :pbc))
     (after (try (.shutdown @client) (catch Exception e)))
 
     (it "creating a PBC client"
