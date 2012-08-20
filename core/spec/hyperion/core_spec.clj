@@ -394,7 +394,7 @@
       (context "Timestamps"
         (it "are automatically populated on save if the entity contains created-at and updated-at"
           (let [mock-date (java.util.Date.)]
-            (binding [now (fn [] mock-date)]
+            (with-redefs [now (fn [] mock-date)]
               (save (timestamps))
               (check-first-call (ds) "ds-save" [{:kind "timestamps"
                                                  :created-at mock-date
@@ -402,7 +402,7 @@
 
         (it "are saved based on kind, not provided keys"
           (let [mock-date (java.util.Date.)]
-            (binding [now (fn [] mock-date)]
+            (with-redefs [now (fn [] mock-date)]
               (save {:kind :timestamps})
               (check-first-call (ds) "ds-save" [{:kind "timestamps"
                                                  :created-at mock-date
@@ -411,7 +411,7 @@
         (it "does not update existing created-at"
           (let [created-at (java.util.Date. 1988 11 1)
                 mock-date (java.util.Date.)]
-            (binding [now (fn [] mock-date)]
+            (with-redefs [now (fn [] mock-date)]
               (save {:kind :timestamps :created-at created-at})
               (should-not= created-at mock-date)
               (check-first-call (ds) "ds-save" [{:kind "timestamps"
@@ -421,7 +421,7 @@
         (it "does update existing updated-at"
           (let [existing-date (java.util.Date. 1988 11 1)
                 mock-date (java.util.Date.)]
-            (binding [now (fn [] mock-date)]
+            (with-redefs [now (fn [] mock-date)]
               (save {:kind :timestamps :created-at existing-date :updated-at existing-date})
               (check-first-call (ds) "ds-save" [{:kind "timestamps"
                                                  :created-at existing-date
