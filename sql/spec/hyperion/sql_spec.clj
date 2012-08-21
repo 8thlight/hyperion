@@ -3,19 +3,16 @@
             [hyperion.core :refer :all]
             [hyperion.sql :refer :all]
             [hyperion.sql.key :refer [compose-key]]
-            [hyperion.sql.query-builder :refer [new-query-builder QueryBuilderStrategy]]
-            [hyperion.sql.jdbc :refer [execute-write execute-mutation execute-query]]))
+            [hyperion.sql.query-builder :refer [new-query-builder]]
+            [hyperion.sql.fake-query-builder]
+            [hyperion.sql.jdbc :refer [execute-write execute-mutation execute-query]])
+  (:import [hyperion.sql.fake_query_builder FakeQueryBuilderStrategy]))
 
 (deftype FakeDBStrategy [log]
   DBStrategy
   (get-count [this result] (swap! log conj [:get-count result]) 42)
   (process-result-record [this result given] (swap! log conj [:process-result-record result given]) result)
   (table-listing-query [this] (swap! log conj [:table-listing-query]) "table-listing-query"))
-
-(deftype FakeQueryBuilderStrategy [log]
-  QueryBuilderStrategy
-  (quote-tick [this] (swap! log conj [:quote-tick]) "'")
-  (apply-limit-and-offset [this query limit offset] (swap! log conj [:apply-limit-and-offset query limit offset]) query))
 
 (describe "Hyperion SQL"
 
@@ -34,6 +31,9 @@
     (ds-save @db [{:kind "foo" :value 1}])
     (should= :write (first (first @@log))))
 
+  (it "gracefully handles empty records"
+    (should-not-throw (ds-save @db [{:kind "foo"}])))
+
   (it "deletes"
     (ds-delete-by-key @db (compose-key "foo" 123))
     (should= :mutation (first (first @@log)))
@@ -43,5 +43,11 @@
     (ds-find-by-key @db (compose-key "foo" 123))
     (should= :query (first (first @@log)))
     (should-not= -1 (.indexOf (apply str (first @@log)) "123")))
+
+  (it "packs and unpacks keys"
+    (let [key (compose-key "foo" 123)]
+      (should= ["foo" 123] (ds-pack-key @db key))
+      (should= key (ds-unpack-key @db ["foo" 123]))))
+
 
   )

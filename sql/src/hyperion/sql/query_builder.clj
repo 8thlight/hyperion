@@ -1,16 +1,15 @@
 (ns hyperion.sql.query-builder
-  (:use
-    [clojure.string :only [join]]
-    [hyperion.sql.query :only [add-str]]
-    [hyperion.sql.format]
-    [hyperion.sql.query :only [make-query add-to-query]])
-  (:require
-    [hyperion.filtering :as filter]
-    [hyperion.sorting :as sort]))
+  (:use [clojure.string :only [join]]
+        [hyperion.sql.query :only [add-str]]
+        [hyperion.sql.format]
+        [hyperion.sql.query :only [make-query add-to-query]])
+  (:require [hyperion.filtering :as filter]
+            [hyperion.sorting :as sort]))
 
 (defprotocol QueryBuilderStrategy
   (quote-tick [this])
-  (apply-limit-and-offset [this query limit offset]))
+  (apply-limit-and-offset [this query limit offset])
+  (empty-insert-query [this]))
 
 (defn- sort->sql [s sort]
   (let [sql-order (case (sort/order sort) :asc "ASC" :desc "DESC")]
@@ -77,11 +76,14 @@
   (build-insert [this table record]
     (let [record (record->db record)
           values (vals record)
-          query-vars (in-variables values)
-          table-name (table->db table (quote-tick strategy))
-          col-names (column->db (keys record) (quote-tick strategy))
-          query-str (format insert-query table-name col-names query-vars)]
-      (make-query query-str values)))
+          table-name (table->db table (quote-tick strategy))]
+      (if (seq values)
+        (make-query
+          (format insert-query table-name
+            (column->db (keys record) (quote-tick strategy))
+            (in-variables values))
+          values)
+        (make-query (format (empty-insert-query strategy) table-name)))))
 
   (build-update [this table id record]
     (let [record (record->db record)

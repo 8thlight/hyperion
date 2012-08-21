@@ -86,7 +86,9 @@
   (ds-count-by-kind [this kind filters] (count (find-records-by-kind this kind filters nil nil nil)))
   (ds-find-by-key [this key] (find-record-by-key this key))
   (ds-find-by-kind [this kind filters sorts limit offset] (find-records-by-kind this kind filters sorts limit offset))
-  (ds-all-kinds [this] (all-kinds this)))
+  (ds-all-kinds [this] (all-kinds this))
+  (ds-pack-key [this value] value)
+  (ds-unpack-key [this value] value))
 
 (defn new-memory-datastore
   ([] (MemoryDatastore. (ref {})))

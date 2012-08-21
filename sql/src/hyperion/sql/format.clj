@@ -14,13 +14,16 @@
   (record<-db [this table] [this table id]))
 
 (extend-protocol FormattableForDatabase
+
+  nil
+  (column->db [this _] "()")
+
   java.lang.String
   (table->db [this quote]
     (add-quotes (snake-case this) quote))
 
   clojure.lang.Keyword
   (operator->db [this] (name this))
-
   (column->db [this quote]
     (add-quotes (snake-case (name this)) quote))
 

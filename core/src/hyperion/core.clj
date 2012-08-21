@@ -18,7 +18,9 @@
   (ds-count-by-kind [this kind filters])
   (ds-find-by-key [this key])
   (ds-find-by-kind [this kind filters sorts limit offset])
-  (ds-all-kinds [this]))
+  (ds-all-kinds [this])
+  (ds-pack-key [this value])
+  (ds-unpack-key [this value]))
 
 (defn ds []
   (if (bound? #'*ds*)
@@ -27,18 +29,18 @@
 
 (def #^{:dynamic true} *entity-specs* (ref {}))
 
-(defprotocol Packable
-  (pack [this value])
-  (unpack [this value]))
-
-(extend-protocol Packable
-  Object
-  (pack [this value] value)
-  (unpack [this value] value)
-
-  nil
-  (pack [this value] value)
-  (unpack [this value] value))
+;(defprotocol Packable
+;  (pack [this value])
+;  (unpack [this value]))
+;
+;(extend-protocol Packable
+;  Object
+;  (pack [this value] value)
+;  (unpack [this value] value)
+;
+;  nil
+;  (pack [this value] value)
+;  (unpack [this value] value))
 
 (defn new? [record]
   (nil? (:key record)))
@@ -127,6 +129,9 @@
 
 (defmulti unpack (fn [type value] type))
 (defmethod unpack :default [type value] value)
+
+(defmethod pack :key [_ value] (when value (ds-pack-key (ds) value)))
+(defmethod unpack :key [_ value] (when value (ds-unpack-key (ds) value)))
 
 (defn- apply-type-packers [options]
   (if-let [t (:type options)]

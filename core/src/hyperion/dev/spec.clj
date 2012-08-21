@@ -33,7 +33,13 @@
             saved (apply save* (take 10 inf-records))]
         (should= 10 (count (set (map :key saved))))
         (should= 10 (count (find-by-kind "testing")))
-        (should= (map str (range 10)) (sort (map :name (find-by-kind "testing"))))))))
+        (should= (map str (range 10)) (sort (map :name (find-by-kind "testing"))))))
+
+    (it "an empty record"
+      (let [result (save {:kind "testing"})]
+        (should= nil (:name (find-by-key (:key result))))))
+    )
+  )
 
 (defn it-deletes []
   (list
@@ -214,8 +220,18 @@
           (should= 7 (count records))
           (should (every? #(= "testing" (:kind %)) records)))))))
 
+(defn it-handles-keys []
+  (context "keys"
+    (it "are packed and unpacked symetrically"
+      (let [key (:key (save {:kind "testing"}))
+            packed-key (ds-pack-key (ds)  key)]
+        (should-not= nil packed-key)
+        (should= key (ds-unpack-key (ds) packed-key))
+        (should= packed-key (ds-pack-key (ds) key))))))
+
 (defn it-behaves-like-a-datastore []
   (list
     (it-saves)
     (it-deletes)
-    (it-can-be-searched)))
+    (it-can-be-searched)
+    (it-handles-keys)))

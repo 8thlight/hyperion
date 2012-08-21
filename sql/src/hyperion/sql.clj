@@ -5,7 +5,7 @@
             [hyperion.sql.query :refer [make-query]]
             [hyperion.sql.jdbc :refer :all ]
             [hyperion.sql.format :refer [record->db record<-db]]
-            [hyperion.sql.key :refer [decompose-key]]
+            [hyperion.sql.key :refer [decompose-key compose-key]]
             [hyperion.filtering :as filter]))
 
 (defprotocol DBStrategy
@@ -17,7 +17,8 @@
   (execute-write (build-update qb kind (:id record) (record->db record))))
 
 (defn- insert-record [qb kind record]
-  (execute-write (build-insert qb kind (record->db record))))
+  (let [row (record->db record)]
+      (execute-write (build-insert qb kind row))))
 
 (defn- save-record [db qb record]
   (let [kind (:kind record)
@@ -56,7 +57,13 @@
 
   (ds-all-kinds [this]
     (let [results (execute-query (make-query (table-listing-query db)))]
-      (map #(get % "table_name") results))))
+      (map #(get % "table_name") results)))
+
+  (ds-pack-key [this value] (decompose-key value))
+
+  (ds-unpack-key [this value] (apply compose-key value))
+
+  )
 
 (defn new-sql-datastore [db qb]
   (SQLDatastore. db qb))

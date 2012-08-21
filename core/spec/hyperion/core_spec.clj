@@ -7,19 +7,19 @@
         [clojure.string :only (upper-case)]
         [chee.datetime :only [now before? seconds-ago between? seconds-from-now]]))
 
-(defn check-call [ds index name params]
-  (let [call (get @(.calls ds) index)]
-    (should= name (first call))
-    (should= params (second call))))
+(defmacro check-call [ds index name params]
+  `(let [call# (get @(.calls ~ds) ~index)]
+     (should= ~name (first call#))
+     (should= (seq ~params) (second call#))))
 
-(defn check-first-call [ds name & params]
-  (check-call ds 0 name params))
+(defmacro check-first-call [ds name & params]
+  `(check-call ~ds 0 ~name ~(vec params)))
 
-(defn check-second-call [ds name & params]
-  (check-call ds 1 name params))
+(defmacro check-second-call [ds name & params]
+  `(check-call ~ds 1 ~name ~(vec params)))
 
-(defn check-third-call [ds name & params]
-  (check-call ds 2 name params))
+(defmacro check-third-call [ds name & params]
+  `(check-call ~ds 2 ~name ~(vec params)))
 
 (def supported-filters
   [[:= := ]
@@ -113,7 +113,10 @@
 (defentity "PACKABLE"
   [widget :type Integer]
   [bauble :packer #(apply str (reverse %)) :unpacker #(if % (upper-case %) %)]
-  [thingy :unpacker true])
+  [gewgaw :unpacker true])
+
+(defentity Keyed
+  [other-key :type :key ])
 
 (defmethod pack Integer [_ value]
   (when value
@@ -216,7 +219,7 @@
 
       (it "packs entities"
         (save {:kind :packable :widget "42"})
-        (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :thingy nil :bauble ""}]))
+        (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :gewgaw nil :bauble ""}]))
 
       (it "converts the kind to a string"
         (save {:kind :one})
@@ -313,11 +316,21 @@
       (context "packing"
         (it "types"
           (save {:kind :packable :widget "42"})
-          (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :bauble "" :thingy nil}]))
+          (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :bauble "" :gewgaw nil}]))
 
         (it "custom functions"
           (save {:kind :packable :bauble "hello"})
-          (check-first-call (ds) "ds-save" [{:kind "packable" :widget nil :bauble "olleh" :thingy nil}]))
+          (check-first-call (ds) "ds-save" [{:kind "packable" :widget nil :bauble "olleh" :gewgaw nil}]))
+
+        (it "keys which are ds-specific"
+          (reset! (.responses (ds)) ["packed-abc123"])
+          (save {:kind :keyed :other-key "abc123"})
+          (check-first-call (ds) "ds-pack-key" "abc123")
+          (check-second-call (ds) "ds-save" [{:kind "keyed" :other-key "packed-abc123"}]))
+
+        (it "nil key"
+          (save {:kind :keyed :other-key nil})
+          (check-first-call (ds) "ds-save" [{:kind "keyed" :other-key nil}]))
 
         (it "applies default values and packs them"
           (save {:kind :many-defaulted-fields})
@@ -339,15 +352,15 @@
 
           (it "attribues for known kind"
             (reset! (.responses (ds)) [[{"KIND" "packable" :BAuble "val"}]])
-            (should= {:kind "packable" :bauble "VAL" :widget nil :thingy nil} (save {})))
+            (should= {:kind "packable" :bauble "VAL" :widget nil :gewgaw nil} (save {})))
 
           (it "kind for known kind"
             (reset! (.responses (ds)) [[{:kind :packable}]])
-            (should= {:kind "packable" :bauble nil :widget nil :thingy nil} (save {}))))
+            (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil} (save {}))))
 
         (it "types"
           (reset! (.responses (ds)) [[{:kind "packable" :widget 42}]])
-          (should= {:kind "packable" :bauble nil :widget "42" :thingy nil} (save {})))
+          (should= {:kind "packable" :bauble nil :widget "42" :gewgaw nil} (save {})))
 
         (it "unknown kinds"
           (reset! (.responses (ds)) [[{:kind "unknown" :widget 42}]])
@@ -355,7 +368,7 @@
 
         (it "custom functions"
           (reset! (.responses (ds)) [[{:kind "packable" :bauble "hello"}]])
-          (should= {:kind "packable" :bauble "HELLO" :widget nil :thingy nil} (save {})))
+          (should= {:kind "packable" :bauble "HELLO" :widget nil :gewgaw nil} (save {})))
 
         (it "does not apply default values"
           (reset! (.responses (ds)) [[{:kind "many-defaulted-fields"}]])
@@ -363,7 +376,20 @@
 
         (it "nil"
           (reset! (.responses (ds)) [[nil]])
-          (should= nil (save {}))))
+          (should= nil (save {})))
+
+        (it "keys which are ds-specific"
+          (reset! (.responses (ds)) [[{:kind "keyed" :other-key "abc123"}] "unpacked-abc123"])
+          (should= {:kind "keyed" :other-key "unpacked-abc123"} (save {}))
+          (check-first-call (ds) "ds-save" [{}])
+          (check-second-call (ds) "ds-unpack-key" "abc123"))
+
+        (it "nil key"
+          (reset! (.responses (ds)) [[{:kind "keyed" :other-key nil}] "unpacked-abc123"])
+          (should= {:kind "keyed" :other-key nil} (save {}))
+          (check-first-call (ds) "ds-save" [{}])
+          (check-second-call (ds) nil))
+        )
 
       (context "hooks"
         (context "after create"
@@ -425,4 +451,8 @@
               (save {:kind :timestamps :created-at existing-date :updated-at existing-date})
               (check-first-call (ds) "ds-save" [{:kind "timestamps"
                                                  :created-at existing-date
-                                                 :updated-at mock-date}]))))))))
+                                                 :updated-at mock-date}]))))
+        )
+      )
+    )
+  )
