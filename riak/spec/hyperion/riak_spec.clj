@@ -88,18 +88,6 @@
       (should-not-throw (.ping @client)))
     )
 
-  (context "Key"
-
-    (it "creates unique keys"
-      (should= 100 (count (into #{} (take 100 (repeatedly #(create-key "foo"))))))
-      (should= 100 (count (into #{} (take 100 (repeatedly #(create-key "bar")))))))
-
-    (it "can parse a key"
-      (let [key (String. (encode (.getBytes (str "foo:abc123"))))]
-        (should= ["foo" "abc123"] (decompose-key key))))
-
-    )
-
   (context "Filters"
 
     (it "identifies queriable filters"

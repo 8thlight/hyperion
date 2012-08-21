@@ -2,7 +2,7 @@
   (:require [speclj.core :refer :all]
             [hyperion.core :refer :all]
             [hyperion.sql :refer :all]
-            [hyperion.sql.key :refer [create-key]]
+            [hyperion.sql.key :refer [compose-key]]
             [hyperion.sql.query-builder :refer [new-query-builder QueryBuilderStrategy]]
             [hyperion.sql.jdbc :refer [execute-write execute-mutation execute-query]]))
 
@@ -35,12 +35,12 @@
     (should= :write (first (first @@log))))
 
   (it "deletes"
-    (ds-delete-by-key @db (create-key "foo" 123))
+    (ds-delete-by-key @db (compose-key "foo" 123))
     (should= :mutation (first (first @@log)))
     (should-not= -1 (.indexOf (apply str (first @@log)) "123")))
 
   (it "finds-by-kind"
-    (ds-find-by-key @db (create-key "foo" 123))
+    (ds-find-by-key @db (compose-key "foo" 123))
     (should= :query (first (first @@log)))
     (should-not= -1 (.indexOf (apply str (first @@log)) "123")))
 

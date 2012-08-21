@@ -1,6 +1,6 @@
 (ns hyperion.sql.format
   (:use [chee.string :only [snake-case spear-case]]
-        [hyperion.sql.key :only [create-key decompose-key]])
+        [hyperion.sql.key :only [compose-key decompose-key]])
   (:require [clojure.string :as str]))
 
 (defn- add-quotes [s quote]
@@ -34,8 +34,8 @@
 
   (record<-db
     ([this table id]
-      (merge this {:kind table :key (create-key table id)}))
+      (merge this {:kind table :key (compose-key table id)}))
     ([this table]
       (let [id (or (:id this) (get this "id"))]
-        (assoc this :kind table :key (create-key table id)))))
+        (assoc this :kind table :key (compose-key table id)))))
   )

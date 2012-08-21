@@ -3,6 +3,7 @@
             [hyperion.memory :as memory]
             [hyperion.sorting :as sort]
             [hyperion.filtering :as filter]
+            [hyperion.key :refer (compose-key decompose-key)]
             [chee.util :refer [->options]]
             [cheshire.core :refer [generate-string parse-string]]
             [clojure.data.codec.base64 :refer [encode decode]]
@@ -81,16 +82,6 @@
     (.returnBody true)
     (.build)))
 
-(defn- generate-id []
-  (.replace (str (java.util.UUID/randomUUID)) "-" ""))
-
-(defn create-key
-  ([kind] (create-key kind (generate-id)))
-  ([kind id] (String. (encode (.getBytes (str kind ":" id))))))
-
-(defn decompose-key [key]
-  (string/split (String. (decode (.getBytes key))) #":"))
-
 (defn- ->native [record kind id]
   (let [record (dissoc record :id :kind )
         json (generate-string record)
@@ -111,11 +102,11 @@
   (let [record (parse-string (String. (.getValue native)) true)]
     (assoc record
       :kind kind
-      :key (create-key kind id))))
+      :key (compose-key kind id))))
 
 ; TODO - investigate using SMILE format of JSON to be faster.
 (defn- save-record [client record]
-  (let [key (or (:key record) (create-key (:kind record)))
+  (let [key (or (:key record) (compose-key (:kind record)))
         [kind id] (decompose-key key)
         native (->native record kind id)
         response (.store client native store-options)
