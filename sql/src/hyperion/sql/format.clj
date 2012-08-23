@@ -1,9 +1,7 @@
 (ns hyperion.sql.format
-  (:use
-    [chee.string :only [snake-case spear-case]]
-    [hyperion.sql.key :only [build-key]])
-  (:require
-    [clojure.string :as str]))
+  (:use [chee.string :only [snake-case spear-case]]
+        [hyperion.sql.key :only [compose-key decompose-key]])
+  (:require [clojure.string :as str]))
 
 (defn- add-quotes [s quote]
   (str quote s quote))
@@ -16,13 +14,16 @@
   (record<-db [this table] [this table id]))
 
 (extend-protocol FormattableForDatabase
+
+  nil
+  (column->db [this _] "()")
+
   java.lang.String
   (table->db [this quote]
     (add-quotes (snake-case this) quote))
 
   clojure.lang.Keyword
   (operator->db [this] (name this))
-
   (column->db [this quote]
     (add-quotes (snake-case (name this)) quote))
 
@@ -32,10 +33,12 @@
 
   clojure.lang.IPersistentMap
   (record->db [this]
-    (dissoc this :id :kind))
+    (dissoc this :key :kind ))
 
   (record<-db
     ([this table id]
-      (merge this {:kind table :id id}))
+      (merge this {:kind table :key (compose-key table id)}))
     ([this table]
-      (assoc this :kind table))))
+      (let [id (or (:id this) (get this "id"))]
+        (assoc this :kind table :key (compose-key table id)))))
+  )

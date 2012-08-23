@@ -1,14 +1,12 @@
-(ns hyperion.sql.key)
+(ns hyperion.sql.key
+  (:require [hyperion.key :as base]
+            [clojure.string :as string]))
 
-(defn build-key [table id]
-  (str table "-" id))
+(defn compose-key [^String kind id]
+  (when (or (nil? id) (not (integer? id)))
+    (throw (Exception. (str "id must be integer to create key. was: " id))))
+  (base/compose-key kind (str id)))
 
-(defn destructure-key [key]
-  (if (nil? key)
-    ["" nil]
-    (if (.contains key "-")
-      (let [index (.lastIndexOf key "-")
-            table-name (.substring key 0 index)
-            id (Integer/parseInt (.substring key (inc index) (.length key)))]
-        [table-name id])
-      [key nil])))
+(defn decompose-key [^String key]
+  (let [[kind id-str] (base/decompose-key key)]
+    (list kind (Long/parseLong id-str))))

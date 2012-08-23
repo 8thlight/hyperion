@@ -35,12 +35,12 @@
     (key? value) value
     (string? value) (string->key value)
     (nil? value) nil
-    :else (string->key (:id value))))
+    :else (string->key (:key value))))
 
 (defn ->native [entity]
-  (let [key (string->key (:id entity))
+  (let [key (string->key (:key entity))
         native (if key (Entity. key) (Entity. (:kind entity)))]
-    (doseq [[field value] (dissoc entity :kind :id)]
+    (doseq [[field value] (dissoc entity :kind :key)]
       (.setProperty native (name field) value))
     native))
 
@@ -48,7 +48,7 @@
   (reduce
     (fn [record entry]
       (assoc record (key entry) (val entry)))
-    {:kind (.getKind native) :id (key->string (.getKey native))}
+    {:kind (.getKind native) :key (key->string (.getKey native))}
     (.getProperties native)))
 
 (defn save-record [service record]
@@ -122,14 +122,16 @@
   (ds-save [this records] (doall (map #(save-record service %) records)))
   (ds-delete-by-kind [this kind filters]
     (delete-by-kind service kind filters))
-  (ds-delete-by-id [this kind id]
-    (.delete service [(->key id)]))
+  (ds-delete-by-key [this key]
+    (.delete service [(->key key)]))
   (ds-count-by-kind [this kind filters] (count-by-kind service kind filters))
-  (ds-find-by-id [this kind id]
-    (find-by-key service id))
+  (ds-find-by-key [this key]
+    (find-by-key service key))
   (ds-find-by-kind [this kind filters sorts limit offset]
     (find-by-kind service kind filters sorts limit offset))
-  (ds-all-kinds [this] (all-kinds service)))
+  (ds-all-kinds [this] (all-kinds service))
+  (ds-pack-key [this value] (string->key value))
+  (ds-unpack-key [this value] (key->string value)))
 
 (defn new-gae-datastore
   ([] (GaeDatastore. (DatastoreServiceFactory/getDatastoreService)))

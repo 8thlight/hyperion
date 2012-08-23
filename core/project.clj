@@ -3,7 +3,8 @@
 (defproject hyperion/hyperion-core (:version config)
   :description "A generic persistence API for Clojure"
   :dependencies [[org.clojure/clojure ~(:clojure-version config)]
-                 [chee ~(:chee-version config)]]
+                 [chee ~(:chee-version config)]
+                 [org.clojure/data.codec "0.1.0"]]
 
   ; leiningen 1
   :dev-dependencies [[speclj ~(:speclj-version config)]]

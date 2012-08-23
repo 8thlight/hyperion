@@ -18,31 +18,37 @@
     (it "it saves an existing record"
       (let [record1 (save {:kind "other-testing" :name "ann"})
             record2 (save (assoc record1 :name "james"))]
-        (should= (:id record1) (:id record2))
+        (should= (:key record1) (:key record2))
         (should= 1 (count (find-by-kind "other-testing")))))
 
-    (it "assigns an id to new records"
+    (it "assigns an key to new records"
       (let [record (save {:kind "testing" :name "ann"})]
-        (should-not= nil (:id record))))
+        (should-not= nil (:key record))))
 
-    (it "assigned ids are unique per kind"
-      (should= 10 (count (set (map #(:id (save {:kind "testing" :name %})) (range 10))))))
+    (it "assigned keys are unique"
+      (should= 10 (count (set (map #(:key (save {:kind "testing" :name %})) (range 10))))))
 
     (it "can save many records"
       (let [inf-records (map #(hash-map :kind "testing" :name (str %)) (iterate inc 0))
             saved (apply save* (take 10 inf-records))]
-        (should= 10 (count (set (map :id saved))))
+        (should= 10 (count (set (map :key saved))))
         (should= 10 (count (find-by-kind "testing")))
-        (should= (map str (range 10)) (sort (map :name (find-by-kind "testing"))))))))
+        (should= (map str (range 10)) (sort (map :name (find-by-kind "testing"))))))
+
+    (it "an empty record"
+      (let [result (save {:kind "testing"})]
+        (should= nil (:name (find-by-key (:key result))))))
+    )
+  )
 
 (defn it-deletes []
   (list
-    (it "deletes by id"
+    (it "deletes by key"
       (let [kind :testing
             one (save {:kind kind :name "jim"})
-            id (:id one)]
-        (delete-by-id kind id)
-        (should= nil (find-by-id kind id))))
+            key (:key one)]
+        (delete-by-key key)
+        (should= nil (find-by-key key))))
 
     (context "deletes by kind"
       (before
@@ -185,13 +191,13 @@
       (should= 7 (count-by-kind "testing"))
       (should= 4 (count-by-kind "testing" :filters [:> :inti 20])))
 
-    (context "find-by-id"
-      (it "finds the items by id"
+    (context "find-by-key"
+      (it "finds the items by key"
         (let [one (save {:kind "testing" :data "my stuff"})
-              found (find-by-id :testing (:id one))]
+              found (find-by-key (:key one))]
           (should= "my stuff" (:data found))
           (should= "testing" (:kind found))
-          (should= (:id one) (:id found)))))
+          (should= (:key one) (:key found)))))
 
     (context "with multiple kinds"
       (before
@@ -214,8 +220,18 @@
           (should= 7 (count records))
           (should (every? #(= "testing" (:kind %)) records)))))))
 
+(defn it-handles-keys []
+  (context "keys"
+    (it "are packed and unpacked symetrically"
+      (let [key (:key (save {:kind "testing"}))
+            packed-key (ds-pack-key (ds)  key)]
+        (should-not= nil packed-key)
+        (should= key (ds-unpack-key (ds) packed-key))
+        (should= packed-key (ds-pack-key (ds) key))))))
+
 (defn it-behaves-like-a-datastore []
   (list
     (it-saves)
     (it-deletes)
-    (it-can-be-searched)))
+    (it-can-be-searched)
+    (it-handles-keys)))
