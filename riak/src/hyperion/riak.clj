@@ -212,5 +212,8 @@
      of the specified kind will be loaded and filtered in memory.
   6. Sort, Offset, and Limit search options are handled in memory because Riak doesn't
      provide a facility for these.  Expect poor performance."
-  [client]
-  (RiakDatastore. client))
+  [& args]
+  (if (and (= 1 (count args)) (.isInstance RawClient (first args)))
+    (RiakDatastore. (first args))
+    (let [client (apply open-client args)]
+      (RiakDatastore. client))))

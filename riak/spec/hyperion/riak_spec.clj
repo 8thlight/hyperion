@@ -70,7 +70,7 @@
 
   (context "PBC client"
 
-    (with client (open-client :api :pbc))
+    (with client (open-client :api :pbc ))
     (after (try (.shutdown @client) (catch Exception e)))
 
     (it "creating a PBC client"
@@ -86,6 +86,22 @@
     (it "creating an HTTP client"
       (should= "com.basho.riak.client.raw.http.HTTPClientAdapter" (.getName (class @client)))
       (should-not-throw (.ping @client)))
+    )
+
+  (context "Creating a riak datastore"
+
+    (it "with a client"
+      (let [client (open-client :api :http )]
+        (try
+          (let [ds (new-riak-datastore client)]
+            (should= client (.client ds)))
+          (finally (.shutdown client)))))
+
+    (it "with options"
+      (let [ds (new-riak-datastore :api :http)]
+        (try
+          (should-not= nil (.client ds))
+          (finally (.shutdown (.client ds))))))
     )
 
   (context "Filters"

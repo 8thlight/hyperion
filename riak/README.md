@@ -22,11 +22,11 @@ A Hyperion implementation for Riak
 
 ### Opening a Riak client
 
-    (open-client (new-riak-datastore [options]))
+    (new-riak-datastore [options])
 
-ie.
+i.e.
 
-    (open-client (new-riak-datastore :api :pbc))
+    (new-riak-datastore :api :pbc)
 
 Options:
 
