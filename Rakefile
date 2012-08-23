@@ -62,7 +62,12 @@ namespace :riak do
   package('riak')
 end
 
-PROJECTS = [:core, :sql, :postgres, :mysql, :sqlite, :gae, :riak]
+namespace :mongo do
+  task :build => ['core:install']
+  package('mongo')
+end
+
+PROJECTS = [:core, :sql, :postgres, :mysql, :sqlite, :gae, :riak, :mongo]
 
 def create_task_for_all(task_name)
   task task_name => PROJECTS.map {|project| "#{project}:#{task_name}"}

@@ -10,36 +10,36 @@
   (context "Client connection"
 
     (it "can open client with one address"
-      (with-open [mongo (open-mongo :host "localhost" :port 27017)]
+      (with-open [mongo (open-mongo :host "127.0.0.1" :port 27017)]
         (should= com.mongodb.Mongo (class mongo))
-        (should= [["localhost" 27017]] (map address->seq (.getAllAddress mongo)))))
+        (should= [["127.0.0.1" 27017]] (map address->seq (.getAllAddress mongo)))))
 
     (it "can open client with one address and default port"
-      (with-open [mongo (open-mongo :host "localhost")]
+      (with-open [mongo (open-mongo :host "127.0.0.1")]
         (should= com.mongodb.Mongo (class mongo))
-        (should= [["localhost" 27017]] (map address->seq (.getAllAddress mongo)))))
+        (should= [["127.0.0.1" 27017]] (map address->seq (.getAllAddress mongo)))))
 
     (it "can open client with multiple addresses"
-      (with-open [mongo (open-mongo :servers [["localhost" 27017] ["foo.com" 27018]])]
+      (with-open [mongo (open-mongo :servers [["127.0.0.1" 27017] ["foo.com" 27018]])]
         (should= com.mongodb.Mongo (class mongo))
-        (should= [["localhost" 27017] ["foo.com" 27018]] (map address->seq (.getAllAddress mongo)))))
+        (should= [["127.0.0.1" 27017] ["foo.com" 27018]] (map address->seq (.getAllAddress mongo)))))
 
     (it "opens a database from mongo"
-      (with-open [mongo (open-mongo :host "localhost" :port 27017)]
+      (with-open [mongo (open-mongo :host "127.0.0.1" :port 27017)]
         (let [db (open-database mongo "foo")]
           (should (.isInstance com.mongodb.DB db))
           (should= "foo" (.getName db))
           (should= com.mongodb.WriteConcern/SAFE (.getWriteConcern db)))))
 
     (it "opens a database from mongo with credentials"
-      (with-open [mongo (open-mongo :host "localhost" :port 27017)]
+      (with-open [mongo (open-mongo :host "127.0.0.1" :port 27017)]
         (let [db (open-database mongo "foo" :username "joe" :password "blow")]
           (should= "foo" (.getName db))
           (should= false (.isAuthenticated db)) ; no real way to test that the credentials are used
           )))
 
     (it "uses the specified write concern for the database"
-      (with-open [mongo (open-mongo :host "localhost" :port 27017)]
+      (with-open [mongo (open-mongo :host "127.0.0.1" :port 27017)]
         (should= com.mongodb.WriteConcern/FSYNC_SAFE (.getWriteConcern (open-database mongo "foo" :write-concern :fsync-safe )))
         (should= com.mongodb.WriteConcern/JOURNAL_SAFE (.getWriteConcern (open-database mongo "foo" :write-concern :journal-safe )))
         (should= com.mongodb.WriteConcern/MAJORITY (.getWriteConcern (open-database mongo "foo" :write-concern :majority )))
@@ -53,7 +53,7 @@
   (context "Creating mongo datastore"
 
     (it "from db"
-      (with-open [mongo (open-mongo :host "localhost" :port 27017)]
+      (with-open [mongo (open-mongo :host "127.0.0.1" :port 27017)]
         (let [db (open-database mongo "foo")
               ds (new-mongo-datastore db)]
           (should= hyperion.mongo.MongoDatastore (class ds))
@@ -61,13 +61,13 @@
           (should= "foo" (.getName (.db ds))))))
 
     (it "from options"
-      (let [ds (new-mongo-datastore :host "localhost" :port 27017 :database "bar")]
+      (let [ds (new-mongo-datastore :host "127.0.0.1" :port 27017 :database "bar")]
         (try
           (let [db (.db ds)
                 mongo (.getMongo db)]
             (should= hyperion.mongo.MongoDatastore (class ds))
             (should= db (.db ds))
-            (should= [["localhost" 27017]] (map address->seq (.getAllAddress mongo)))
+            (should= [["127.0.0.1" 27017]] (map address->seq (.getAllAddress mongo)))
             (should= "bar" (.getName db)))
           (finally (.close (.getMongo (.db ds)))))))
   )
