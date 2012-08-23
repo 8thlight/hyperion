@@ -27,7 +27,9 @@
   (apply-limit-and-offset [this query limit offset]
     (-> query
       (apply-limit limit)
-      (apply-offset offset))))
+      (apply-offset offset)))
+
+  (empty-insert-query [this] "INSERT INTO %s DEFAULT VALUES"))
 
 (deftype PostgresDB []
   DBStrategy

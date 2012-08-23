@@ -19,7 +19,9 @@
       query
       (let [limit (or limit 9223372036854775807)
             offset (or offset 0)]
-        (add-to-query query "LIMIT ?, ?" [offset limit])))))
+        (add-to-query query "LIMIT ?, ?" [offset limit]))))
+
+  (empty-insert-query [this] "INSERT INTO %s DEFAULT VALUES"))
 
 (deftype SqliteDB []
   DBStrategy

@@ -3,7 +3,8 @@
 (defproject hyperion/hyperion-sql (:version config)
   :description "SQL utilities for hyperion"
   :dependencies [[org.clojure/clojure ~(:clojure-version config)]
-                 [hyperion/hyperion-core ~(:version config)]]
+                 [hyperion/hyperion-core ~(:version config)]
+                 [org.clojure/data.codec "0.1.0"]]
 
   ; leiningen 1
   :dev-dependencies [[speclj ~(:speclj-version config)]

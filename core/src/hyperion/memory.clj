@@ -1,15 +1,12 @@
 (ns hyperion.memory
-  (:use
-    [hyperion.core :only [Datastore new?]])
   (:require
+    [hyperion.core :refer [Datastore new?]]
+    [hyperion.key :refer [generate-id]]
     [hyperion.sorting :as sort]
     [hyperion.filtering :as filter]))
 
 (defn- != [a b]
   (not (= a b)))
-
-(defn- create-id []
-  (str (java.util.UUID/randomUUID)))
 
 (defn format-kind [kind]
   (if (isa? (type kind) clojure.lang.Keyword)
@@ -17,10 +14,10 @@
     kind))
 
 (defn- save-record [ds record]
-  (let [record (if (new? record) (assoc record :id (create-id)) record)
+  (let [record (if (new? record) (assoc record :key (generate-id)) record)
         record (update-in record [:kind] (fn [kind] (format-kind kind)))]
     (dosync
-      (alter (.store ds) assoc (:id record) record))
+      (alter (.store ds) assoc (:key record) record))
     record))
 
 (defn- find-record-by-key [ds key]
@@ -28,7 +25,7 @@
 
 (defn- delete-records [ds records]
   (dosync
-    (apply alter (.store ds) dissoc (map :id records))))
+    (apply alter (.store ds) dissoc (map :key records))))
 
 (defn- ->operator [op value]
   (cond
@@ -77,17 +74,21 @@
     (filter (build-filter filters))
     (delete-records ds)))
 
+(defn- delete-by-key [ds key]
+  (when-let [record (find-record-by-key ds key)]
+    (delete-records ds [record])))
+
 (deftype MemoryDatastore [store]
   Datastore
   (ds-save [this records] (doall (map #(save-record this %) records)))
-  (ds-delete-by-id [this kind id]
-    (delete-by-kind this kind [(filter/make-filter := :id id)]))
-  (ds-delete-by-kind [this kind filters]
-    (delete-by-kind this kind filters))
+  (ds-delete-by-key [this key] (delete-by-key this key))
+  (ds-delete-by-kind [this kind filters] (delete-by-kind this kind filters))
   (ds-count-by-kind [this kind filters] (count (find-records-by-kind this kind filters nil nil nil)))
-  (ds-find-by-id [this kind id] (find-record-by-key this id))
+  (ds-find-by-key [this key] (find-record-by-key this key))
   (ds-find-by-kind [this kind filters sorts limit offset] (find-records-by-kind this kind filters sorts limit offset))
-  (ds-all-kinds [this] (all-kinds this)))
+  (ds-all-kinds [this] (all-kinds this))
+  (ds-pack-key [this value] value)
+  (ds-unpack-key [this value] value))
 
 (defn new-memory-datastore
   ([] (MemoryDatastore. (ref {})))

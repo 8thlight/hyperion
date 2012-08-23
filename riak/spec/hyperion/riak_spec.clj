@@ -4,7 +4,7 @@
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.riak.spec-helper :refer [with-testable-riak-datastore]]
             [hyperion.riak :refer :all ]
-            [clojure.data.codec.base64 :refer (encode decode)])
+            [clojure.data.codec.base64 :refer [encode decode]])
   (:import [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery IntValueQuery IntRangeQuery]))
 
 ; Required Configuration:
@@ -88,16 +88,20 @@
       (should-not-throw (.ping @client)))
     )
 
-  (context "Key"
+  (context "Creating a riak datastore"
 
-    (it "creates unique keys"
-      (should= 100 (count (into #{} (take 100 (repeatedly #(create-key "foo"))))))
-      (should= 100 (count (into #{} (take 100 (repeatedly #(create-key "bar")))))))
+    (it "with a client"
+      (let [client (open-client :api :http )]
+        (try
+          (let [ds (new-riak-datastore client)]
+            (should= client (.client ds)))
+          (finally (.shutdown client)))))
 
-    (it "can parse a key"
-      (let [key (String. (encode (.getBytes (str "foo:abc123"))))]
-        (should= ["foo" "abc123"] (decompose-key key))))
-
+    (it "with options"
+      (let [ds (new-riak-datastore :api :http)]
+        (try
+          (should-not= nil (.client ds))
+          (finally (.shutdown (.client ds))))))
     )
 
   (context "Filters"
