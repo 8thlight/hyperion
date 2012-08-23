@@ -4,8 +4,7 @@
   :description "Mongo Datastore for Hyperion"
   :dependencies [[org.clojure/clojure ~(:clojure-version config)]
                  [hyperion/hyperion-core ~(:version config)]
-                 [org.mongodb/mongo-java-driver	"2.8.0"]
-                 [cheshire "4.0.1"]]
+                 [org.mongodb/mongo-java-driver	"2.8.0"]]
 
   ; leiningen 2
   :profiles {:dev {:dependencies [[speclj ~(:speclj-version config)]]}}

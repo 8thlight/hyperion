@@ -1,4 +1,4 @@
-# riak
+# Mongo
 
 A Hyperion implementation for Mongo
 

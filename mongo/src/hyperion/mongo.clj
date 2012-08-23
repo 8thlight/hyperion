@@ -1,15 +1,7 @@
 (ns hyperion.mongo
   (:require [hyperion.core :refer [Datastore]]
-            ;            [hyperion.memory :as memory]
-            ;            [hyperion.sorting :as sort]
-            ;            [hyperion.filtering :as filter]
             [hyperion.key :refer (compose-key decompose-key)]
-            [chee.util :refer [->options]]
-            ;            [cheshire.core :refer [generate-string parse-string]]
-            ;            [clojure.data.codec.base64 :refer [encode decode]]
-            ;            [clojure.string :as string]
-            [clojure.set :refer [difference]]
-            ))
+            [chee.util :refer [->options]]))
 
 (defn- ->address [spec]
   (let [host (first spec)
