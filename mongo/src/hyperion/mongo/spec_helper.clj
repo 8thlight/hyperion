@@ -1,8 +1,7 @@
 (ns hyperion.mongo.spec-helper
   (:require [speclj.core :refer :all ]
             [hyperion.mongo :refer :all ]
-            [hyperion.core :refer [*ds*]]
-            [clojure.set :refer [difference union]]))
+            [hyperion.core :refer [*ds*]]))
 
 (def test-mongo (atom nil))
 
