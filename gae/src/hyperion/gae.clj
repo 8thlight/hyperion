@@ -1,16 +1,13 @@
 (ns hyperion.gae
-  (:use
-    [chee.string :only (gsub spear-case)]
-    [chee.util :only (->options)]
-    [hyperion.core :only (Datastore *entity-specs*)])
-  (:require
-    [clojure.string :as str]
-    [hyperion.gae.types]
-    [hyperion.sorting :as sort]
-    [hyperion.filtering :as filter])
-  (:import
-    [com.google.appengine.api.datastore Entity Entities Query DatastoreServiceFactory Query$FilterOperator
-     Query$SortDirection FetchOptions$Builder EntityNotFoundException KeyFactory Key]))
+  (:use [chee.string :only (gsub spear-case)]
+        [chee.util :only (->options)]
+        [hyperion.core :only (Datastore *entity-specs*)])
+  (:require [clojure.string :as str]
+            [hyperion.gae.types]
+            [hyperion.sorting :as sort]
+            [hyperion.filtering :as filter])
+  (:import [com.google.appengine.api.datastore Entity Entities Query DatastoreService DatastoreServiceFactory Query$FilterOperator
+            Query$SortDirection FetchOptions$Builder EntityNotFoundException KeyFactory Key]))
 
 (defn create-key [kind id]
   (if (number? id)
@@ -40,7 +37,7 @@
 (defn ->native [entity]
   (let [key (string->key (:key entity))
         native (if key (Entity. key) (Entity. (:kind entity)))]
-    (doseq [[field value] (dissoc entity :kind :key)]
+    (doseq [[field value] (dissoc entity :kind :key )]
       (.setProperty native (name field) value))
     native))
 
@@ -115,7 +112,7 @@
 (defn- all-kinds [service]
   (let [query (.prepare service (Query. Entities/KIND_METADATA_KIND))
         fetching (build-fetch-options nil nil)]
-      (map #(.getName (.getKey %)) (.asIterable query fetching))))
+    (map #(.getName (.getKey %)) (.asIterable query fetching))))
 
 (deftype GaeDatastore [service]
   Datastore
@@ -133,6 +130,8 @@
   (ds-pack-key [this value] (string->key value))
   (ds-unpack-key [this value] (key->string value)))
 
-(defn new-gae-datastore
-  ([] (GaeDatastore. (DatastoreServiceFactory/getDatastoreService)))
-  ([service] (GaeDatastore. service)))
+(defn new-gae-datastore [& args]
+  (cond
+    (nil? (seq args)) (GaeDatastore. (DatastoreServiceFactory/getDatastoreService))
+    (and (= 1 (count args)) (.isInstance DatastoreService (first args))) (GaeDatastore. (first args))
+    :else (let [options (->options args)] (GaeDatastore. (or (:service options) (DatastoreServiceFactory/getDatastoreService))))))

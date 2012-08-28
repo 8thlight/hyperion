@@ -102,6 +102,12 @@
         (try
           (should-not= nil (.client ds))
           (finally (.shutdown (.client ds))))))
+
+    (it "using factory"
+      (let [ds (new-datastore :implementation :riak :api :http)]
+        (try
+          (should-not= nil (.client ds))
+          (finally (.shutdown (.client ds))))))
     )
 
   (context "Filters"

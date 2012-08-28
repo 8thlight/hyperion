@@ -455,4 +455,20 @@
         )
       )
     )
+
+  (context "factory"
+
+    (it "bombs on unkown implementation"
+      (should-throw Exception "Can't find datastore implementation: nonexistent"
+        (new-datastore :implementation "nonexistent")))
+
+    (it "bombs on missing implementation"
+      (should-throw Exception "new-datastore requires an :implementation entry (:memory, :mysql, :mongo, ...)"
+        (new-datastore)))
+
+    (it "manufactures a memory database"
+      (let [ds (new-datastore :implementation :memory)]
+        (should= "hyperion.memory.MemoryDatastore" (.getName (class ds)))))
+
+    )
   )

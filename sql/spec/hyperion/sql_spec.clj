@@ -5,7 +5,8 @@
             [hyperion.sql.key :refer [compose-key]]
             [hyperion.sql.query-builder :refer [new-query-builder]]
             [hyperion.sql.fake-query-builder]
-            [hyperion.sql.jdbc :refer [execute-write execute-mutation execute-query]])
+            [hyperion.sql.jdbc :refer [execute-write execute-mutation execute-query]]
+            [hyperion.sql.fake-driver])
   (:import [hyperion.sql.fake_query_builder FakeQueryBuilderStrategy]))
 
 (deftype FakeDBStrategy [log]
@@ -20,7 +21,7 @@
   (with db-strategy (FakeDBStrategy. (atom [])))
   (with qb-strategy (FakeQueryBuilderStrategy. (atom [])))
   (with qb (new-query-builder @qb-strategy))
-  (with db (new-sql-datastore @db-strategy @qb))
+  (with db (new-sql-datastore :connection-url "jdbc:fake" :db @db-strategy :qb @qb))
   (around [it]
     (with-redefs [execute-write (fn [query] (swap! @log conj [:write query]) {:write-response 42 :id 42})
                   execute-mutation (fn [query] (swap! @log conj [:mutation query]) :mutation-response)

@@ -1,11 +1,10 @@
 (ns hyperion.mysql
-  (:use
-    [hyperion.sql.query :only [add-to-query]]
-    [hyperion.sql.query-builder]
-    [hyperion.sql.format :only [column->db]]
-    [hyperion.sql])
-  (:require
-    [hyperion.sorting :as sort]))
+  (:require [hyperion.sorting :as sort]
+            [hyperion.sql.query :refer [add-to-query]]
+            [hyperion.sql.query-builder :refer :all ]
+            [hyperion.sql.format :refer [column->db]]
+            [hyperion.sql :refer :all ]
+            [chee.util :refer [->options]]))
 
 (clojure.lang.RT/loadClassForName "com.mysql.jdbc.Driver")
 
@@ -36,5 +35,6 @@
   (table-listing-query [this]
     (format "SELECT `table_name` FROM `information_schema`.`tables` WHERE `table_schema` = '%s'" database)))
 
-(defn new-mysql-datastore [database]
-  (new-sql-datastore (MysqlDB. database) (new-query-builder (MysqlQB.))))
+(defn new-mysql-datastore [& args]
+  (let [options (->options args)]
+    (new-sql-datastore options :db (MysqlDB. (:database options)) :qb (new-query-builder (MysqlQB.)))))

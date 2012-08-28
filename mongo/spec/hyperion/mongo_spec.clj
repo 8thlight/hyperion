@@ -70,6 +70,17 @@
             (should= [["127.0.0.1" 27017]] (map address->seq (.getAllAddress mongo)))
             (should= "bar" (.getName db)))
           (finally (.close (.getMongo (.db ds)))))))
+
+    (it "using factory"
+      (let [ds (new-datastore :implementation :mongo :host "127.0.0.1" :port 27017 :database "bar")]
+        (try
+          (let [db (.db ds)
+                mongo (.getMongo db)]
+            (should= hyperion.mongo.MongoDatastore (class ds))
+            (should= db (.db ds))
+            (should= [["127.0.0.1" 27017]] (map address->seq (.getAllAddress mongo)))
+            (should= "bar" (.getName db)))
+          (finally (.close (.getMongo (.db ds)))))))
   )
 
   (context "Live"

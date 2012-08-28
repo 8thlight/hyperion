@@ -1,12 +1,10 @@
 (ns hyperion.core
-  (:require
-    [clojure.string :as str]
-    [hyperion.sorting :as sort]
-    [hyperion.filtering :as filter])
-  (:use
-    [chee.string :only (gsub spear-case)]
-    [chee.datetime :only (now)]
-    [chee.util :only (->options)]))
+  (:require [clojure.string :as str]
+            [hyperion.sorting :as sort]
+            [hyperion.filtering :as filter])
+  (:use [chee.string :only (gsub spear-case)]
+        [chee.datetime :only (now)]
+        [chee.util :only (->options)]))
 
 (declare #^{:dynamic true} *ds*)
 (def DS (atom nil))
@@ -135,7 +133,7 @@
 
 (defn- apply-type-packers [options]
   (if-let [t (:type options)]
-    (-> (dissoc options :type)
+    (-> (dissoc options :type )
       (assoc :packer t)
       (assoc :unpacker t))
     options))
@@ -177,8 +175,8 @@
   (let [field-map (map-fields fields)
         kind (->kind class-sym)]
     `(do
-      (dosync (alter *entity-specs* assoc ~(->keyword kind) ~field-map))
-      (defn ~(symbol kind) [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind))))))
+       (dosync (alter *entity-specs* assoc ~(->keyword kind) ~field-map))
+       (defn ~(symbol kind) [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind))))))
 
 ; ----- Packing / Unpacking -------------------------------
 
@@ -221,12 +219,12 @@
     (if-assoc entity :key (:key record))))
 
 (defn- with-created-at [record spec]
-  (if (and (or (contains? spec :created-at) (contains? record :created-at)) (= nil (:created-at record)))
+  (if (and (or (contains? spec :created-at ) (contains? record :created-at )) (= nil (:created-at record)))
     (assoc record :created-at (now))
     record))
 
 (defn- with-updated-at [record spec]
-  (if (or (contains? spec :updated-at) (contains? record :updated-at))
+  (if (or (contains? spec :updated-at ) (contains? record :updated-at ))
     (assoc record :updated-at (now))
     record))
 
@@ -247,7 +245,7 @@
     with-updated-timestamps
     before-save))
 
-; ----- API --------------------------------------
+; ----- API -----------------------------------------------
 
 (defn save [record & args]
   (let [attrs (->options args)
@@ -261,20 +259,11 @@
 
 (defn- ->filter-operator [operator]
   (case (name operator)
-    ("=" "eq") :=
-    ("<" "lt") :<
-    ("<=" "lte") :<=
-    (">" "gt") :>
-    (">=" "gte") :>=
-    ("!=" "not") :!=
-    ("contains?" "contains" "in?" "in") :contains?
-    (throw (Exception. (str "Unknown filter operator: " operator)))))
+    ("=" "eq") := ("<" "lt") :< ("<=" "lte") :<= (">" "gt") :> (">=" "gte") :>= ("!=" "not") :!= ("contains?" "contains" "in?" "in") :contains? (throw (Exception. (str "Unknown filter operator: " operator)))))
 
 (defn- ->sort-direction [dir]
   (case (name dir)
-    ("asc" "ascending") :asc
-    ("desc" "descending") :desc
-    (throw (Exception. (str "Unknown sort direction: " dir)))))
+    ("asc" "ascending") :asc ("desc" "descending") :desc (throw (Exception. (str "Unknown sort direction: " dir)))))
 
 ; Protocol?
 (defn- ->seq [items]
@@ -287,22 +276,22 @@
   (let [spec (spec-for kind)
         filters (->seq filters)]
     (doall (map
-      (fn [[operator field value]]
-        (let [field (->field field)]
-          (filter/make-filter
-            (->filter-operator operator)
-            (->field field)
-            (pack-field (field spec) value))))
-      filters))))
+             (fn [[operator field value]]
+               (let [field (->field field)]
+                 (filter/make-filter
+                   (->filter-operator operator)
+                   (->field field)
+                   (pack-field (field spec) value))))
+             filters))))
 
 (defn- parse-sorts [sorts]
   (let [sorts (->seq sorts)]
     (doall (map
-      (fn [[field direction]]
-        (sort/make-sort
-          (->field field)
-          (->sort-direction direction)))
-      sorts))))
+             (fn [[field direction]]
+               (sort/make-sort
+                 (->field field)
+                 (->sort-direction direction)))
+             sorts))))
 
 (defn- find-records-by-kind [kind filters sorts limit offset]
   (map native->entity (ds-find-by-kind (ds) kind (parse-filters kind filters) sorts limit offset)))
@@ -361,3 +350,17 @@
         kind (->kind kind)]
     (ds-delete-by-kind (ds) kind (parse-filters kind (:filters options)))
     nil))
+
+; ----- Factory -------------------------------------------
+
+(defn new-datastore [& args]
+  (let [options (->options args)]
+    (if-let [implementation (:implementation options)]
+      (try
+        (let [ns-sym (symbol (str "hyperion." (name implementation)))]
+          (require ns-sym)
+          ((ns-resolve (the-ns ns-sym) (symbol (format "new-%s-datastore" (name implementation)))) options))
+        (catch java.io.FileNotFoundException e
+          (throw (Exception. (str "Can't find datastore implementation: " implementation) e))))
+      (throw (Exception. "new-datastore requires an :implementation entry (:memory, :mysql, :mongo, ...)"))
+      )))

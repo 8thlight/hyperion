@@ -1,11 +1,11 @@
 (ns hyperion.sqlite
-  (:use
-    [hyperion.sql.query :only [add-to-query]]
-    [hyperion.sql.query-builder]
-    [hyperion.sql.format :only [column->db]]
-    [hyperion.sql])
   (:require
-    [hyperion.sorting :as sort]))
+    [hyperion.sql.query :refer [add-to-query]]
+    [hyperion.sql.query-builder :refer :all]
+    [hyperion.sql.format :refer [column->db]]
+    [hyperion.sql :refer :all]
+    [hyperion.sorting :as sort]
+    [chee.util :refer [->options]]))
 
 (clojure.lang.RT/loadClassForName "org.sqlite.JDBC")
 
@@ -36,5 +36,8 @@
   (table-listing-query [this]
     "SELECT \"name\" AS \"table_name\" FROM \"sqlite_master\" WHERE \"type\" = 'table'"))
 
-(defn new-sqlite-datastore []
-  (new-sql-datastore (SqliteDB.) (new-query-builder (SqliteQB.))))
+(defn new-sqlite-datastore [& args]
+  (if (and (= 1 (count args)) (string? (first args)))
+    (new-sql-datastore :connection-url (first args) :db (SqliteDB.) :qb (new-query-builder (SqliteQB.)))
+    (let [options (->options args)]
+      (new-sql-datastore options :db (SqliteDB.) :qb (new-query-builder (SqliteQB.))))))

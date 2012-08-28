@@ -1,11 +1,10 @@
 (ns hyperion.postgres
-  (:use
-    [hyperion.sql.query :only [add-to-query]]
-    [hyperion.sql.query-builder]
-    [hyperion.sql.format :only [column->db]]
-    [hyperion.sql])
-  (:require
-    [hyperion.sorting :as sort]))
+  (:require [hyperion.sql.query :refer [add-to-query]]
+            [hyperion.sql.query-builder :refer :all ]
+            [hyperion.sql.format :refer [column->db]]
+            [hyperion.sql :refer :all ]
+            [hyperion.sorting :as sort]
+            [chee.util :refer [->options]]))
 
 (clojure.lang.RT/loadClassForName "org.postgresql.Driver")
 
@@ -41,5 +40,8 @@
   (table-listing-query [this]
     "SELECT \"table_name\" FROM \"information_schema\".\"tables\" WHERE \"table_schema\" = 'public'"))
 
-(defn new-postgres-datastore []
-  (new-sql-datastore (PostgresDB.) (new-query-builder (PostgresQB.))))
+(defn new-postgres-datastore [& args]
+  (if (and (= 1 (count args)) (string? (first args)))
+    (new-sql-datastore :connection-url (first args) :db (PostgresDB.) :qb (new-query-builder (PostgresQB.)))
+    (let [options (->options args)]
+      (new-sql-datastore options :db (PostgresDB.) :qb (new-query-builder (PostgresQB.))))))

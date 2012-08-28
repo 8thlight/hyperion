@@ -1,12 +1,14 @@
 (ns hyperion.sql
   (:require [clojure.string :as string]
             [hyperion.core :refer [Datastore new? ds-delete-by-kind ds-find-by-kind]]
+            [hyperion.sql.connection :refer [with-connection]]
             [hyperion.sql.query-builder :refer :all ]
             [hyperion.sql.query :refer [make-query]]
             [hyperion.sql.jdbc :refer :all ]
             [hyperion.sql.format :refer [record->db record<-db]]
             [hyperion.sql.key :refer [decompose-key compose-key]]
-            [hyperion.filtering :as filter]))
+            [hyperion.filtering :as filter]
+            [chee.util :refer [->options]]))
 
 (defprotocol DBStrategy
   (get-count [this result])
@@ -18,7 +20,7 @@
 
 (defn- insert-record [qb kind record]
   (let [row (record->db record)]
-      (execute-write (build-insert qb kind row))))
+    (execute-write (build-insert qb kind row))))
 
 (defn- save-record [db qb record]
   (let [kind (:kind record)
@@ -29,35 +31,39 @@
         result (process-result-record db result record)]
     (record<-db result kind)))
 
-(deftype SQLDatastore [db qb]
+(deftype SQLDatastore [connection db qb]
   Datastore
 
   (ds-save [this records]
-    (doall (map #(save-record db qb %) records)))
+    (with-connection connection (doall (map #(save-record db qb %) records))))
+
 
   (ds-delete-by-key [this key]
     (let [[kind id] (decompose-key key)]
       (ds-delete-by-kind this kind [(filter/make-filter := :id id)])))
 
   (ds-delete-by-kind [this kind filters]
-    (execute-mutation (build-delete qb kind filters)))
+    (with-connection connection (execute-mutation (build-delete qb kind filters))))
 
   (ds-count-by-kind [this kind filters]
-    (let [results (execute-query (build-select qb "COUNT(*)" kind filters nil nil nil))]
-      (get-count db (first results))))
+    (with-connection connection
+      (let [results (execute-query (build-select qb "COUNT(*)" kind filters nil nil nil))]
+        (get-count db (first results)))))
 
   (ds-find-by-key [this key]
     (let [[kind id] (decompose-key key)]
       (first (ds-find-by-kind this kind [(filter/make-filter := :id id)] nil nil nil))))
 
   (ds-find-by-kind [this kind filters sorts limit offset]
-    (let [query (build-select qb "*" kind filters sorts limit offset)
-          results (execute-query query)]
-      (map #(record<-db % kind) results)))
+    (with-connection connection
+      (let [query (build-select qb "*" kind filters sorts limit offset)
+            results (execute-query query)]
+        (map #(record<-db % kind) results))))
 
   (ds-all-kinds [this]
-    (let [results (execute-query (make-query (table-listing-query db)))]
-      (map #(get % "table_name") results)))
+    (with-connection connection
+      (let [results (execute-query (make-query (table-listing-query db)))]
+        (map #(get % "table_name") results))))
 
   (ds-pack-key [this value] (decompose-key value))
 
@@ -65,5 +71,7 @@
 
   )
 
-(defn new-sql-datastore [db qb]
-  (SQLDatastore. db qb))
+(defn new-sql-datastore [& args]
+  (let [options (->options args)
+        connection (or (:connection options) (java.sql.DriverManager/getConnection (:connection-url options)))]
+    (SQLDatastore. connection (:db options) (:qb options))))
