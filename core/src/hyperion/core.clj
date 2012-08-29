@@ -6,10 +6,8 @@
         [chee.datetime :only (now)]
         [chee.util :only (->options)]))
 
-(declare #^{:dynamic true} *ds*)
-(def DS (atom nil))
-
 (defprotocol Datastore
+  "Protocol for Hyperion implementations."
   (ds-save [this records])
   (ds-delete-by-key [this key])
   (ds-delete-by-kind [this kind filters])
@@ -20,31 +18,33 @@
   (ds-pack-key [this value])
   (ds-unpack-key [this value]))
 
-(defn ds []
-  (if (bound? #'*ds*)
+(declare ^{:dynamic true
+           :tag hyperion.core.Datastore
+           :doc "Stores the active datastore."} *ds*)
+
+(defn set-ds!
+  "Uses alter-var-root to set *ds*. A violent, but effective way to install a datastore."
+  [^hyperion.core.Datastore ds]
+  (alter-var-root (var *ds*) (fn [_] ds)))
+
+(defn ds
+  "Returns the currently bound datastore instance"
+  []
+  (if (and (bound? #'*ds*) *ds*)
     *ds*
-    (or @DS (throw (NullPointerException. "No Datastore bound (hyperion/*ds*) or installed (hyperion/DS).")))))
+    (throw (NullPointerException. "No Datastore bound (hyperion/*ds*). Use clojure.core/binding to bind a value or hyperion.core/set-ds! to globally set it."))))
 
-(def #^{:dynamic true} *entity-specs* (ref {}))
+(def #^{:dynamic true
+        :doc "Map of specs decalred using defentity"} *entity-specs* (ref {}))
 
-;(defprotocol Packable
-;  (pack [this value])
-;  (unpack [this value]))
-;
-;(extend-protocol Packable
-;  Object
-;  (pack [this value] value)
-;  (unpack [this value] value)
-;
-;  nil
-;  (pack [this value] value)
-;  (unpack [this value] value))
-
-(defn new? [record]
+(defn new?
+  "Returns true if the record is new (not saved/doesn't have a :key), false otherwise."
+  [record]
   (nil? (:key record)))
 
 (defprotocol AsKind
-  (->kind [this]))
+  "Protocol to coerce values into a 'kind' string."
+  (^{:doc "Coerces value into a 'kind' string"} ->kind [this]))
 
 (extend-protocol AsKind
   java.lang.String
@@ -62,21 +62,9 @@
   nil
   (->kind [this] this))
 
-(defprotocol AsKeyword
-  (->keyword [this]))
-
-(extend-protocol AsKeyword
-  java.lang.String
-  (->keyword [this] (keyword this))
-
-  clojure.lang.Keyword
-  (->keyword [this] this)
-
-  nil
-  (->keyword [this] nil))
-
 (defprotocol AsField
-  (->field [this]))
+  "Protocol to coerce values into a field name"
+  (^{:doc "Coerces value into a field name"} ->field [this]))
 
 (extend-protocol AsField
   java.lang.String
@@ -89,7 +77,8 @@
   (->field [this] (->field (name this))))
 
 (defprotocol Specable
-  (spec-for [this]))
+  "Protocol to retrieve an entity-spec as defined in defentity."
+  (^{:doc "Retrieves the entity-spec for the value"} spec-for [this]))
 
 (extend-protocol Specable
   clojure.lang.IPersistentMap
@@ -111,21 +100,37 @@
 
 ; ----- Hooks ---------------------------------------------
 
-(defmulti after-create #(->keyword (:kind %)))
+(defmulti after-create
+  "Hook to alter an entity immediately after being created"
+  #(keyword (:kind %)))
 (defmethod after-create :default [record] record)
 
-(defmulti before-save #(->keyword (:kind %)))
+(defmulti before-save
+  "Hook to alter values immediately before being saved
+  "#(keyword (:kind %)))
 (defmethod before-save :default [record] record)
 
-(defmulti after-load #(->keyword (:kind %)))
+(defmulti after-load
+  "Hook to alter values immediately after being loaded"
+  #(keyword (:kind %)))
 (defmethod after-load :default [record] record)
 
 ; ----- Entity Implementation -----------------------------
 
-(defmulti pack (fn [type value] type))
+(defmulti pack
+  "Packers may be any object and are added to defentity specs.
+  When an entity is saved, values are 'packed' before getting shipped
+  off to the persistence implementation.
+  You may add your own packer by declare a defmethod for your type."
+  (fn [type value] type))
 (defmethod pack :default [type value] value)
 
-(defmulti unpack (fn [type value] type))
+(defmulti unpack
+  "Unpackers may be any object and are added to defentity specs.
+  When an entity is loaded, values are 'unpacked' from the data in the
+  persistence implementation.
+  You may add your own packer by declare a defmethod for your type."
+  (fn [type value] type))
 (defmethod unpack :default [type value] value)
 
 (defmethod pack :key [_ value] (when value (ds-pack-key (ds) value)))
@@ -150,6 +155,7 @@
 (defn- null-val-fn [field-spec value] value)
 
 (defn create-entity
+  "PRIVATE: Used by the defentity macro to create entities."
   ([record] (create-entity record null-val-fn))
   ([record val-fn]
     (let [kind (->kind record)
@@ -167,15 +173,50 @@
   (or value (:default field-spec)))
 
 (defn create-entity-with-defaults
+  "PRIVATE: Used by the defentity macro to create entities."
   ([record] (create-entity-with-defaults record null-val-fn))
   ([record val-fn]
     (create-entity record #(->> %2 (apply-default %1) (val-fn %1)))))
 
-(defmacro defentity [class-sym & fields]
+(defmacro defentity
+  "Used to define entities. An entity is simply an encapulation of data that
+  is persisted.
+  The advantage of using entities are:
+   - they limit the fields persisted to only what is specified in their
+     definition.
+   - default values can be assigned to fields
+   - types, packers, and unpackers can be assigned to fields.  Packers
+     allow you to manipulate a field (perhaps serialize it) before it
+     is persisted.  Unpacker conversly manipulate fields when loaded.
+     Packers and unpackers maybe a fn (which will be excuted) or an
+     object used to pivot the pack and unpack multimethods.
+     A type (object) is simply a combined packer and unpacker.
+   - constructors are provided
+   - they are represented by records (defrecord) instead of plain maps.
+     This allows you to use extend-type on them if you choose.
+
+   Example:
+
+      (defentity Citizen
+        [name]
+        [age :packer ->int] ; ->int is a function defined in your code.
+        [gender :unpacker ->string] ; ->string is a customer function too.
+        [occupation :type my.ns.Occupation] ; and then we define pack/unpack for my.ns.Occupation
+        [spouse-key :type :key] ; :key is a special type that pack string keys into implementation-specific keys
+        [country :default \"USA\"] ; newly created records will use the default if no value is provided
+        [created-at] ; populated automaticaly
+        [updated-at] ; also populated automatically
+        )
+
+        (save (citizen :name \"John\" :age \"21\" :gender :male :occupation coder :spouse-key \"abc123\"))
+
+        ;=> #<Citizen {:kind \"citizen\" :key \"some generated key\" :country \"USA\" :created-at #<java.util.Date just-now> :updated-at #<java.util.Date just-now> ...)
+  "
+  [class-sym & fields]
   (let [field-map (map-fields fields)
         kind (->kind class-sym)]
     `(do
-       (dosync (alter *entity-specs* assoc ~(->keyword kind) ~field-map))
+       (dosync (alter *entity-specs* assoc ~(keyword kind) ~field-map))
        (defn ~(symbol kind) [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind))))))
 
 ; ----- Packing / Unpacking -------------------------------
@@ -247,14 +288,31 @@
 
 ; ----- API -----------------------------------------------
 
-(defn save [record & args]
+(defn save
+  "Saves a record. Any additional parameters will get merged onto the record
+  before it is saved.
+
+    (save {:kind :foo})
+    ;=> {:kind \"foo\" :key \"generated key\"}
+    (save {:kind :foo} {:value :bar})
+    ;=> {:kind \"foo\" :value :bar :key \"generated key\"}
+    (save {:kind :foo} :value :bar)
+    ;=> {:kind \"foo\" :value :bar :key \"generated key\"}
+    (save {:kind :foo} {:value :bar} :another :fizz)
+    ;=> {:kind \"foo\" :value :bar :another :fizz :key \"generated key\"}
+    (save (citizen) :name \"Joe\" :age 21 :country \"France\")
+    ;=> #<Citizen {:kind \"citizen\" :name \"Joe\" :age 21 :country \"France\" ...}>
+  "
+  [record & args]
   (let [attrs (->options args)
         record (merge record attrs)
         entity (prepare-for-save record)
         saved (first (ds-save (ds) [entity]))]
     (native->entity saved)))
 
-(defn save* [& records]
+(defn save*
+  "Saves multiple records at once."
+  [& records]
   (doall (map native->entity (ds-save (ds) (map prepare-for-save records)))))
 
 (defn- ->filter-operator [operator]
@@ -296,14 +354,44 @@
 (defn- find-records-by-kind [kind filters sorts limit offset]
   (map native->entity (ds-find-by-kind (ds) kind (parse-filters kind filters) sorts limit offset)))
 
-(defn find-by-key [key]
+(defn find-by-key
+  "Retrieves the value associated with the given key from the datastore.
+  nil if it doesn't exist."
+  [key]
   (native->entity
     (ds-find-by-key (ds) key)))
 
-(defn reload [entity]
+(defn reload
+  "Returns a freshly loaded record based on the key of the given record."
+  [entity]
   (find-by-key (:key entity)))
 
-(defn find-by-kind [kind & args]
+(defn find-by-kind
+  "Returns all records of the specified kind that match the filters provided.
+
+    (find-by-kind :dog) ; returns all records with :kind of \"dog\"
+    (find-by-kind :dog :filters [:= :name \"Fido\"]) ; returns all dogs whos name is Fido
+    (find-by-kind :dog :filters [[:> :age 2][:< :age 5]]) ; returns all dogs between the age of 2 and 5 (exclusive)
+    (find-by-kind :dog :sorts [:name :asc]) ; returns all dogs in alphebetical order of their name
+    (find-by-kind :dog :sorts [[:age :desc][:name :asc]]) ; returns all dogs ordered from oldest to youngest, and gos of the same age ordered by name
+    (find-by-kind :dog :limit 10) ; returns upto 10 dogs in undefined order
+    (find-by-kind :dog :sorts [:name :asc] :limit 10) ; returns upto the first 10 dogs in alphebetical order of their name
+    (find-by-kind :dog :sorts [:name :asc] :limit 10 :offset 10) ; returns the second set of 10 dogs in alphebetical order of their name
+
+  Filter operations and acceptable syntax:
+    := \"=\" \"eq\"
+    :< \"<\" \"lt\"
+    :<= \"<=\" \"lte\"
+    :> \">\" \"gt\"
+    :>= \">=\" \"gte\"
+    :!= \"!=\" \"not\"
+    :contains? \"contains?\" :contains \"contains\" :in? \"in?\" :in \"in\"
+
+  Sort orders and acceptable syntax:
+    :asc \"asc\" :ascending \"ascending\"
+    :desc \"desc\" :descending \"descending\"
+  "
+  [kind & args]
   (let [options (->options args)
         kind (name kind)]
     (find-records-by-kind kind
@@ -312,7 +400,10 @@
       (:limit options)
       (:offset options))))
 
-(defn find-all-kinds [& args]
+(defn find-all-kinds
+  "Same as find-by-kind except that it'll returns results of any kind
+  WARNING: This methods is almost certainly horribly inefficient.  Use with caution."
+  [& args]
   (let [options (->options args)
         kinds (ds-all-kinds (ds))
         sorts (parse-sorts (:sorts options))
@@ -327,7 +418,9 @@
 (defn- count-records-by-kind [kind filters]
   (ds-count-by-kind (ds) kind (parse-filters kind filters)))
 
-(defn count-by-kind [kind & args]
+(defn count-by-kind
+  "Counts records of the specified kind that match the filters provided."
+  [kind & args]
   (let [options (->options args)
         kind (name kind)]
     (count-records-by-kind kind (:filters options))))
@@ -337,15 +430,22 @@
         results (flatten (map #(count-records-by-kind % filters) kinds))]
     (apply + results)))
 
-(defn count-all-kinds [& args]
+(defn count-all-kinds
+  "Counts records of any kind that match the filters provided."
+  [& args]
   (let [options (->options args)]
     (count-records-by-all-kinds (:filters options))))
 
-(defn delete-by-key [key]
+(defn delete-by-key
+  "Removes the record stored with the given key.
+  Returns nil no matter what."
+  [key]
   (ds-delete-by-key (ds) key)
   nil)
 
-(defn delete-by-kind [kind & args]
+(defn delete-by-kind
+  "Deletes all records of the specified kind that match the filters provided."
+  [kind & args]
   (let [options (->options args)
         kind (->kind kind)]
     (ds-delete-by-kind (ds) kind (parse-filters kind (:filters options)))
@@ -353,7 +453,15 @@
 
 ; ----- Factory -------------------------------------------
 
-(defn new-datastore [& args]
+(defn new-datastore
+  "Factory methods to create datastore instances.  Just provide the
+  :implementation you want (along with configuration) and we'll load
+  the namespace and construct the instance for you.
+
+    (new-datastore :implementation :memory) ; create a new in-memory datastore
+    (new-datastore :implementation :sqlite :connection-url \"jdbc:sqlite:\") ; creates a new sqlite datastore
+  "
+  [& args]
   (let [options (->options args)]
     (if-let [implementation (:implementation options)]
       (try

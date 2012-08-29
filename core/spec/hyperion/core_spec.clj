@@ -145,8 +145,8 @@
 (describe "Datastore Core"
 
   (it "has no ds by default"
-    (reset! DS nil)
-    (should-throw Exception "No Datastore bound (hyperion/*ds*) or installed (hyperion/DS)."
+    (set-ds! nil)
+    (should-throw Exception "No Datastore bound (hyperion/*ds*). Use clojure.core/binding to bind a value or hyperion.core/set-ds! to globally set it."
       (ds)))
 
   (it "the ds can be bound"
@@ -157,9 +157,9 @@
   (it "the ds can be installed"
     (let [fake-ds (new-fake-datastore)]
       (try
-        (reset! DS fake-ds)
+        (set-ds! fake-ds)
         (should= fake-ds (ds))
-        (finally (reset! DS nil)))))
+        (finally (set-ds! nil)))))
 
   (it "knows if a record is new"
     (should= true (new? {:kind "new"}))

@@ -13,4 +13,5 @@
   ; leiningen 2
   :profiles {:dev {:dependencies [[speclj ~(:speclj-version config)]]}}
   :test-paths ["spec/"]
-  :plugins [[speclj ~(:speclj-version config)]])
+  :plugins [[speclj ~(:speclj-version config)]
+            [lein-autodoc "0.9.0"]])
