@@ -13,7 +13,7 @@ There are a few guiding principles for Hyperion.
 
 Hyperion Implementations:
 
- * [memory](https://github.com/8thlight/hyperion/tree/master/gae) - an in-memory datastore, ideal for testing, included in core
+ * [memory](https://github.com/8thlight/hyperion/tree/master/gae) - an in-memory datastore, ideal for testing, included in hyperion-api.jar
  * [gae](https://github.com/8thlight/hyperion/tree/master/gae) - [Google App Engine Datastore](https://developers.google.com/appengine/docs/python/datastore/overview)
  * [mongo](https://github.com/8thlight/hyperion/tree/master/mongo) - [Mongo DB](http://www.mongodb.org/)
  * [mysql](https://github.com/8thlight/hyperion/tree/master/mysql) - [MySQL](http://www.mysql.com/)
@@ -25,15 +25,15 @@ Hyperion Implementations:
 
 ### Leiningen
 
-    :dependencies [[hyperion/hyperion-<impl here> "3.1.0"]]
+    :dependencies [[hyperion/hyperion-<impl here> "3.2.0"]]
 
 ## Usage
 
 ### Creating a datastore
 
-hyperion.core provide a convenient factory function for instantiating any datastore implementation
+hyperion.api provide a convenient factory function for instantiating any datastore implementation
 
-    (use 'hyperion.core)
+    (use 'hyperion.api)
     (new-datastore :implementation :memory)
     (new-datastore :implementation :mysql :connection-url "jdbc:mysql://localhost:3306/myapp?user=root" :database "myapp")
     (new-datastore :implementation :mongo :host "localhost" :port 27017 :database "myapp" :username "test" :password "test")
@@ -135,17 +135,15 @@ Example:
 
 ## Full API
 
-To learn more, downlaod hyperion.core and load up the REPL.
+To learn more, downlaod hyperion.api and load up the REPL.
 
-    user=> (keys (ns-publics 'hyperion.core))
-    (delete-by-key save* ds-count-by-kind count-all-kinds AsField ds-all-kinds ds-delete-by-kind save
-    find-by-key reload pack create-entity-with-defaults ds-pack-key ds-unpack-key delete-by-kind defentity
-    *ds* ds-save ->kind before-save find-by-kind count-by-kind after-load after-create ds-delete-by-key
-    new-datastore spec-for ds-find-by-kind ds Specable unpack ds-find-by-key Datastore create-entity
-    ->field AsKind set-ds! *entity-specs* find-all-kinds new?)
+    user=> (keys (ns-publics 'hyperion.api))
+    (delete-by-key save* count-all-kinds save find-by-key reload pack create-entity-with-defaults delete-by-kind defentity *ds*
+    before-save find-by-kind count-by-kind after-load after-create new-datastore ds unpack create-entity set-ds! find-all-kinds new?)
+
     user=> (doc delete-by-key)
     -------------------------
-    hyperion.core/delete-by-key
+    hyperion.api/delete-by-key
     ([key])
       Removes the record stored with the given key.
       Returns nil no matter what.
