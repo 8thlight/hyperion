@@ -1,6 +1,11 @@
-# 3.2.0
+# 3.3.0
 
 * renames hyperion.core to hyperion.api
+
+# 3.2.0
+
+* removes DS atom
+* adds set-ds! to globally install a datastore
 
 # 3.1.0
 

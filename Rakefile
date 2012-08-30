@@ -28,46 +28,46 @@ def package(name)
   end
 end
 
-namespace :core do
-  package('core')
+namespace :api do
+  package('api')
 end
 
 namespace :sql do
-  task :build => 'core:install'
+  task :build => 'api:install'
   package('sql')
 end
 
 namespace :postgres do
-  task :build => ['core:install', 'sql:install']
+  task :build => ['api:install', 'sql:install']
   package('postgres')
 end
 
 namespace :mysql do
-  task :build => ['core:install', 'sql:install']
+  task :build => ['api:install', 'sql:install']
   package('mysql')
 end
 
 namespace :sqlite do
-  task :build => ['core:install', 'sql:install']
+  task :build => ['api:install', 'sql:install']
   package('sqlite')
 end
 
 namespace :gae do
-  task :build => ['core:install']
+  task :build => ['api:install']
   package('gae')
 end
 
 namespace :riak do
-  task :build => ['core:install']
+  task :build => ['api:install']
   package('riak')
 end
 
 namespace :mongo do
-  task :build => ['core:install']
+  task :build => ['api:install']
   package('mongo')
 end
 
-PROJECTS = [:core, :sql, :postgres, :mysql, :sqlite, :gae, :riak, :mongo]
+PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :riak, :mongo]
 
 def create_task_for_all(task_name)
   task task_name => PROJECTS.map {|project| "#{project}:#{task_name}"}
