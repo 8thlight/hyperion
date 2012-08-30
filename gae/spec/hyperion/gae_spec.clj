@@ -1,6 +1,6 @@
 (ns hyperion.gae-spec
   (:use [speclj.core]
-        [hyperion.core]
+        [hyperion.api]
         [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
         [hyperion.gae.spec-helper :only (with-local-datastore)]
         [hyperion.gae :only (new-gae-datastore) :as gae]

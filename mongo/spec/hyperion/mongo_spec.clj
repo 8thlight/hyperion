@@ -1,6 +1,6 @@
 (ns hyperion.mongo-spec
   (:require [speclj.core :refer :all ]
-            [hyperion.core :refer :all ]
+            [hyperion.api :refer :all ]
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.mongo.spec-helper :refer [with-testable-mongo-datastore]]
             [hyperion.mongo :refer :all ]))

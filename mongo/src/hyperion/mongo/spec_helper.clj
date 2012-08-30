@@ -1,7 +1,7 @@
 (ns hyperion.mongo.spec-helper
   (:require [speclj.core :refer :all ]
             [hyperion.mongo :refer :all ]
-            [hyperion.core :refer [*ds*]]))
+            [hyperion.api :refer [*ds*]]))
 
 (def test-mongo (atom nil))
 

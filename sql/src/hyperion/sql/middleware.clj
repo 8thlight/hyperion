@@ -1,6 +1,6 @@
 (ns hyperion.sql.middleware
   (:use
-    [hyperion.core :only [*ds*]]
+    [hyperion.api :only [*ds*]]
     [hyperion.sql.jdbc :only [transaction]]
     [hyperion.sql.connection :only [with-connection-url]]))
 

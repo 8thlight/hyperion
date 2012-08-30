@@ -1,7 +1,7 @@
 (ns hyperion.gae.spec-helper
   (:use
     [speclj.core]
-    [hyperion.core :only [*ds*]]
+    [hyperion.api :only [*ds*]]
     [hyperion.gae :only [new-gae-datastore]])
   (:import
     [com.google.appengine.tools.development.testing

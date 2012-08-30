@@ -3,7 +3,7 @@
 (defproject hyperion/hyperion-mysql (:version config)
   :description "MySQL Datastore for Hyperion"
   :dependencies [[org.clojure/clojure ~(:clojure-version config)]
-                 [hyperion/hyperion-core ~(:version config)]
+                 [hyperion/hyperion-api ~(:version config)]
                  [hyperion/hyperion-sql ~(:version config)]
                  [mysql/mysql-connector-java "5.1.6"]]
 

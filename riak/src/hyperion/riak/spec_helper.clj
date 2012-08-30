@@ -1,7 +1,7 @@
 (ns hyperion.riak.spec-helper
   (:require [speclj.core :refer :all ]
             [hyperion.riak :refer :all ]
-            [hyperion.core :refer [*ds*]]
+            [hyperion.api :refer [*ds*]]
             [clojure.set :refer [difference union]])
   (:import [com.basho.riak.client.query.indexes BinIndex KeyIndex]
            [com.basho.riak.client.raw.query.indexes BinRangeQuery]))

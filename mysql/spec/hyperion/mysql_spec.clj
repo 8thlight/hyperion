@@ -2,7 +2,7 @@
   (:use [speclj.core]
         [hyperion.sql.spec-helper]
         [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
-        [hyperion.core :only [*ds* new-datastore]]
+        [hyperion.api :only [*ds* new-datastore]]
         [hyperion.sql.jdbc :only [execute-mutation]]
         [hyperion.sql.query]
         [hyperion.mysql :only [new-mysql-datastore]]))

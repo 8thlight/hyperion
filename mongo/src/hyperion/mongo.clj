@@ -1,5 +1,5 @@
 (ns hyperion.mongo
-  (:require [hyperion.core :refer [Datastore]]
+  (:require [hyperion.abstr :refer [Datastore]]
             [hyperion.key :refer (compose-key decompose-key)]
             [chee.util :refer [->options]]))
 

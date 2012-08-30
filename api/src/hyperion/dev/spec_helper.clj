@@ -1,7 +1,7 @@
 (ns hyperion.dev.spec-helper
   (:use
     [speclj.core]
-    [hyperion.core :only [*ds*]]
+    [hyperion.api :only [*ds*]]
     [hyperion.dev.memory :only [new-memory-datastore]]))
 
 (defn with-memory-datastore []

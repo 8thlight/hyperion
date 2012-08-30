@@ -1,6 +1,7 @@
 (ns hyperion.sql-spec
   (:require [speclj.core :refer :all]
-            [hyperion.core :refer :all]
+            [hyperion.abstr :refer :all]
+            [hyperion.api :refer :all]
             [hyperion.sql :refer :all]
             [hyperion.sql.key :refer [compose-key]]
             [hyperion.sql.query-builder :refer [new-query-builder]]

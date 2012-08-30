@@ -1,6 +1,7 @@
 (ns hyperion.sql
   (:require [clojure.string :as string]
-            [hyperion.core :refer [Datastore new? ds-delete-by-kind ds-find-by-kind]]
+            [hyperion.abstr :refer [Datastore ds-delete-by-kind ds-find-by-kind]]
+            [hyperion.api :refer [new?]]
             [hyperion.sql.connection :refer [with-connection]]
             [hyperion.sql.query-builder :refer :all ]
             [hyperion.sql.query :refer [make-query]]

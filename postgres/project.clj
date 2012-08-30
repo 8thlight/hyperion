@@ -3,7 +3,7 @@
 (defproject hyperion/hyperion-postgres (:version config)
   :description "Postgres Datastore for Hyperion"
   :dependencies [[org.clojure/clojure ~(:clojure-version config)]
-                 [hyperion/hyperion-core ~(:version config)]
+                 [hyperion/hyperion-api ~(:version config)]
                  [hyperion/hyperion-sql ~(:version config)]
                  [postgresql/postgresql "8.4-702.jdbc4"]]
 

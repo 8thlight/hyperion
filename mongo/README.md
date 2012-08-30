@@ -9,9 +9,9 @@ Indexes should be added externally since Hyperion doesn't support indexes.
 
 ## Usage
 
-    (require 'hyperion.core)
+    (require 'hyperion.api)
     (require 'hyperion.mongo)
-    (binding [hyperion.core/*ds* (hyperion.mongo/new-mongo-datastore :host "localhost" :port 27017 :database "mydb")]
+    (binding [hyperion.api/*ds* (hyperion.mongo/new-mongo-datastore :host "localhost" :port 27017 :database "mydb")]
         (save {:kind "test" :value "test"})
         (find-by-kind "test"))
 

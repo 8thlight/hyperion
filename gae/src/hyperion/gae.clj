@@ -1,11 +1,11 @@
 (ns hyperion.gae
-  (:use [chee.string :only (gsub spear-case)]
-        [chee.util :only (->options)]
-        [hyperion.core :only (Datastore *entity-specs*)])
-  (:require [clojure.string :as str]
+  (:require [chee.string :refer [gsub spear-case]]
+            [chee.util :refer [->options]]
+            [clojure.string :as str]
+            [hyperion.abstr :refer [Datastore]]
+            [hyperion.filtering :as filter]
             [hyperion.gae.types]
-            [hyperion.sorting :as sort]
-            [hyperion.filtering :as filter])
+            [hyperion.sorting :as sort])
   (:import [com.google.appengine.api.datastore Entity Entities Query DatastoreService DatastoreServiceFactory Query$FilterOperator
             Query$SortDirection FetchOptions$Builder EntityNotFoundException KeyFactory Key]))
 

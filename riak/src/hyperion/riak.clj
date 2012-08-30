@@ -1,14 +1,14 @@
 (ns hyperion.riak
-  (:require [hyperion.core :refer [Datastore]]
-            [hyperion.memory :as memory]
-            [hyperion.sorting :as sort]
-            [hyperion.filtering :as filter]
-            [hyperion.key :refer (compose-key decompose-key)]
-            [chee.util :refer [->options]]
+  (:require [chee.util :refer [->options]]
             [cheshire.core :refer [generate-string parse-string]]
             [clojure.data.codec.base64 :refer [encode decode]]
+            [clojure.set :refer [intersection]]
             [clojure.string :as string]
-            [clojure.set :refer [intersection]])
+            [hyperion.abstr :refer [Datastore]]
+            [hyperion.filtering :as filter]
+            [hyperion.key :refer (compose-key decompose-key)]
+            [hyperion.memory :as memory]
+            [hyperion.sorting :as sort])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
            [com.basho.riak.client.query.functions NamedErlangFunction JSSourceFunction]
            [com.basho.riak.client.query.indexes BinIndex KeyIndex IntIndex]

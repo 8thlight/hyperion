@@ -1,5 +1,5 @@
 (ns hyperion.gae.types
-  (:use [hyperion.core :only [pack unpack]])
+  (:use [hyperion.api :only [pack unpack]])
   (:import [com.google.appengine.api.datastore
             Key KeyFactory ShortBlob Blob Category Email GeoPt Link
             IMHandle IMHandle$Scheme PostalAddress Rating PhoneNumber Text]
