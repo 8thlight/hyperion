@@ -1,7 +1,7 @@
 (ns hyperion.dev.spec
-  (:use
-    [speclj.core]
-    [hyperion.core]))
+  (:require [speclj.core :refer :all]
+            [hyperion.api :refer :all]
+            [hyperion.abstr :refer :all]))
 
 (defn it-saves []
   (context "save"
@@ -44,81 +44,71 @@
 (defn it-deletes []
   (list
     (it "deletes by key"
-      (let [kind :testing
-            one (save {:kind kind :name "jim"})
+      (let [kind :testing one (save {:kind kind :name "jim"})
             key (:key one)]
         (delete-by-key key)
         (should= nil (find-by-key key))))
 
     (context "deletes by kind"
       (before
-        (save* {:kind "testing" :inti 1  :data "one"}
-                {:kind "testing" :inti 12 :data "twelve"}))
+        (save* {:kind "testing" :inti 1 :data "one"}
+          {:kind "testing" :inti 12 :data "twelve"}))
 
       (it "with no filters"
-        (let [kind :testing]
+        (let [kind :testing ]
           (delete-by-kind kind)
           (should= [] (find-by-kind kind))))
 
       (it "with equal filter on an int"
-        (let [kind :testing
-              _ (delete-by-kind kind :filters [[:= :inti 1]])
+        (let [kind :testing _ (delete-by-kind kind :filters [[:= :inti 1]])
               result (find-by-kind kind)]
           (should= 1 (count result))
           (should= 12 (:inti (first result)))))
 
       (it "with equal filter on an string"
-        (let [kind :testing
-              _ (delete-by-kind kind :filters [[:= :data "one"]])
+        (let [kind :testing _ (delete-by-kind kind :filters [[:= :data "one"]])
               result (find-by-kind kind)]
           (should= 1 (count result))
           (should= 12 (:inti (first result)))))
 
       (it "with not equal to filter"
-        (let [kind :testing
-              _ (delete-by-kind kind :filters [[:!= :inti 1]])
+        (let [kind :testing _ (delete-by-kind kind :filters [[:!= :inti 1]])
               result (find-by-kind kind)]
           (should= 1 (count result))
           (should= 1 (:inti (first result)))))
 
       (it "with less than or equal to filter"
-        (let [kind :testing
-              _ (delete-by-kind kind :filters [[:<= :inti 1]])
+        (let [kind :testing _ (delete-by-kind kind :filters [[:<= :inti 1]])
               result (find-by-kind kind)]
           (should= 1 (count result))
           (should= 12 (:inti (first result)))))
 
       (it "with less than filter"
-        (let [kind :testing
-              _ (delete-by-kind kind :filters [[:<= :inti 2]])
+        (let [kind :testing _ (delete-by-kind kind :filters [[:<= :inti 2]])
               result (find-by-kind kind)]
           (should= 1 (count result))
           (should= 12 (:inti (first result)))))
 
       (it "with greater than or equal to filter"
-        (let [kind :testing
-              _ (delete-by-kind kind :filters [[:>= :inti 2]])
+        (let [kind :testing _ (delete-by-kind kind :filters [[:>= :inti 2]])
               result (find-by-kind kind)]
           (should= 1 (count result))
           (should= 1 (:inti (first result)))))
 
       (it "with greater than filter"
-        (let [kind :testing
-              _ (delete-by-kind kind :filters [[:> :inti 1]])
+        (let [kind :testing _ (delete-by-kind kind :filters [[:> :inti 1]])
               result (find-by-kind kind)]
           (should= 1 (count result))
           (should= 1 (:inti (first result)))))
 
       (it "with contains filter"
-        (let [kind :testing
-              _ (delete-by-kind kind :filters [[:in :inti [1]]])
+        (let [kind :testing _ (delete-by-kind kind :filters [[:in :inti [1]]])
               result (find-by-kind kind)]
           (should= 1 (count result))
           (should= 12 (:inti (first result)))))
 
       (it "with contains filter"
-        (let [kind :testing
-              _ (delete-by-kind kind :filters [[:in :inti [1 12]]])
+        (let [kind :testing _ (delete-by-kind kind :filters [[:in :inti [1 12]]])
               result (find-by-kind kind)]
           (should= 0 (count result))
           (should= [] result))))))
@@ -150,23 +140,23 @@
       (should= #{"the one" "twelve" "twenty3" "thirty4" "forty4" "forty5"} (set (map :data (find :filters [:!= :data "one"]))))
       (should= #{"one" "twelve"} (set (map :data (find :filters [:in :data ["one" "twelve"]]))))
       (should= #{} (set (map :data (find :filters [[:> :data "qux"] [:< :data "qux"]]))))
-      (should= #{"the one" "thirty4"  "forty4" "forty5"} (set (map :data (find :filters [[:!= :data "one"] [:!= :data "twelve"] [:!= :data "twenty3"]])))))
+      (should= #{"the one" "thirty4" "forty4" "forty5"} (set (map :data (find :filters [[:!= :data "one"] [:!= :data "twelve"] [:!= :data "twenty3"]])))))
 
     (it "applies sorts"
-      (should= [1 1 12 23 34 44 45] (map :inti (find :sorts [:inti :asc])))
-      (should= [45 44 34 23 12 1 1] (map :inti (find :sorts [:inti :desc])))
-      (should= [44 45 1 1 34 12 23] (map :inti (find :sorts [:data :asc])))
-      (should= [23 12 34 1 1 45 44] (map :inti (find :sorts [:data :desc])))
-      (should= ["one" "the one" "twelve" "twenty3" "thirty4" "forty4" "forty5"] (map :data (find-by-kind "testing" :sorts [[:inti :asc] [:data :asc]])))
-      (should= [44 45 1 1 34 12 23] (map :inti (find-by-kind "testing" :sorts [[:data :asc] [:inti :asc]]))))
+      (should= [1 1 12 23 34 44 45] (map :inti (find :sorts [:inti :asc ])))
+      (should= [45 44 34 23 12 1 1] (map :inti (find :sorts [:inti :desc ])))
+      (should= [44 45 1 1 34 12 23] (map :inti (find :sorts [:data :asc ])))
+      (should= [23 12 34 1 1 45 44] (map :inti (find :sorts [:data :desc ])))
+      (should= ["one" "the one" "twelve" "twenty3" "thirty4" "forty4" "forty5"] (map :data (find-by-kind "testing" :sorts [[:inti :asc ] [:data :asc ]])))
+      (should= [44 45 1 1 34 12 23] (map :inti (find-by-kind "testing" :sorts [[:data :asc ] [:inti :asc ]]))))
 
     (it "applies limit and offset"
-      (should= [12 23 34 44 45] (map :inti (find :sorts [:inti :asc] :offset 2)))
-      (should= [12 23] (map :inti (find :sorts [:inti :asc] :limit 2 :offset 2)))
-      (should= [34 44] (map :inti (find :sorts [:inti :asc] :limit 2 :offset 4)))
-      (should= [45 44] (map :inti (find :sorts [:inti :desc] :limit 2)))
-      (should= [34 23] (map :inti (find :sorts [:inti :desc] :limit 2 :offset 2)))
-      (should= [12 1] (map :inti (find :sorts [:inti :desc] :limit 2 :offset 4))))
+      (should= [12 23 34 44 45] (map :inti (find :sorts [:inti :asc ] :offset 2)))
+      (should= [12 23] (map :inti (find :sorts [:inti :asc ] :limit 2 :offset 2)))
+      (should= [34 44] (map :inti (find :sorts [:inti :asc ] :limit 2 :offset 4)))
+      (should= [45 44] (map :inti (find :sorts [:inti :desc ] :limit 2)))
+      (should= [34 23] (map :inti (find :sorts [:inti :desc ] :limit 2 :offset 2)))
+      (should= [12 1] (map :inti (find :sorts [:inti :desc ] :limit 2 :offset 4))))
 
     (it "applies formating to filters with dashes"
       (let [with-dashes (save {:kind "testing" :first-name "sam"})
@@ -176,13 +166,13 @@
 (defn it-can-be-searched []
   (context "searching"
     (before
-      (save* {:kind "testing" :inti 1  :data "one"}
-              {:kind "testing" :inti 12 :data "twelve"}
-              {:kind "testing" :inti 23 :data "twenty3"}
-              {:kind "testing" :inti 34 :data "thirty4"}
-              {:kind "testing" :inti 45 :data "forty5"}
-              {:kind "testing" :inti 1 :data "the one"}
-              {:kind "testing" :inti 44 :data "forty4"}))
+      (save* {:kind "testing" :inti 1 :data "one"}
+        {:kind "testing" :inti 12 :data "twelve"}
+        {:kind "testing" :inti 23 :data "twenty3"}
+        {:kind "testing" :inti 34 :data "thirty4"}
+        {:kind "testing" :inti 45 :data "forty5"}
+        {:kind "testing" :inti 1 :data "the one"}
+        {:kind "testing" :inti 44 :data "forty4"}))
 
     (it-can-find find-all-kinds "find-all-kinds")
     (it-can-find (fn [& args] (apply find-by-kind "testing" args)) "find-by-kind")
@@ -202,18 +192,18 @@
     (context "with multiple kinds"
       (before
         (save* {:kind "other-testing" :inti 56 :data "fifty6"}
-                {:kind "other-testing" :inti 20 :data "twenty"}))
+          {:kind "other-testing" :inti 20 :data "twenty"}))
 
       (it "finds by all kinds (find-all-kinds)"
-        (should= [1 1 12 20 23 34 44 45 56] (map :inti (find-all-kinds :sorts [[:inti :asc]])))
-        (should= [1 1 12 20] (map :inti (find-all-kinds :sorts [[:inti :asc]] :limit 4)))
-        (should= [23 34 44 45 56] (map :inti (find-all-kinds :sorts [[:inti :asc]] :offset 4)))
-        (should= [44 45] (map :inti (find-all-kinds :offset 6 :limit 2 :sorts [[:inti :asc]])))
-        (should= [34 44 45 56] (map :inti (find-all-kinds :filters [:> :inti 30] :sorts [:inti :asc]))))
+        (should= [1 1 12 20 23 34 44 45 56] (map :inti (find-all-kinds :sorts [[:inti :asc ]])))
+        (should= [1 1 12 20] (map :inti (find-all-kinds :sorts [[:inti :asc ]] :limit 4)))
+        (should= [23 34 44 45 56] (map :inti (find-all-kinds :sorts [[:inti :asc ]] :offset 4)))
+        (should= [44 45] (map :inti (find-all-kinds :offset 6 :limit 2 :sorts [[:inti :asc ]])))
+        (should= [34 44 45 56] (map :inti (find-all-kinds :filters [:> :inti 30] :sorts [:inti :asc ]))))
 
       (it "counts by all kinds (count-all-kinds)"
         (should= 9 (count-all-kinds))
-        (should= 4 (count-all-kinds :filters [:> :inti 30] :sorts [:inti :asc])))
+        (should= 4 (count-all-kinds :filters [:> :inti 30] :sorts [:inti :asc ])))
 
       (it "finds all records by kind"
         (let [records (find-by-kind "testing")]
@@ -224,7 +214,7 @@
   (context "keys"
     (it "are packed and unpacked symetrically"
       (let [key (:key (save {:kind "testing"}))
-            packed-key (ds-pack-key (ds)  key)]
+            packed-key (ds-pack-key (ds) key)]
         (should-not= nil packed-key)
         (should= key (ds-unpack-key (ds) packed-key))
         (should= packed-key (ds-pack-key (ds) key))))))

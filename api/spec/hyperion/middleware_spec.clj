@@ -1,7 +1,7 @@
 (ns hyperion.middleware-spec
   (:use
     [speclj.core]
-    [hyperion.core :only [*ds*]]
+    [hyperion.api :only [*ds*]]
     [hyperion.fake :only [new-fake-datastore]]
     [hyperion.middleware :only [with-datastore]]))
 

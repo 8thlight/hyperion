@@ -1,6 +1,6 @@
 (def config (load-file "../config.clj"))
 
-(defproject hyperion/hyperion-core (:version config)
+(defproject hyperion/hyperion-api (:version config)
   :description "A generic persistence API for Clojure"
   :dependencies [[org.clojure/clojure ~(:clojure-version config)]
                  [chee ~(:chee-version config)]

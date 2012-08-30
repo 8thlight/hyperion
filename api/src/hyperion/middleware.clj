@@ -1,6 +1,6 @@
 (ns hyperion.middleware
   (:use
-    [hyperion.core :only [*ds*]]))
+    [hyperion.api :only [*ds*]]))
 
 (defn with-datastore [handler ds]
   (fn [request]

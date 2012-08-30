@@ -1,6 +1,7 @@
 (ns hyperion.memory
   (:require
-    [hyperion.core :refer [Datastore new?]]
+    [hyperion.api :refer [new?]]
+    [hyperion.abstr :refer [Datastore ]]
     [hyperion.key :refer [generate-id]]
     [hyperion.sorting :as sort]
     [hyperion.filtering :as filter]))

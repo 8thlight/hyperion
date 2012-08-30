@@ -1,6 +1,6 @@
-(ns hyperion.core-spec
+(ns hyperion.api-spec
   (:use [speclj.core]
-        [hyperion.core]
+        [hyperion.api]
         [hyperion.filtering :only [make-filter]]
         [hyperion.sorting :only [make-sort]]
         [hyperion.fake]
@@ -146,7 +146,7 @@
 
   (it "has no ds by default"
     (set-ds! nil)
-    (should-throw Exception "No Datastore bound (hyperion/*ds*). Use clojure.core/binding to bind a value or hyperion.core/set-ds! to globally set it."
+    (should-throw Exception "No Datastore bound (hyperion/*ds*). Use clojure.core/binding to bind a value or hyperion.api/set-ds! to globally set it."
       (ds)))
 
   (it "the ds can be bound"
@@ -166,34 +166,34 @@
     (should= false (new? {:kind "old" :key "exists"})))
 
   (it "translates filters"
-    (should= := (#'hyperion.core/->filter-operator := ))
-    (should= := (#'hyperion.core/->filter-operator "="))
-    (should= := (#'hyperion.core/->filter-operator "eq"))
-    (should= :!= (#'hyperion.core/->filter-operator :!= ))
-    (should= :!= (#'hyperion.core/->filter-operator "not"))
-    (should= :> (#'hyperion.core/->filter-operator :> ))
-    (should= :> (#'hyperion.core/->filter-operator "gt"))
-    (should= :< (#'hyperion.core/->filter-operator :< ))
-    (should= :< (#'hyperion.core/->filter-operator "lt"))
-    (should= :>= (#'hyperion.core/->filter-operator :>= ))
-    (should= :>= (#'hyperion.core/->filter-operator "gte"))
-    (should= :<= (#'hyperion.core/->filter-operator :<= ))
-    (should= :<= (#'hyperion.core/->filter-operator "lte"))
-    (should= :contains? (#'hyperion.core/->filter-operator :contains? ))
-    (should= :contains? (#'hyperion.core/->filter-operator "contains?"))
-    (should= :contains? (#'hyperion.core/->filter-operator "in"))
-    (should-throw Exception "Unknown filter operator: foo" (#'hyperion.core/->filter-operator "foo")))
+    (should= := (#'hyperion.api/->filter-operator := ))
+    (should= := (#'hyperion.api/->filter-operator "="))
+    (should= := (#'hyperion.api/->filter-operator "eq"))
+    (should= :!= (#'hyperion.api/->filter-operator :!= ))
+    (should= :!= (#'hyperion.api/->filter-operator "not"))
+    (should= :> (#'hyperion.api/->filter-operator :> ))
+    (should= :> (#'hyperion.api/->filter-operator "gt"))
+    (should= :< (#'hyperion.api/->filter-operator :< ))
+    (should= :< (#'hyperion.api/->filter-operator "lt"))
+    (should= :>= (#'hyperion.api/->filter-operator :>= ))
+    (should= :>= (#'hyperion.api/->filter-operator "gte"))
+    (should= :<= (#'hyperion.api/->filter-operator :<= ))
+    (should= :<= (#'hyperion.api/->filter-operator "lte"))
+    (should= :contains? (#'hyperion.api/->filter-operator :contains? ))
+    (should= :contains? (#'hyperion.api/->filter-operator "contains?"))
+    (should= :contains? (#'hyperion.api/->filter-operator "in"))
+    (should-throw Exception "Unknown filter operator: foo" (#'hyperion.api/->filter-operator "foo")))
 
   (it "translates sort directions"
-    (should= :asc (#'hyperion.core/->sort-direction :asc ))
-    (should= :asc (#'hyperion.core/->sort-direction :ascending ))
-    (should= :asc (#'hyperion.core/->sort-direction "asc"))
-    (should= :asc (#'hyperion.core/->sort-direction "ascending"))
-    (should= :desc (#'hyperion.core/->sort-direction :desc ))
-    (should= :desc (#'hyperion.core/->sort-direction :descending ))
-    (should= :desc (#'hyperion.core/->sort-direction "desc"))
-    (should= :desc (#'hyperion.core/->sort-direction "descending"))
-    (should-throw Exception "Unknown sort direction: foo" (#'hyperion.core/->sort-direction "foo")))
+    (should= :asc (#'hyperion.api/->sort-direction :asc ))
+    (should= :asc (#'hyperion.api/->sort-direction :ascending ))
+    (should= :asc (#'hyperion.api/->sort-direction "asc"))
+    (should= :asc (#'hyperion.api/->sort-direction "ascending"))
+    (should= :desc (#'hyperion.api/->sort-direction :desc ))
+    (should= :desc (#'hyperion.api/->sort-direction :descending ))
+    (should= :desc (#'hyperion.api/->sort-direction "desc"))
+    (should= :desc (#'hyperion.api/->sort-direction "descending"))
+    (should-throw Exception "Unknown sort direction: foo" (#'hyperion.api/->sort-direction "foo")))
 
   (context "with fake ds"
     (around [it]

@@ -1,30 +1,18 @@
-(ns hyperion.core
+(ns hyperion.api
   (:require [clojure.string :as str]
+            [hyperion.abstr :refer :all]
             [hyperion.sorting :as sort]
-            [hyperion.filtering :as filter])
-  (:use [chee.string :only (gsub spear-case)]
-        [chee.datetime :only (now)]
-        [chee.util :only (->options)]))
-
-(defprotocol Datastore
-  "Protocol for Hyperion implementations."
-  (ds-save [this records])
-  (ds-delete-by-key [this key])
-  (ds-delete-by-kind [this kind filters])
-  (ds-count-by-kind [this kind filters])
-  (ds-find-by-key [this key])
-  (ds-find-by-kind [this kind filters sorts limit offset])
-  (ds-all-kinds [this])
-  (ds-pack-key [this value])
-  (ds-unpack-key [this value]))
+            [hyperion.filtering :as filter]
+            [chee.datetime :refer [now]]
+            [chee.util :refer [->options]]))
 
 (declare ^{:dynamic true
-           :tag hyperion.core.Datastore
+           :tag hyperion.abstr.Datastore
            :doc "Stores the active datastore."} *ds*)
 
 (defn set-ds!
   "Uses alter-var-root to set *ds*. A violent, but effective way to install a datastore."
-  [^hyperion.core.Datastore ds]
+  [^hyperion.abstr.Datastore ds]
   (alter-var-root (var *ds*) (fn [_] ds)))
 
 (defn ds
@@ -32,66 +20,12 @@
   []
   (if (and (bound? #'*ds*) *ds*)
     *ds*
-    (throw (NullPointerException. "No Datastore bound (hyperion/*ds*). Use clojure.core/binding to bind a value or hyperion.core/set-ds! to globally set it."))))
-
-(def #^{:dynamic true
-        :doc "Map of specs decalred using defentity"} *entity-specs* (ref {}))
+    (throw (NullPointerException. "No Datastore bound (hyperion/*ds*). Use clojure.core/binding to bind a value or hyperion.api/set-ds! to globally set it."))))
 
 (defn new?
   "Returns true if the record is new (not saved/doesn't have a :key), false otherwise."
   [record]
   (nil? (:key record)))
-
-(defprotocol AsKind
-  "Protocol to coerce values into a 'kind' string."
-  (^{:doc "Coerces value into a 'kind' string"} ->kind [this]))
-
-(extend-protocol AsKind
-  java.lang.String
-  (->kind [this] (spear-case this))
-
-  clojure.lang.Keyword
-  (->kind [this] (->kind (name this)))
-
-  clojure.lang.Symbol
-  (->kind [this] (->kind (name this)))
-
-  clojure.lang.IPersistentMap
-  (->kind [this] (->kind (:kind this)))
-
-  nil
-  (->kind [this] this))
-
-(defprotocol AsField
-  "Protocol to coerce values into a field name"
-  (^{:doc "Coerces value into a field name"} ->field [this]))
-
-(extend-protocol AsField
-  java.lang.String
-  (->field [this] (keyword (spear-case this)))
-
-  clojure.lang.Keyword
-  (->field [this] (->field (name this)))
-
-  clojure.lang.Symbol
-  (->field [this] (->field (name this))))
-
-(defprotocol Specable
-  "Protocol to retrieve an entity-spec as defined in defentity."
-  (^{:doc "Retrieves the entity-spec for the value"} spec-for [this]))
-
-(extend-protocol Specable
-  clojure.lang.IPersistentMap
-  (spec-for [this] (spec-for (->kind this)))
-
-  clojure.lang.Keyword
-  (spec-for [this] (get @*entity-specs* this))
-
-  java.lang.String
-  (spec-for [this] (spec-for (keyword this)))
-
-  nil
-  (spec-for [this] this))
 
 (defn- if-assoc [map key value]
   (if value
@@ -107,7 +41,7 @@
 
 (defmulti before-save
   "Hook to alter values immediately before being saved
-  "#(keyword (:kind %)))
+  " #(keyword (:kind %)))
 (defmethod before-save :default [record] record)
 
 (defmulti after-load

@@ -1,3 +1,7 @@
+# 3.2.0
+
+* renames hyperion.core to hyperion.api
+
 # 3.1.0
 
 * adds hyperion.core/new-datastore factory function
