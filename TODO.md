@@ -1,7 +1,7 @@
+* Logging: For debugging.  For runtime monitoring.  For warning of dangerous actions.
 * Use Around Save/Around Load callbacks to implement associations
 * Embedded record for document datastores
 * Website?
-* Documentation
 * Indexes:
     * Riak: currently indexes ALL fields.  That's inefficient.
     Yet it can't search efficiently without index.  If defentity allowed
@@ -13,7 +13,6 @@
     they exist.  Indexes are not needed at runtime.
     * GAE: Indexes are handled externally.  Would be useless.
     * SQL: Same as Mongo I suppose.
-* Logging: For debugging.  For runtime monitoring.  For warning of dangerous actions.
 * Ragtime integration for migrations (https://github.com/weavejester/ragtime)
-* Datomic
+* Datomic - maybe?
 
