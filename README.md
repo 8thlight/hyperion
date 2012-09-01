@@ -1,6 +1,6 @@
+<img src="https://raw.github.com/8thlight/hyperion/master/hyperion_logo.png" alt="Hyperion logo" title="Titan of Light" align="right"/>
 # Hyperion [![Build Status](https://secure.travis-ci.org/mylesmegyesi/hyperion.png)](http://travis-ci.org/mylesmegyesi/hyperion)
 
-<img src="https://raw.github.com/8thlight/hyperion/master/hyperion_logo.png" alt="Hyperion logo" title="Titan of Light" align="right"/>
 <i>1 API, multiple database backends.</i>
 
 Hyperion provides you with a simple API for data persistence allowing you to delay the choice of database without delaying your development.
