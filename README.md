@@ -69,9 +69,16 @@ If you can bind the datastore once at high level in your application that's idea
     (save {:kind :foo} {:value :bar} :another :fizz)
     ;=> {:kind "foo" :value :bar :another :fizz :key "generated key"}
     (save (citizen) :name "Joe" :age 21 :country "France")
-    ;=> #<Citizen {:kind "citizen" :name "Joe" :age 21 :country "France" ...}>
+    ;=> #<{:kind "citizen" :name "Joe" :age 21 :country "France" ...}>
 
-### Loading a value
+### Updating a value:
+
+    (let [record (save {:kind :foo :name "Sue"})
+          new-record (assoc record :name "John")]
+      (save new-record))
+    ;=> {:kind "foo" :name "John" :key "generated key"}
+
+### Loading a value:
 
     ; if you have a key...
     (find-by-key my-key)
@@ -85,6 +92,16 @@ If you can bind the datastore once at high level in your application that's idea
     (find-by-kind :dog :limit 10) ; returns upto 10 dogs in undefined order
     (find-by-kind :dog :sorts [:name :asc] :limit 10) ; returns upto the first 10 dogs in alphebetical order of their name
     (find-by-kind :dog :sorts [:name :asc] :limit 10 :offset 10) ; returns the second set of 10 dogs in alphebetical order of their name
+
+### Deleting a value:
+
+    ; if you have a key...
+    (delete-by-key my-key)
+
+    ; otherwise
+    (delete-by-kind :dog) ; deletes all records with :kind of "dog"
+    (delete-by-kind :dog :filters [:= :name "Fido"]) ; deletes all dogs whos name is Fido
+    (delete-by-kind :dog :filters [[:> :age 2][:< :age 5]]) ; deletes all dogs between the age of 2 and 5 (exclusive)
 
 Filter operations and acceptable syntax:
 
@@ -132,7 +149,7 @@ Example:
 
     (save (citizen :name "John" :age "21" :gender :male :occupation coder :spouse-key "abc123"))
 
-    ;=> #<Citizen {:kind "citizen" :key "some generated key" :country "USA" :created-at #<java.util.Date just-now> :updated-at #<java.util.Date just-now> ...)
+    ;=> #<{:kind "citizen" :key "some generated key" :country "USA" :created-at #<java.util.Date just-now> :updated-at #<java.util.Date just-now> ...)
 
 ## Full API
 
