@@ -2,7 +2,7 @@
   (:use [speclj.core]
         [hyperion.sql.spec-helper]
         [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
-        [hyperion.api :only [*ds* new-datastore]]
+        [hyperion.api :only [*ds* new-datastore save find-by-key]]
         [hyperion.sql.jdbc :only [execute-mutation]]
         [hyperion.sql.query]
         [hyperion.mysql :only [new-mysql-datastore]]))
@@ -57,5 +57,20 @@
 
     (it-behaves-like-a-datastore)
 
+    (context "SQL Injection"
+      (it "sanitizes strings to be inserted"
+        (let [evil-string "my evil string' --"
+              record (save {:kind :testing :name evil-string})]
+          (should= evil-string (:name (find-by-key (:key record))))))
+
+      (it "sanitizes table names"
+        (error-msg-contains?
+          "Table 'hyperion.my_evil_name`___' doesn't exist"
+          (save {:kind "my-evil-name` --" :name "test"})))
+
+      (it "sanitizes column names"
+        (error-msg-contains?
+          "Unknown column 'my_evil_name`___' in 'field list'"
+          (save {:kind :testing (keyword "my-evil-name` --") "test"}))))
     )
   )
