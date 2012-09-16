@@ -11,7 +11,7 @@
     (should-not= (compose-key "foo" 1) (compose-key "bar" 1)))
 
   (it "can parse a key"
-    (let [key (String. (encode (.getBytes (str "foo:123"))))]
+    (let [key (compose-key :foo 123)]
       (should= ["foo" 123] (decompose-key key))))
 
   )

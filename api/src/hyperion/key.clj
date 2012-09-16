@@ -1,5 +1,6 @@
 (ns hyperion.key
-  (:require [clojure.data.codec.base64 :refer [encode decode]]))
+  (:require [clojure.data.codec.base64 :refer [encode decode]]
+            [hyperion.abstr :refer :all]))
 
 (defn encode-key [value]
   (.replace
@@ -22,7 +23,8 @@
 
 (defn compose-key
   ([kind] (compose-key kind (generate-id)))
-  ([kind id] (encode-key (str kind ":" id))))
+  ([kind id] (encode-key (str (encode-key (->kind kind)) ":" (encode-key (str id))))))
 
 (defn decompose-key [key]
-  (seq (.split (decode-key key) ":")))
+  (map decode-key (.split (decode-key key) ":")))
+

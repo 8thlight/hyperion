@@ -23,10 +23,18 @@
   (it "composes unique keys"
     (should= 100 (count (into #{} (take 100 (repeatedly #(compose-key "foo"))))))
     (should= 100 (count (into #{} (take 100 (repeatedly #(compose-key "bar"))))))
-    (should= (encode-key "foo:123") (compose-key "foo" 123)))
+    (should= (compose-key "foo" 123) (compose-key "foo" 123)))
 
   (it "decomposes keys"
-    (let [key (encode-key "foo:abc123")]
+    (let [key (compose-key "foo" "abc123")]
       (should= ["foo" "abc123"] (decompose-key key))))
+
+  (it "decomposes keys containing a :"
+    (let [key (compose-key "foo" "abc:123")]
+      (should= ["foo" "abc:123"] (decompose-key key))))
+
+  (it "decomposes keys kind as a keyword"
+    (let [key (compose-key :foo "abc:123")]
+      (should= ["foo" "abc:123"] (decompose-key key))))
 
   )
