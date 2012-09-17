@@ -21,6 +21,7 @@ Hyperion Implementations:
  * [postgres](https://github.com/8thlight/hyperion/tree/master/postgres) - [PostgreSQL](http://www.postgresql.org/)
  * [riak](https://github.com/8thlight/hyperion/tree/master/riak) - [Riak](http://wiki.basho.com/Riak.html)
  * [sqlite](https://github.com/8thlight/hyperion/tree/master/sqlite) - [SQLite](http://www.sqlite.org/)
+ * [redis](https://github.com/8thlight/hyperion/tree/master/redis) - [Redis](http://redis.io/)
 
 ## Installation
 
