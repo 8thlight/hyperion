@@ -7,3 +7,4 @@ script: rake spec
 services:
   - redis-server
   - riak
+  - mongodb
