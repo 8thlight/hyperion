@@ -67,7 +67,12 @@ namespace :mongo do
   package('mongo')
 end
 
-PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :riak, :mongo]
+namespace :redis do
+  task :build => ['api:install']
+  package('redis')
+end
+
+PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :redis, :riak, :mongo]
 
 def create_task_for_all(task_name)
   task task_name => PROJECTS.map {|project| "#{project}:#{task_name}"}
