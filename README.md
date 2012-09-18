@@ -14,7 +14,7 @@ There are a few guiding principles for Hyperion.
 
 Hyperion Implementations:
 
- * [memory](https://github.com/8thlight/hyperion/tree/master/gae) - an in-memory datastore, ideal for testing, included in hyperion-api.jar
+ * [memory](https://github.com/8thlight/hyperion/blob/master/api/src/hyperion/memory.clj) - an in-memory datastore, ideal for testing, included in hyperion-api.jar
  * [gae](https://github.com/8thlight/hyperion/tree/master/gae) - [Google App Engine Datastore](https://developers.google.com/appengine/docs/python/datastore/overview)
  * [mongo](https://github.com/8thlight/hyperion/tree/master/mongo) - [Mongo DB](http://www.mongodb.org/)
  * [mysql](https://github.com/8thlight/hyperion/tree/master/mysql) - [MySQL](http://www.mysql.com/)
@@ -33,7 +33,7 @@ Hyperion Implementations:
 
 ### Creating a datastore
 
-hyperion.api provide a convenient factory function for instantiating any datastore implementation
+hyperion.api provides a convenient factory function for instantiating any datastore implementation
 
     (use 'hyperion.api)
     (new-datastore :implementation :memory)
@@ -133,7 +133,6 @@ The advantage of using entities are:
      object used to pivot the pack and unpack multimethods.
      A type (object) is simply a combined packer and unpacker.
  * constructors are provided
- * they are represented by records (defrecord) instead of plain maps. This allows you to use extend-type on them if you choose.
 
 Example:
 
