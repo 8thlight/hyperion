@@ -5,7 +5,7 @@
             [hyperion.api :refer [*ds*]]))
 
 (defn- clear-db [db]
-  (let [test-keys (carmine db (r/keys "*"))]
+  (let [test-keys (carmine db (r/keys "hyperion:*"))]
       (when (seq test-keys)
         (carmine db (apply r/del test-keys)))))
 
