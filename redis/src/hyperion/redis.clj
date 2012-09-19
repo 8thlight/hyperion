@@ -7,6 +7,8 @@
             [taoensso.carmine :as r]
             [chee.util :refer [->options]]))
 
+(def hyperion-namespace "hyperion:")
+
 (defmacro carmine [db & body]
   `(r/with-conn (:pool ~db) (:spec ~db) ~@body))
 
@@ -16,22 +18,38 @@
         connection-spec (merge defaults options)]
     {:pool pool :spec connection-spec}))
 
-(defn- kind-key [kind]
-  (str kind ":*"))
+;; KEY LOOKUP
 
-(defn- find-full-key [db key]
-  (first (carmine db (r/keys (str "*:" key)))))
+(defn- hyperion-key [key]
+  (str hyperion-namespace key))
+
+(defn- kind-key [kind]
+  (str hyperion-namespace kind))
+
+(defn- record-key [record]
+  (let [key  (:key  record)]
+    (hyperion-key key)))
+
+(defn- keys-of-kind [db kind]
+  (carmine db 
+    (r/smembers (kind-key kind))))
+
+;; SAVING
+
+(defn- add-keys-to-kind [db keys kind]
+  (carmine db
+    (doseq [key keys] (r/sadd (kind-key kind) key))
+    (r/sadd (str hyperion-namespace "kinds") kind)))
 
 (defn- save-record [db record]
-  (let [kind (:kind record)
-        key (name (:key record))]
-    (carmine db
-      (r/set (str kind ":" key) record))
-    record))
+  (carmine db
+    (r/set (record-key record) record))
+  record)
     
 (defn- insert-records-of-kind [db kind records]
   (let [records (map #(assoc % :kind kind) records)
         records (map #(assoc % :key (compose-key kind)) records)]
+    (add-keys-to-kind db (map :key records) kind)
     (mapv (partial save-record db) records)))
 
 (defn- save-records [db records]
@@ -45,33 +63,49 @@
           (fn [[kind values]] (insert-records-of-kind db kind values))
           insert-groups)))))
 
+;; FINDING
+
 (defn- find-by-key [db key]
-  (let [key (find-full-key db key)]
-    (carmine db (r/get key))))
+  (carmine db 
+    (r/get (hyperion-key key))))
 
 (defn- find-by-kind [db kind filters sorts limit offset]
-  (let [keys (carmine db (r/keys (kind-key kind)))
-        results (map (fn [key] (carmine db (r/get key))) keys)]
+  (let [keys (keys-of-kind db kind)
+        results (map (partial find-by-key db) keys)]
     (->> results 
       (filter (memory/build-filter filters))
       (sort/sort-results sorts)
       (filter/offset-results offset)
       (filter/limit-results limit))))
+
+;; DELETING
       
 (defn- delete-by-key [db key]
-  (let [key (find-full-key db key)]
-    (carmine db (r/del key))))
+  (let [record (find-by-key db key)
+        kind (:kind record)]
+    (carmine db 
+      (r/srem (kind-key kind) key)
+      (r/del (hyperion-key key)))
+    (carmine db
+      (if (empty? (r/smembers (kind-key kind)))
+        (r/srem (str hyperion-namespace "kinds") kind)))))
 
 (defn- delete-by-kind [db kind filters]
   (let [keys (map :key (find-by-kind db kind filters nil nil nil))]
     (doseq [key keys] (delete-by-key db key))))
 
+;; COUNTING
+
 (defn- count-by-kind [db kind filters]
   (count (find-by-kind db kind filters nil nil nil)))
 
+;; LISTING
+
 (defn- list-all-kinds [db]
-  (let [keys (carmine db (r/keys "*"))]
-    (vec (set (map #(first (clojure.string/split % #":")) keys)))))
+  (carmine db
+    (r/smembers (str hyperion-namespace "kinds"))))
+
+;; DATASTORE
 
 (deftype RedisDatastore [db]
   Datastore
