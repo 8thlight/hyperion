@@ -118,6 +118,16 @@
 (defentity Keyed
   [other-key :type :key ])
 
+(defentity :address
+  [line-1]
+  [postal-code]
+  [state :default "Illinois"])
+
+(defentity :person
+  [first-name]
+  [last-name]
+  [address :type :address])
+
 (defmethod pack Integer [_ value]
   (when value
     (Integer. (Integer/parseInt value))))
@@ -318,6 +328,14 @@
           (save {:kind :packable :widget "42"})
           (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :bauble "" :gewgaw nil}]))
 
+        (it "nested types"
+          (save (person :first-name "Myles"))
+          (check-first-call (ds) "ds-save" [{:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 nil :postal-code nil :state "Illinois"}}]))
+
+        (it "nested types merges given nested data"
+          (save (person :first-name "Myles" :address {:line-1 "Home"}))
+          (check-first-call (ds) "ds-save" [{:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 "Home" :postal-code nil :state "Illinois"}}]))
+
         (it "custom functions"
           (save {:kind :packable :bauble "hello"})
           (check-first-call (ds) "ds-save" [{:kind "packable" :widget nil :bauble "olleh" :gewgaw nil}]))
@@ -338,7 +356,9 @@
                                              :field1 nil
                                              :field2 nil
                                              :field3 ".141592"
-                                             :field42 "24eulav"}])))
+                                             :field42 "24eulav"}]))
+
+               )
 
       (context "unpacking"
         (context "normalizes"
@@ -361,6 +381,14 @@
         (it "types"
           (reset! (.responses (ds)) [[{:kind "packable" :widget 42}]])
           (should= {:kind "packable" :bauble nil :widget "42" :gewgaw nil} (save {})))
+
+        (it "nested types does not apply defaults"
+          (reset! (.responses (ds)) [[{:kind "person" :first-name "Myles"}]])
+          (should= {:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 nil :postal-code nil :state nil}} (save {})))
+
+        (it "nested types merges given nested data"
+          (reset! (.responses (ds)) [[{:kind "person" :first-name "Myles" :address {:line-1 "Home"}}]])
+          (should= {:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 "Home" :postal-code nil :state nil}} (save {})))
 
         (it "unknown kinds"
           (reset! (.responses (ds)) [[{:kind "unknown" :widget 42}]])
