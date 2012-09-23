@@ -1,3 +1,7 @@
+# 3.4.0
+
+* adds support for nested types
+
 # 3.3.0
 
 * renames hyperion.core to hyperion.api
