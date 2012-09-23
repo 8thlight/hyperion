@@ -112,6 +112,73 @@
   ([record val-fn]
     (create-entity record #(->> %2 (apply-default %1) (val-fn %1)))))
 
+(defn- packer-fn [packer]
+  (if (fn? packer)
+    packer
+    #(pack packer %)))
+
+(defn- unpacker-fn [packer]
+  (if (fn? packer)
+    packer
+    #(unpack packer %)))
+
+(defn- do-packing [packer value]
+  (if (or (sequential? value) (isa? (class value) java.util.List))
+    (map #(packer %) value)
+    (packer value)))
+
+(defn- pack-field [field-spec value]
+  (do-packing (packer-fn (:packer field-spec)) value))
+
+(defn- unpack-field [field-spec value]
+  (do-packing (unpacker-fn (:unpacker field-spec)) value))
+
+(defn- normalize-fields [record]
+  (reduce
+    (fn [record [field value]]
+      (assoc record (->field field) value))
+    {}
+    record))
+
+(defn unpack-entity [record]
+  "PRIVATE: Used by the defentity macro to unpack entities."
+  (when record
+    (let [record (normalize-fields record)
+          entity (create-entity record unpack-field)]
+      (if-assoc entity :key (:key record)))))
+
+(defn pack-entity [record]
+  "PRIVATE: Used by the defentity macro to pack entities."
+  (let [entity (create-entity-with-defaults record pack-field)]
+    (if-assoc entity :key (:key record))))
+
+(defn- with-created-at [record spec]
+  (if (and (or (contains? spec :created-at ) (contains? record :created-at )) (= nil (:created-at record)))
+    (assoc record :created-at (now))
+    record))
+
+(defn- with-updated-at [record spec]
+  (if (or (contains? spec :updated-at ) (contains? record :updated-at ))
+    (assoc record :updated-at (now))
+    record))
+
+(defn- with-updated-timestamps [record]
+  (let [spec (spec-for record)]
+    (-> record
+      (with-created-at spec)
+      (with-updated-at spec))))
+
+(defn- native->entity [native]
+  (-> native
+    unpack-entity
+    after-load))
+
+(defn- prepare-for-save [entity]
+  (-> entity
+    pack-entity
+    with-updated-timestamps
+    before-save))
+
 (defmacro defentity
   "Used to define entities. An entity is simply an encapulation of data that
   is persisted.
@@ -148,77 +215,15 @@
   "
   [class-sym & fields]
   (let [field-map (map-fields fields)
-        kind (->kind class-sym)]
+        kind (->kind class-sym)
+        kind-key (keyword kind)
+        kind-fn (symbol kind)]
     `(do
        (dosync (alter *entity-specs* assoc ~(keyword kind) ~field-map))
-       (defn ~(symbol kind) [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind))))))
+       (defn ~kind-fn [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind)))
+       (defmethod pack ~kind-key [type# value#] (pack-entity (assoc (or value# {}) :kind ~kind)))
+       (defmethod unpack ~kind-key [type# value#] (unpack-entity (assoc (or value# {}) :kind ~kind))))))
 
-; ----- Packing / Unpacking -------------------------------
-
-(defn- packer-fn [packer]
-  (if (fn? packer)
-    packer
-    #(pack packer %)))
-
-(defn- unpacker-fn [packer]
-  (if (fn? packer)
-    packer
-    #(unpack packer %)))
-
-(defn- do-packing [packer value]
-  (if (or (sequential? value) (isa? (class value) java.util.List))
-    (map #(packer %) value)
-    (packer value)))
-
-(defn- pack-field [field-spec value]
-  (do-packing (packer-fn (:packer field-spec)) value))
-
-(defn- unpack-field [field-spec value]
-  (do-packing (unpacker-fn (:unpacker field-spec)) value))
-
-(defn- normalize-fields [record]
-  (reduce
-    (fn [record [field value]]
-      (assoc record (->field field) value))
-    {}
-    record))
-
-(defn- unpack-entity [record]
-  (when record
-    (let [record (normalize-fields record)
-          entity (create-entity record unpack-field)]
-      (if-assoc entity :key (:key record)))))
-
-(defn- pack-entity [record]
-  (let [entity (create-entity-with-defaults record pack-field)]
-    (if-assoc entity :key (:key record))))
-
-(defn- with-created-at [record spec]
-  (if (and (or (contains? spec :created-at ) (contains? record :created-at )) (= nil (:created-at record)))
-    (assoc record :created-at (now))
-    record))
-
-(defn- with-updated-at [record spec]
-  (if (or (contains? spec :updated-at ) (contains? record :updated-at ))
-    (assoc record :updated-at (now))
-    record))
-
-(defn- with-updated-timestamps [record]
-  (let [spec (spec-for record)]
-    (-> record
-      (with-created-at spec)
-      (with-updated-at spec))))
-
-(defn- native->entity [native]
-  (-> native
-    unpack-entity
-    after-load))
-
-(defn- prepare-for-save [entity]
-  (-> entity
-    pack-entity
-    with-updated-timestamps
-    before-save))
 
 ; ----- API -----------------------------------------------
 

@@ -1,6 +1,4 @@
 * Logging: For debugging.  For runtime monitoring.  For warning of dangerous actions.
-* Use Around Save/Around Load callbacks to implement associations
-* Embedded record for document datastores
 * Website?
 * Indexes:
     * Riak: currently indexes ALL fields.  That's inefficient.
@@ -13,6 +11,7 @@
     they exist.  Indexes are not needed at runtime.
     * GAE: Indexes are handled externally.  Would be useless.
     * SQL: Same as Mongo I suppose.
+    * Implement indexes as datastore decorators?
 * Ragtime integration for migrations (https://github.com/weavejester/ragtime)
 * Datomic - maybe?
 
