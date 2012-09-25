@@ -146,12 +146,14 @@ Example:
         [updated-at] ; also populated automatically
         )
 
+    (use 'hyperion.types)
+
     (defentity Citizen
         [name]
         [age :packer ->int] ; ->int is a function defined in your code.
         [gender :unpacker ->string] ; ->string is a customer function too.
         [occupation :type my.ns.Occupation] ; and then we define pack/unpack for my.ns.Occupation
-        [spouse-key :type :key] ; :key is a special type that pack string keys into implementation-specific keys
+        [spouse-key :type (foreign-key :citizen)] ; :key is a special type that pack string keys into implementation-specific keys
         [country :default "USA"] ; newly created records will use the default if no value is provided
         [address :type :us-address] ; an embedded map; uses the packing strategy for a UsAddress defined above
         [created-at] ; populated automaticaly

@@ -28,7 +28,7 @@
     (carmine db
       (r/set (str kind ":" key) record))
     record))
-    
+
 (defn- insert-records-of-kind [db kind records]
   (let [records (map #(assoc % :kind kind) records)
         records (map #(assoc % :key (compose-key kind)) records)]
@@ -52,12 +52,12 @@
 (defn- find-by-kind [db kind filters sorts limit offset]
   (let [keys (carmine db (r/keys (kind-key kind)))
         results (map (fn [key] (carmine db (r/get key))) keys)]
-    (->> results 
+    (->> results
       (filter (memory/build-filter filters))
       (sort/sort-results sorts)
       (filter/offset-results offset)
       (filter/limit-results limit))))
-      
+
 (defn- delete-by-key [db key]
   (let [key (find-full-key db key)]
     (carmine db (r/del key))))
@@ -83,7 +83,7 @@
   (ds-find-by-kind [this kind filters sorts limit offset] (find-by-kind db kind filters sorts limit offset))
   (ds-all-kinds [this] (list-all-kinds db))
   (ds-pack-key [this value] value)
-  (ds-unpack-key [this value] value))
+  (ds-unpack-key [this kind value] value))
 
 (defn new-redis-datastore [& args]
   (let [options (->options args)

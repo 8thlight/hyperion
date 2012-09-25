@@ -158,7 +158,7 @@
   (ds-find-by-kind [this kind filters sorts limit offset] (find-by-kind db kind filters sorts limit offset))
   (ds-all-kinds [this] (list-all-kinds db))
   (ds-pack-key [this value] value)
-  (ds-unpack-key [this value] value))
+  (ds-unpack-key [this kind value] value))
 
 (defn new-mongo-datastore [& args]
   (if (and (= 1 (count args)) (.isInstance com.mongodb.DB (first args)))

@@ -7,6 +7,10 @@
         [hyperion.sql.query]
         [hyperion.mysql :only [new-mysql-datastore]]))
 
+(defn do-query [query]
+  (execute-mutation
+    (make-query query)))
+
 (def create-table-query
   "CREATE TABLE %s (
     id INTEGER NOT NULL AUTO_INCREMENT,
@@ -17,15 +21,34 @@
     PRIMARY KEY (id)
   )")
 
+(defn create-key-tables []
+  (do-query
+    "CREATE TABLE account (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    first_name VARCHAR(35),
+    inti INTEGER,
+    data VARCHAR(32),
+    PRIMARY KEY (id)
+    );")
+  (do-query
+    "CREATE TABLE shirt (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    account_key INTEGER NOT NULL,
+    first_name VARCHAR(35),
+    inti INTEGER,
+    data VARCHAR(32),
+    PRIMARY KEY (id),
+    INDEX (account_key),
+    FOREIGN KEY (account_key) REFERENCES account (id)
+    )"))
+
 (defn create-table [table-name]
-  (execute-mutation
-    (make-query (format create-table-query table-name))))
+  (do-query (format create-table-query table-name)))
 
 (def drop-table-query "DROP TABLE IF EXISTS %s")
 
 (defn drop-table [table-name]
-  (execute-mutation
-    (make-query (format drop-table-query table-name))))
+  (do-query (format drop-table-query table-name)))
 
 (describe "MySQL Datastore"
 
@@ -48,12 +71,14 @@
       (try
         (create-table "testing")
         (create-table "other_testing")
+        (create-key-tables)
         (binding [*ds* (new-mysql-datastore :connection-url "jdbc:mysql://localhost:3306/hyperion?user=root" :database "hyperion")]
           (it))
         (finally
           (drop-table "testing")
           (drop-table "other_testing")
-          )))
+          (drop-table "shirt")
+          (drop-table "account"))))
 
     (it-behaves-like-a-datastore)
 

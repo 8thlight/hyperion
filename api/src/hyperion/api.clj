@@ -67,9 +67,6 @@
   (fn [type value] type))
 (defmethod unpack :default [type value] value)
 
-(defmethod pack :key [_ value] (when value (ds-pack-key (ds) value)))
-(defmethod unpack :key [_ value] (when value (ds-unpack-key (ds) value)))
-
 (defn- apply-type-packers [options]
   (if-let [t (:type options)]
     (-> (dissoc options :type )

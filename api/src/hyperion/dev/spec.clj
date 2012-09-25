@@ -1,5 +1,6 @@
 (ns hyperion.dev.spec
   (:require [speclj.core :refer :all]
+            [hyperion.types :refer [foreign-key]]
             [hyperion.api :refer :all]
             [hyperion.abstr :refer :all]))
 
@@ -210,14 +211,27 @@
           (should= 7 (count records))
           (should (every? #(= "testing" (:kind %)) records)))))))
 
+(defentity OtherShirt
+  [account-key :type (foreign-key :account)])
+
+(defentity Shirt
+  [account-key :type (foreign-key :account)])
+
+(defentity Account
+  [first-name])
+
 (defn it-handles-keys []
   (context "keys"
-    (it "are packed and unpacked symetrically"
-      (let [key (:key (save {:kind "testing"}))
-            packed-key (ds-pack-key (ds) key)]
-        (should-not= nil packed-key)
-        (should= key (ds-unpack-key (ds) packed-key))
-        (should= packed-key (ds-pack-key (ds) key))))))
+
+    (it "saves records with foreign keys"
+      (let [account (save {:kind :account})
+            shirt (save {:kind :shirt :account-key (:key account)})
+            found-shirt (find-by-key (:key shirt))
+            found-account (find-by-key (:key account))
+            account-key (:key account)]
+        (should= account-key (:account-key shirt))
+        (should= account-key (:account-key found-shirt))
+        (should= account-key (:key found-account))))))
 
 (defn it-behaves-like-a-datastore []
   (list

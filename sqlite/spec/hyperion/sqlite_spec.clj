@@ -8,6 +8,10 @@
         [hyperion.sql.query]
         [hyperion.sqlite :only [new-sqlite-datastore]]))
 
+(defn do-query [query]
+  (execute-mutation
+    (make-query query)))
+
 (def create-table-query
   "CREATE TABLE %s (
     id INTEGER PRIMARY KEY,
@@ -18,9 +22,26 @@
     data VARCHAR(32)
   )")
 
+(defn create-key-tables []
+  (do-query
+    "CREATE TABLE account (
+    id INTEGER PRIMARY KEY,
+    first_name VARCHAR(35),
+    inti INTEGER,
+    data VARCHAR(32)
+    );")
+  (do-query
+    "CREATE TABLE shirt (
+    id INTEGER PRIMARY KEY,
+    account_key INTEGER,
+    first_name VARCHAR(35),
+    inti INTEGER,
+    data VARCHAR(32),
+    FOREIGN KEY (account_key) REFERENCES account(id)
+    )"))
+
 (defn create-table [table-name]
-  (execute-mutation
-    (make-query (format create-table-query table-name))))
+  (do-query (format create-table-query table-name)))
 
 (describe "SQLite Datastore"
 
@@ -48,7 +69,8 @@
 
     (before
       (create-table "testing")
-      (create-table "other_testing"))
+      (create-table "other_testing")
+      (create-key-tables))
 
     (it-behaves-like-a-datastore)
     )
