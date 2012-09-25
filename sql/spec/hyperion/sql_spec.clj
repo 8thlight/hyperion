@@ -48,8 +48,8 @@
 
   (it "packs and unpacks keys"
     (let [key (compose-key "foo" 123)]
-      (should= ["foo" 123] (ds-pack-key @db key))
-      (should= key (ds-unpack-key @db ["foo" 123]))))
+      (should= 123 (ds-pack-key @db key))
+      (should= key (ds-unpack-key @db "foo" 123))))
 
 
   )

@@ -11,7 +11,7 @@
   (ds-find-by-kind [this kind filters sorts limit offset])
   (ds-all-kinds [this])
   (ds-pack-key [this value])
-  (ds-unpack-key [this value]))
+  (ds-unpack-key [this kind value]))
 
 (def #^{:dynamic true
         :doc "Map of specs decalred using defentity"} *entity-specs* (ref {}))

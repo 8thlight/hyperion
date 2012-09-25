@@ -128,7 +128,7 @@
     (find-by-kind service kind filters sorts limit offset))
   (ds-all-kinds [this] (all-kinds service))
   (ds-pack-key [this value] (string->key value))
-  (ds-unpack-key [this value] (key->string value)))
+  (ds-unpack-key [this kind value] (key->string value)))
 
 (defn new-gae-datastore [& args]
   (cond

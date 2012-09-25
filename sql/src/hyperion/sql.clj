@@ -66,9 +66,9 @@
       (let [results (execute-query (make-query (table-listing-query db)))]
         (map #(get % "table_name") results))))
 
-  (ds-pack-key [this value] (decompose-key value))
+  (ds-pack-key [this value] (second (decompose-key value)))
 
-  (ds-unpack-key [this value] (apply compose-key value))
+  (ds-unpack-key [this kind value] (compose-key kind value))
 
   )
 

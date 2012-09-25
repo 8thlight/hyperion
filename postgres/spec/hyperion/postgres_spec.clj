@@ -9,6 +9,10 @@
         [hyperion.postgres :only [new-postgres-datastore]])
   (:import [speclj SpecFailure]))
 
+(defn do-query [query]
+  (execute-mutation
+    (make-query query)))
+
 (def create-table-query
   "CREATE TABLE %s (
     id SERIAL PRIMARY KEY,
@@ -18,9 +22,24 @@
     data VARCHAR(32)
   )")
 
+(defn create-key-tables []
+  (do-query
+    "CREATE TABLE account (
+    id SERIAL PRIMARY KEY,
+    first_name VARCHAR(35),
+    inti INTEGER,
+    data VARCHAR(32)
+    );
+    CREATE TABLE shirt (
+    id SERIAL PRIMARY KEY,
+    account_key INTEGER REFERENCES account,
+    first_name VARCHAR(35),
+    inti INTEGER,
+    data VARCHAR(32)
+    )"))
+
 (defn create-table [table-name]
-  (execute-mutation
-    (make-query (format create-table-query table-name))))
+  (do-query (format create-table-query table-name)))
 
 (def connection-url "jdbc:postgresql://localhost:5432/hyperion")
 
@@ -47,6 +66,7 @@
     (around [it]
       (create-table "testing")
       (create-table "other_testing")
+      (create-key-tables)
       (binding [*ds* (new-postgres-datastore :connection (connection))]
         (it)))
 

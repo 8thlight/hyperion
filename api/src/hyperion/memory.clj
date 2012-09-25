@@ -89,7 +89,7 @@
   (ds-find-by-kind [this kind filters sorts limit offset] (find-records-by-kind this kind filters sorts limit offset))
   (ds-all-kinds [this] (all-kinds this))
   (ds-pack-key [this value] value)
-  (ds-unpack-key [this value] value))
+  (ds-unpack-key [this kind value] value))
 
 (defn new-memory-datastore
   ([] (MemoryDatastore. (ref {})))

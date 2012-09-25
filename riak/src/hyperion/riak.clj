@@ -194,8 +194,8 @@
   (ds-find-by-key [this key] (find-by-key client key))
   (ds-find-by-kind [this kind filters sorts limit offset] (find-by-kind client kind filters sorts limit offset))
   (ds-all-kinds [this] (find-all-kinds client))
-  (ds-pack-key [this value] (decompose-key value))
-  (ds-unpack-key [this value] (apply compose-key value)))
+  (ds-pack-key [this value] (second (decompose-key value)))
+  (ds-unpack-key [this kind value] (compose-key kind value)))
 
 (defn new-riak-datastore
   "Creates a datastore implementation for Riak.

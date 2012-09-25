@@ -31,7 +31,7 @@
     (hyperion-key key)))
 
 (defn- keys-of-kind [db kind]
-  (carmine db 
+  (carmine db
     (r/smembers (kind-key kind))))
 
 ;; SAVING
@@ -45,7 +45,7 @@
   (carmine db
     (r/set (record-key record) record))
   record)
-    
+
 (defn- insert-records-of-kind [db kind records]
   (let [records (map #(assoc % :kind kind) records)
         records (map #(assoc % :key (compose-key kind)) records)]
@@ -66,24 +66,24 @@
 ;; FINDING
 
 (defn- find-by-key [db key]
-  (carmine db 
+  (carmine db
     (r/get (hyperion-key key))))
 
 (defn- find-by-kind [db kind filters sorts limit offset]
   (let [keys (keys-of-kind db kind)
         results (map (partial find-by-key db) keys)]
-    (->> results 
+    (->> results
       (filter (memory/build-filter filters))
       (sort/sort-results sorts)
       (filter/offset-results offset)
       (filter/limit-results limit))))
 
 ;; DELETING
-      
+;;
 (defn- delete-by-key [db key]
   (let [record (find-by-key db key)
         kind (:kind record)]
-    (carmine db 
+    (carmine db
       (r/srem (kind-key kind) key)
       (r/del (hyperion-key key)))
     (carmine db
@@ -117,7 +117,7 @@
   (ds-find-by-kind [this kind filters sorts limit offset] (find-by-kind db kind filters sorts limit offset))
   (ds-all-kinds [this] (list-all-kinds db))
   (ds-pack-key [this value] value)
-  (ds-unpack-key [this value] value))
+  (ds-unpack-key [this kind value] value))
 
 (defn new-redis-datastore [& args]
   (let [options (->options args)

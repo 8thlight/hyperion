@@ -4,6 +4,7 @@
         [hyperion.filtering :only [make-filter]]
         [hyperion.sorting :only [make-sort]]
         [hyperion.fake]
+        [hyperion.types :only [foreign-key]]
         [clojure.string :only (upper-case)]
         [chee.datetime :only [now before? seconds-ago between? seconds-from-now]]))
 
@@ -116,7 +117,17 @@
   [gewgaw :unpacker true])
 
 (defentity Keyed
-  [other-key :type :key ])
+  [other-key :type (foreign-key :other)])
+
+(defentity :address
+  [line-1]
+  [postal-code]
+  [state :default "Illinois"])
+
+(defentity :person
+  [first-name]
+  [last-name]
+  [address :type :address])
 
 (defentity :address
   [line-1]
@@ -410,7 +421,7 @@
           (reset! (.responses (ds)) [[{:kind "keyed" :other-key "abc123"}] "unpacked-abc123"])
           (should= {:kind "keyed" :other-key "unpacked-abc123"} (save {}))
           (check-first-call (ds) "ds-save" [{}])
-          (check-second-call (ds) "ds-unpack-key" "abc123"))
+          (check-second-call (ds) "ds-unpack-key" "other" "abc123"))
 
         (it "nil key"
           (reset! (.responses (ds)) [[{:kind "keyed" :other-key nil}] "unpacked-abc123"])
