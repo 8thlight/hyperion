@@ -19,6 +19,10 @@
   (count (execute-query
     (make-query "SELECT * FROM test"))))
 
+(defn do-query [query]
+  (execute-write
+    (make-query query)))
+
 (describe "JDBC Adapter"
   (with connection-url "jdbc:sqlite:")
   (around [it]
@@ -33,9 +37,9 @@
 
     (it "rolls back all changes"
       (rollback
-        (execute-write
-          (make-query "INSERT INTO test (name, age) VALUES ('Myles', 23)")))
-        (should= 0 (test-count)))
+        (do-query "INSERT INTO test (name, age) VALUES ('Myles', 23)")
+        (should= 1 (test-count)))
+      (should= 0 (test-count)))
 
     (it "resets auto commit to its previous value"
       (.setAutoCommit (connection) true)
@@ -43,7 +47,18 @@
         (rollback
           (throw (Exception.)))
         (catch Exception _))
-      (should (.getAutoCommit (connection)))))
+      (should (.getAutoCommit (connection))))
+
+    (it "rolls back multiple"
+      (rollback
+        (do-query "INSERT INTO test (name, age) VALUES ('Myles', 23)")
+        (rollback
+          (do-query "INSERT INTO test (name, age) VALUES ('Myles', 23)")
+          (should= 2 (test-count)))
+        (should= 1 (test-count)))
+      (should= 0 (test-count)))
+
+           )
 
   (context "transaction"
     (it "commits"

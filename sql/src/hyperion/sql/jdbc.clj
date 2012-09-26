@@ -1,5 +1,6 @@
 (ns hyperion.sql.jdbc
   (:use
+    [hyperion.key :only [generate-id]]
     [hyperion.sql.connection :only [connection]]
     [hyperion.sql.query :only [query-str params]]
     [hyperion.sql.query-builder]))
@@ -133,14 +134,45 @@
 (defmacro transaction [& body]
   `(transaction-fn (fn [] ~@body)))
 
+(def ^{:private true :dynamic true} *in-txn* false)
+
+(defn with-txn [f]
+  (if *in-txn*
+    (f)
+    (binding [*in-txn* true]
+      (without-auto-commit
+        (try
+          (let [result (f)]
+            (.commit (connection))
+            result)
+          (catch Exception e
+            (.rollback (connection))
+            (throw e)))))))
+
 (def ^{:private true :dynamic true} *in-rollback* false)
 
+(defn new-savepoint-id [] (generate-id))
+
+(defn exec [query]
+  (let [stmt (.createStatement (connection))]
+    (.executeUpdate stmt query)
+    (.close stmt)))
+
+(defn- begin-savepoint []
+  (let [savepoint-id (new-savepoint-id)]
+    (exec (str "SAVEPOINT \"" savepoint-id "\""))))
+
+(defn- rollback-to-savepoint [savepoint-id]
+  (exec (str "ROLLBACK TO SAVEPOINT \"" savepoint-id "\"")))
+
 (defn rollback-fn [f]
-  (without-auto-commit
-    (try
-      (f)
-      (finally
-        (.rollback (connection))))))
+  (with-txn
+    (fn []
+      (let [savepoint-id (begin-savepoint)]
+        (try
+          (f)
+          (finally
+            (rollback-to-savepoint savepoint-id)))))))
 
 (defmacro rollback [& body]
   `(rollback-fn (fn [] ~@body)))
