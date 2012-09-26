@@ -9,4 +9,5 @@
 *.lein-deps-sum
 *.idea
 *.iml
+*.sqlite
 repl-port

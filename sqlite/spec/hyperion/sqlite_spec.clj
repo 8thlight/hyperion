@@ -1,11 +1,11 @@
 (ns hyperion.sqlite-spec
   (:use [speclj.core]
-        [hyperion.sql.spec-helper]
         [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
         [hyperion.api :only [*ds* new-datastore]]
-        [hyperion.sql.connection :only [connection]]
+        [hyperion.sql.connection :only [with-connection-url]]
         [hyperion.sql.jdbc :only [execute-mutation]]
         [hyperion.sql.query]
+        [hyperion.sql.transaction-spec :only [include-transaction-specs]]
         [hyperion.sqlite :only [new-sqlite-datastore]]))
 
 (defn do-query [query]
@@ -43,35 +43,47 @@
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))
 
+(defn drop-table [table-name]
+  (do-query (format "DROP TABLE IF EXISTS %s" table-name)))
+
 (describe "SQLite Datastore"
+  (with connection-url "jdbc:sqlite:hyperion_clojure.sqlite")
 
   (context "creation"
 
     (it "with a kv pairs as params"
-      (let [ds (new-sqlite-datastore :connection-url "jdbc:sqlite:")]
+      (let [ds (new-sqlite-datastore :connection-url @connection-url)]
         (should= false (.isClosed (.connection ds)))
         (.close (.connection ds))))
 
     (it "with factory fn"
-      (let [ds (new-datastore :implementation :sqlite :connection-url "jdbc:sqlite:")]
+      (let [ds (new-datastore :implementation :sqlite :connection-url @connection-url)]
         (should= false (.isClosed (.connection ds)))
-        (.close (.connection ds))))
-
-    )
+        (.close (.connection ds)))))
 
   (context "live"
 
-    (with-connection-and-rollback "jdbc:sqlite:")
-
     (around [it]
-      (binding [*ds* (new-sqlite-datastore :connection (connection))]
+      (binding [*ds* (new-datastore :implementation :sqlite :connection-url @connection-url)]
         (it)))
 
     (before
-      (create-table "testing")
-      (create-table "other_testing")
-      (create-key-tables))
+      (with-connection-url @connection-url
+        (create-table "testing")
+        (create-table "other_testing")
+        (create-key-tables)))
+
+    (after
+      (with-connection-url @connection-url
+        (drop-table "testing")
+        (drop-table "other_testing")
+        (drop-table "account")
+        (drop-table "shirt")))
 
     (it-behaves-like-a-datastore)
-    )
-  )
+
+    (context "Transactions"
+      (around [it]
+        (with-connection-url @connection-url
+          (it)))
+      (include-transaction-specs))))

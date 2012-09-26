@@ -2,6 +2,7 @@
 
 * adds support for nested types
 * fixes abstract :key type
+* refactors transactions to support nesting
 
 # 3.3.0
 

@@ -2,10 +2,11 @@
   (:use [speclj.core]
         [hyperion.sql.spec-helper]
         [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
+        [hyperion.sql.transaction-spec :only [include-transaction-specs]]
         [hyperion.api :only [*ds* new-datastore save find-by-key]]
+        [hyperion.sql.connection :only [with-connection-url]]
         [hyperion.sql.jdbc :only [execute-mutation]]
-        [hyperion.sql.query]
-        [hyperion.mysql :only [new-mysql-datastore]]))
+        [hyperion.sql.query]))
 
 (defn do-query [query]
   (execute-mutation
@@ -45,42 +46,42 @@
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))
 
-(def drop-table-query "DROP TABLE IF EXISTS %s")
-
 (defn drop-table [table-name]
-  (do-query (format drop-table-query table-name)))
+  (do-query (format "DROP TABLE IF EXISTS %s" table-name)))
 
 (describe "MySQL Datastore"
+  (with connection-url "jdbc:mysql://localhost:3306/hyperion?user=root")
 
-  (context "creation"
-
-    (it "with a kv pairs as params"
-      (let [ds (new-mysql-datastore :connection-url "jdbc:mysql://localhost:3306/hyperion?user=root" :database "hyperion")]
-        (should= "hyperion" (.database (.db ds)))))
-
-    (it "with factory fn"
-      (let [ds (new-datastore :implementation :mysql :connection-url "jdbc:mysql://localhost:3306/hyperion?user=root" :database "hyperion")]
-        (should= "hyperion" (.database (.db ds)))))
-
-    )
+  (it "with factory fn"
+    (let [ds (new-datastore :implementation :mysql :connection-url @connection-url :database "hyperion")]
+      (should= "hyperion" (.database (.db ds)))))
 
   (context "live"
-    (with-connection-and-rollback "jdbc:mysql://localhost:3306/hyperion?user=root")
 
-    (around [it]
-      (try
+    (before
+      (with-connection-url @connection-url
         (create-table "testing")
         (create-table "other_testing")
-        (create-key-tables)
-        (binding [*ds* (new-mysql-datastore :connection-url "jdbc:mysql://localhost:3306/hyperion?user=root" :database "hyperion")]
-          (it))
-        (finally
-          (drop-table "testing")
-          (drop-table "other_testing")
-          (drop-table "shirt")
-          (drop-table "account"))))
+        (create-key-tables)))
+
+    (after
+      (with-connection-url @connection-url
+        (drop-table "testing")
+        (drop-table "other_testing")
+        (drop-table "shirt")
+        (drop-table "account")))
+
+    (around [it]
+      (binding [*ds* (new-datastore :implementation :mysql :connection-url @connection-url :database "hyperion")]
+        (it)))
 
     (it-behaves-like-a-datastore)
+
+    (context "Transactions"
+      (around [it]
+        (with-connection-url @connection-url
+          (it)))
+      (include-transaction-specs))
 
     (context "SQL Injection"
       (it "sanitizes strings to be inserted"

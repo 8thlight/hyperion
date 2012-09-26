@@ -2,12 +2,11 @@
   (:use [speclj.core]
         [hyperion.sql.spec-helper]
         [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
-        [hyperion.api :only [*ds* save find-by-key]]
+        [hyperion.sql.transaction-spec :only [include-transaction-specs]]
+        [hyperion.api :only [*ds* new-datastore save find-by-key]]
         [hyperion.sql.jdbc :only [execute-mutation]]
-        [hyperion.sql.connection :only [connection]]
-        [hyperion.sql.query]
-        [hyperion.postgres :only [new-postgres-datastore]])
-  (:import [speclj SpecFailure]))
+        [hyperion.sql.connection :only [with-connection-url]]
+        [hyperion.sql.query]))
 
 (defn do-query [query]
   (execute-mutation
@@ -41,36 +40,44 @@
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))
 
-(def connection-url "jdbc:postgresql://localhost:5432/hyperion")
+(defn drop-table [table-name]
+  (do-query (format "DROP TABLE IF EXISTS %s" table-name)))
 
 (describe "Postgres Datastore"
+  (with connection-url "jdbc:postgresql://localhost:5432/hyperion")
 
   (context "creation"
-
-    (it "with a string as the only param"
-      (let [ds (new-postgres-datastore connection-url)]
-        (should= false (.isClosed (.connection ds)))
-        (.close (.connection ds))))
-
     (it "with a kv pairs as params"
-      (let [ds (new-postgres-datastore :connection-url connection-url)]
+      (let [ds (new-datastore :implementation :postgres :connection-url @connection-url)]
         (should= false (.isClosed (.connection ds)))
-        (.close (.connection ds))))
-
-    )
+        (.close (.connection ds)))))
 
   (context "live"
 
-    (with-rollback connection-url)
-
     (around [it]
-      (create-table "testing")
-      (create-table "other_testing")
-      (create-key-tables)
-      (binding [*ds* (new-postgres-datastore :connection (connection))]
+      (binding [*ds* (new-datastore :implementation :postgres :connection-url @connection-url)]
         (it)))
 
+    (before
+      (with-connection-url @connection-url
+        (create-table "testing")
+        (create-table "other_testing")
+        (create-key-tables)))
+
+    (after
+      (with-connection-url @connection-url
+        (drop-table "testing")
+        (drop-table "other_testing")
+        (drop-table "shirt")
+        (drop-table "account")))
+
     (it-behaves-like-a-datastore)
+
+    (context "Transactions"
+      (around [it]
+        (with-connection-url @connection-url
+          (it)))
+      (include-transaction-specs))
 
     (context "SQL Injection"
       (it "sanitizes strings to be inserted"

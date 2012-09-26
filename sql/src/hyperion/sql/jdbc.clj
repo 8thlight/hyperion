@@ -106,8 +106,6 @@
     (set-parameters stmt (params query))
     (.executeUpdate stmt)))
 
-(def ^{:private true :dynamic true} *in-transaction* false)
-
 (defmacro without-auto-commit [& body]
   `(let [conn# (connection)
          old-auto-commit# (.getAutoCommit conn#)]
@@ -117,62 +115,61 @@
        (finally
          (.setAutoCommit conn# old-auto-commit#)))))
 
-(defn transaction-fn [f]
-  (if *in-transaction*
-    (f)
-    (binding [*in-transaction* true]
-      (without-auto-commit
-        (.setTransactionIsolation (connection) java.sql.Connection/TRANSACTION_SERIALIZABLE)
-        (try
-          (let [result (f)]
-            (.commit (connection))
-            result)
-          (catch Exception e
-            (.rollback (connection))
-            (throw e)))))))
-
-(defmacro transaction [& body]
-  `(transaction-fn (fn [] ~@body)))
-
 (def ^{:private true :dynamic true} *in-txn* false)
-
-(defn with-txn [f]
-  (if *in-txn*
-    (f)
-    (binding [*in-txn* true]
-      (without-auto-commit
-        (try
-          (let [result (f)]
-            (.commit (connection))
-            result)
-          (catch Exception e
-            (.rollback (connection))
-            (throw e)))))))
-
-(def ^{:private true :dynamic true} *in-rollback* false)
-
-(defn new-savepoint-id [] (generate-id))
 
 (defn exec [query]
   (let [stmt (.createStatement (connection))]
     (.executeUpdate stmt query)
     (.close stmt)))
 
+(defn new-savepoint-id []
+  (str "JDBC_SPID_" (generate-id)))
+
 (defn- begin-savepoint []
   (let [savepoint-id (new-savepoint-id)]
-    (exec (str "SAVEPOINT \"" savepoint-id "\""))))
+    (exec (str "SAVEPOINT " savepoint-id))
+    savepoint-id))
 
 (defn- rollback-to-savepoint [savepoint-id]
-  (exec (str "ROLLBACK TO SAVEPOINT \"" savepoint-id "\"")))
+  (exec (str "ROLLBACK TO SAVEPOINT " savepoint-id)))
+
+(defn- release-savepoint [savepoint-id]
+  (exec (str "RELEASE SAVEPOINT " savepoint-id)))
+
+(defn with-savepoint [f]
+  (if *in-txn*
+    (f (begin-savepoint))
+    (binding [*in-txn* true]
+      (without-auto-commit
+        (try
+          (let [result (f (begin-savepoint))]
+            (.commit (connection))
+            result)
+          (catch Exception e
+            (.rollback (connection))
+            (throw e)))))))
+
+(defn transaction-fn [f]
+  (with-savepoint
+    (fn [savepoint-id]
+      (try
+        (let [result (f)]
+          (release-savepoint savepoint-id)
+          result)
+        (catch Exception e
+          (rollback-to-savepoint savepoint-id)
+          (throw e))))))
+
+(defmacro transaction [& body]
+  `(transaction-fn (fn [] ~@body)))
 
 (defn rollback-fn [f]
-  (with-txn
-    (fn []
-      (let [savepoint-id (begin-savepoint)]
-        (try
-          (f)
-          (finally
-            (rollback-to-savepoint savepoint-id)))))))
+  (with-savepoint
+    (fn [savepoint-id]
+      (try
+        (f)
+        (finally
+          (rollback-to-savepoint savepoint-id))))))
 
 (defmacro rollback [& body]
   `(rollback-fn (fn [] ~@body)))
