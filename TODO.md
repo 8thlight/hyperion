@@ -1,6 +1,5 @@
 * Logging: For debugging.  For runtime monitoring.  For warning of dangerous actions.
 * Connection pooling for Sql implementations
-* Better transactions (i.e. use savepoints)
 * Website?
 * Indexes:
     * Riak: currently indexes ALL fields.  That's inefficient.
