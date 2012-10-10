@@ -35,84 +35,98 @@ Hyperion Implementations:
 
 hyperion.api provides a convenient factory function for instantiating any datastore implementation
 
-    (use 'hyperion.api)
-    (new-datastore :implementation :memory)
-    (new-datastore :implementation :mysql :connection-url "jdbc:mysql://localhost:3306/myapp?user=root" :database "myapp")
-    (new-datastore :implementation :mongo :host "localhost" :port 27017 :database "myapp" :username "test" :password "test")
+```clojure
+(use 'hyperion.api)
+(new-datastore :implementation :memory)
+(new-datastore :implementation :mysql :connection-url "jdbc:mysql://localhost:3306/myapp?user=root" :database "myapp")
+(new-datastore :implementation :mongo :host "localhost" :port 27017 :database "myapp" :username "test" :password "test")
+```
 
 Each implementation provides their own facilities our course:
 
-    (use 'hyperion.mongo)
-    (new-mongo-datastore :host "localhost" :port 27017 :database "myapp" :username "test" :password "test")
-    ;or
-    (let [mongo (open-mongo :host "127.0.0.1" :port 27017)
-          db (open-database mongo "myapp" :username "test" :password "test")]
-       (new-mongo-datastore db))
+```clojure
+(use 'hyperion.mongo)
+(new-mongo-datastore :host "localhost" :port 27017 :database "myapp" :username "test" :password "test")
+;or
+(let [mongo (open-mongo :host "127.0.0.1" :port 27017)
+      db (open-database mongo "myapp" :username "test" :password "test")]
+   (new-mongo-datastore db))
+```
 
 ### Installing a datastore
 
-    ; with brute force
-    (set-ds! (new-datastore ...))
-    ; with elegance
-    (binding [*ds* (new-datastore ...)]
-      ; persistence stuff here)
+```clojure
+; with brute force
+(set-ds! (new-datastore ...))
+; with elegance
+(binding [*ds* (new-datastore ...)]
+  ; persistence stuff here)
+```
 
 If you can bind the datastore once at high level in your application that's ideal.  Otherwise use the brute force set-ds! technique.
 
 ### Saving a value:
 
-    (save {:kind :foo})
-    ;=> {:kind "foo" :key "generated key"}
-    (save {:kind :foo} {:value :bar})
-    ;=> {:kind "foo" :value :bar :key "generated key"}
-    (save {:kind :foo} :value :bar)
-    ;=> {:kind "foo" :value :bar :key "generated key"}
-    (save {:kind :foo} {:value :bar} :another :fizz)
-    ;=> {:kind "foo" :value :bar :another :fizz :key "generated key"}
-    (save (citizen) :name "Joe" :age 21 :country "France")
-    ;=> #<{:kind "citizen" :name "Joe" :age 21 :country "France" ...}>
+```clojure
+(save {:kind :foo})
+;=> {:kind "foo" :key "generated key"}
+(save {:kind :foo} {:value :bar})
+;=> {:kind "foo" :value :bar :key "generated key"}
+(save {:kind :foo} :value :bar)
+;=> {:kind "foo" :value :bar :key "generated key"}
+(save {:kind :foo} {:value :bar} :another :fizz)
+;=> {:kind "foo" :value :bar :another :fizz :key "generated key"}
+(save (citizen) :name "Joe" :age 21 :country "France")
+;=> #<{:kind "citizen" :name "Joe" :age 21 :country "France" ...}>
+```
 
 ### Updating a value:
 
-    (let [record (save {:kind :foo :name "Sue"})
-          new-record (assoc record :name "John")]
-      (save new-record))
-    ;=> {:kind "foo" :name "John" :key "generated key"}
+```clojure
+(let [record (save {:kind :foo :name "Sue"})
+      new-record (assoc record :name "John")]
+  (save new-record))
+;=> {:kind "foo" :name "John" :key "generated key"}
+```
 
 ### Loading a value:
 
-    ; if you have a key...
-    (find-by-key my-key)
+```clojure
+; if you have a key...
+(find-by-key my-key)
 
-    ; otherwise
-    (find-by-kind :dog) ; returns all records with :kind of "dog"
-    (find-by-kind :dog :filters [:= :name "Fido"]) ; returns all dogs whos name is Fido
-    (find-by-kind :dog :filters [[:> :age 2][:< :age 5]]) ; returns all dogs between the age of 2 and 5 (exclusive)
-    (find-by-kind :dog :sorts [:name :asc]) ; returns all dogs in alphebetical order of their name
-    (find-by-kind :dog :sorts [[:age :desc][:name :asc]]) ; returns all dogs ordered from oldest to youngest, and gos of the same age ordered by name
-    (find-by-kind :dog :limit 10) ; returns upto 10 dogs in undefined order
-    (find-by-kind :dog :sorts [:name :asc] :limit 10) ; returns upto the first 10 dogs in alphebetical order of their name
-    (find-by-kind :dog :sorts [:name :asc] :limit 10 :offset 10) ; returns the second set of 10 dogs in alphebetical order of their name
+; otherwise
+(find-by-kind :dog) ; returns all records with :kind of "dog"
+(find-by-kind :dog :filters [:= :name "Fido"]) ; returns all dogs whos name is Fido
+(find-by-kind :dog :filters [[:> :age 2][:< :age 5]]) ; returns all dogs between the age of 2 and 5 (exclusive)
+(find-by-kind :dog :sorts [:name :asc]) ; returns all dogs in alphebetical order of their name
+(find-by-kind :dog :sorts [[:age :desc][:name :asc]]) ; returns all dogs ordered from oldest to youngest, and gos of the same age ordered by name
+(find-by-kind :dog :limit 10) ; returns upto 10 dogs in undefined order
+(find-by-kind :dog :sorts [:name :asc] :limit 10) ; returns upto the first 10 dogs in alphebetical order of their name
+(find-by-kind :dog :sorts [:name :asc] :limit 10 :offset 10) ; returns the second set of 10 dogs in alphebetical order of their name
+```
 
 ### Deleting a value:
 
-    ; if you have a key...
-    (delete-by-key my-key)
+```clojure
+; if you have a key...
+(delete-by-key my-key)
 
-    ; otherwise
-    (delete-by-kind :dog) ; deletes all records with :kind of "dog"
-    (delete-by-kind :dog :filters [:= :name "Fido"]) ; deletes all dogs whos name is Fido
-    (delete-by-kind :dog :filters [[:> :age 2][:< :age 5]]) ; deletes all dogs between the age of 2 and 5 (exclusive)
+; otherwise
+(delete-by-kind :dog) ; deletes all records with :kind of "dog"
+(delete-by-kind :dog :filters [:= :name "Fido"]) ; deletes all dogs whos name is Fido
+(delete-by-kind :dog :filters [[:> :age 2][:< :age 5]]) ; deletes all dogs between the age of 2 and 5 (exclusive)
+```
 
 Filter operations and acceptable syntax:
 
- * := "=" "eq"
- * :< "<" "lt"
- * :<= "<=" "lte"
- * :> ">" "gt"
- * :>= ">=" "gte"
- * :!= "!=" "not"
- * :contains? "contains?" :contains "contains" :in? "in?" :in "in"
+  * := "=" "eq"
+  * :< "<" "lt"
+  * :<= "<=" "lte"
+  * :> ">" "gt"
+  * :>= ">=" "gte"
+  * :!= "!=" "not"
+  * :contains? "contains?" :contains "contains" :in? "in?" :in "in"
 
 Sort orders and acceptable syntax:
 
@@ -136,47 +150,49 @@ The advantage of using entities are:
 
 Example:
 
-    (defentity UsAddress
-        [line-1]
-        [line-2]
-        [city]
-        [state :packer abbreviate-state]
-        [zip-code]
-        [created-at] ; populated automaticaly
-        [updated-at] ; also populated automatically
-        )
+```clojure
+(defentity UsAddress
+    [line-1]
+    [line-2]
+    [city]
+    [state :packer abbreviate-state]
+    [zip-code]
+    [created-at] ; populated automaticaly
+    [updated-at] ; also populated automatically
+    )
 
-    (use 'hyperion.types)
+(use 'hyperion.types)
 
-    (defentity Citizen
-        [name]
-        [age :packer ->int] ; ->int is a function defined in your code.
-        [gender :unpacker ->string] ; ->string is a customer function too.
-        [occupation :type my.ns.Occupation] ; and then we define pack/unpack for my.ns.Occupation
-        [spouse-key :type (foreign-key :citizen)] ; :key is a special type that pack string keys into implementation-specific keys
-        [country :default "USA"] ; newly created records will use the default if no value is provided
-        [address :type :us-address] ; an embedded map; uses the packing strategy for a UsAddress defined above
-        [created-at] ; populated automaticaly
-        [updated-at] ; also populated automatically
-        )
+(defentity Citizen
+    [name]
+    [age :packer ->int] ; ->int is a function defined in your code.
+    [gender :unpacker ->string] ; ->string is a customer function too.
+    [occupation :type my.ns.Occupation] ; and then we define pack/unpack for my.ns.Occupation
+    [spouse-key :type (foreign-key :citizen)] ; :key is a special type that pack string keys into implementation-specific keys
+    [country :default "USA"] ; newly created records will use the default if no value is provided
+    [address :type :us-address] ; an embedded map; uses the packing strategy for a UsAddress defined above
+    [created-at] ; populated automaticaly
+    [updated-at] ; also populated automatically
+    )
 
-    (save (citizen :name "John" :age "21" :gender :male :occupation coder :spouse-key "abc123"))
+(save (citizen :name "John" :age "21" :gender :male :occupation coder :spouse-key "abc123"))
 
-    ;=> #<{:kind "citizen" :key "some generated key" :country "USA" :created-at #<java.util.Date just-now> :updated-at #<java.util.Date just-now> ...)
+;=> #<{:kind "citizen" :key "some generated key" :country "USA" :created-at #<java.util.Date just-now> :updated-at #<java.util.Date just-now> ...)
+```
 
 ## Full API
 
 To learn more, downlaod hyperion.api and load up the REPL.
 
-    user=> (keys (ns-publics 'hyperion.api))
-    (delete-by-key save* count-all-kinds save find-by-key reload pack create-entity-with-defaults delete-by-kind defentity *ds*
-    before-save find-by-kind count-by-kind after-load after-create new-datastore ds unpack create-entity set-ds! find-all-kinds new?)
+```clojure
+user=> (keys (ns-publics 'hyperion.api))
+(delete-by-key save* count-all-kinds save find-by-key reload pack create-entity-with-defaults delete-by-kind defentity *ds*
+before-save find-by-kind count-by-kind after-load after-create new-datastore ds unpack create-entity set-ds! find-all-kinds new?)
 
-    user=> (doc delete-by-key)
-    -------------------------
-    hyperion.api/delete-by-key
-    ([key])
-      Removes the record stored with the given key.
-      Returns nil no matter what.
-
-
+user=> (doc delete-by-key)
+-------------------------
+hyperion.api/delete-by-key
+([key])
+  Removes the record stored with the given key.
+  Returns nil no matter what.
+```
