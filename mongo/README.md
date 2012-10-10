@@ -9,18 +9,22 @@ Indexes should be added externally since Hyperion doesn't support indexes.
 
 ## Usage
 
-    (require 'hyperion.api)
-    (require 'hyperion.mongo)
-    (binding [hyperion.api/*ds* (hyperion.mongo/new-mongo-datastore :host "localhost" :port 27017 :database "mydb")]
-        (save {:kind "test" :value "test"})
-        (find-by-kind "test"))
+```clojure
+(require 'hyperion.api)
+(require 'hyperion.mongo)
+(binding [hyperion.api/*ds* (hyperion.mongo/new-mongo-datastore :host "localhost" :port 27017 :database "mydb")]
+    (save {:kind "test" :value "test"})
+    (find-by-kind "test"))
+```
 
 ### Creating a datastore piecemeal
 
-    (use 'hyperion.mongo)
-    (def mongo (open-mongo :host "localhost"))
-    (def database (open-database mongo "mydb"))
-    (def datastore (new-mongo-datastore db))
+```clojure
+(use 'hyperion.mongo)
+(def mongo (open-mongo :host "localhost"))
+(def database (open-database mongo "mydb"))
+(def datastore (new-mongo-datastore db))
+```
 
 ### open-mongo options
 

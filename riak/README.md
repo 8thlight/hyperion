@@ -22,11 +22,15 @@ A Hyperion implementation for Riak
 
 ### Opening a Riak client
 
-    (new-riak-datastore [options])
+```clojure
+(new-riak-datastore [options])
+```
 
 i.e.
 
-    (new-riak-datastore :api :pbc)
+```clojure
+(new-riak-datastore :api :pbc)
+```
 
 Options:
 
@@ -52,10 +56,12 @@ PBC Options:
 Riak's configuration is located at (when installed using homebrew): /usr/local/Cellar/riak/1.1.4-x86_64/libexec/etc/app.config
 Hyperion Riak requires LeveDB persistence.  Change the config file storage portion like so:
 
-    %% Storage_backend specifies the Erlang module defining the storage
-    %% mechanism that will be used on this node.
-    %% {storage_backend, riak_kv_bitcask_backend},
-    {storage_backend, riak_kv_eleveldb_backend},
+```erlang
+%% Storage_backend specifies the Erlang module defining the storage
+%% mechanism that will be used on this node.
+%% {storage_backend, riak_kv_bitcask_backend},
+{storage_backend, riak_kv_eleveldb_backend},
+```
 
 ## Development
 
@@ -63,7 +69,9 @@ Hyperion Riak requires LeveDB persistence.  Change the config file storage porti
 
 The specs require that riak's delete_mode is immediate.  Add the following to the riak_kv section of config.
 
-    {delete_mode, immediate}
+```erlang
+{delete_mode, immediate}
+```
 
 For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-October/006048.html
 
