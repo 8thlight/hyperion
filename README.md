@@ -27,7 +27,9 @@ Hyperion Implementations:
 
 ### Leiningen
 
-    :dependencies [[hyperion/hyperion-<impl here> "3.2.0"]]
+```clojure
+:dependencies [[hyperion/hyperion-<impl here> "3.2.0"]]
+```
 
 ## Usage
 
