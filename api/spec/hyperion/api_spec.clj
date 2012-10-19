@@ -154,6 +154,9 @@
 (defentity Hooks
   [field])
 
+(defn save-empty []
+  (save {:kind "test"}))
+
 (defmethod after-create :hooks [record]
   (assoc record :create-message (str "created with: " (:field record))))
 
@@ -229,6 +232,13 @@
       (it "saves records"
         (save {:kind "one" :value 42})
         (check-first-call (ds) "ds-save" [{:kind "one" :value 42}]))
+
+      (it "throws an exception when saving a record without a kind"
+        (let [to-save {:value 42}]
+          (should-throw
+            Exception
+            (str "Cannot save without specifying a kind: " to-save)
+            (save to-save))))
 
       (it "saves records with values as options"
         (save {:kind "one"} :value 42)
@@ -391,58 +401,58 @@
         (context "normalizes"
           (it "attribues for unknown kind"
             (reset! (.responses (ds)) [[{"KIND" "unknown" :some_WEIRD_Field :val}]])
-            (should= {:kind "unknown" :some-weird-field :val} (save {})))
+            (should= {:kind "unknown" :some-weird-field :val} (save-empty)))
 
           (it "kind for unknown kind"
             (reset! (.responses (ds)) [[{:kind :UNknown}]])
-            (should= {:kind "unknown"} (save {})))
+            (should= {:kind "unknown"} (save-empty)))
 
           (it "attribues for known kind"
             (reset! (.responses (ds)) [[{"KIND" "packable" :BAuble "val"}]])
-            (should= {:kind "packable" :bauble "VAL" :widget nil :gewgaw nil} (save {})))
+            (should= {:kind "packable" :bauble "VAL" :widget nil :gewgaw nil} (save-empty)))
 
           (it "kind for known kind"
             (reset! (.responses (ds)) [[{:kind :packable}]])
-            (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil} (save {}))))
+            (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil} (save-empty))))
 
         (it "types"
           (reset! (.responses (ds)) [[{:kind "packable" :widget 42}]])
-          (should= {:kind "packable" :bauble nil :widget "42" :gewgaw nil} (save {})))
+          (should= {:kind "packable" :bauble nil :widget "42" :gewgaw nil} (save-empty)))
 
         (it "nested types does not apply defaults"
           (reset! (.responses (ds)) [[{:kind "person" :first-name "Myles"}]])
-          (should= {:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 nil :postal-code nil :state nil}} (save {})))
+          (should= {:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 nil :postal-code nil :state nil}} (save-empty)))
 
         (it "nested types merges given nested data"
           (reset! (.responses (ds)) [[{:kind "person" :first-name "Myles" :address {:line-1 "Home"}}]])
-          (should= {:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 "Home" :postal-code nil :state nil}} (save {})))
+          (should= {:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 "Home" :postal-code nil :state nil}} (save-empty)))
 
         (it "unknown kinds"
           (reset! (.responses (ds)) [[{:kind "unknown" :widget 42}]])
-          (should= {:kind "unknown" :widget 42} (save {})))
+          (should= {:kind "unknown" :widget 42} (save-empty)))
 
         (it "custom functions"
           (reset! (.responses (ds)) [[{:kind "packable" :bauble "hello"}]])
-          (should= {:kind "packable" :bauble "HELLO" :widget nil :gewgaw nil} (save {})))
+          (should= {:kind "packable" :bauble "HELLO" :widget nil :gewgaw nil} (save-empty)))
 
         (it "does not apply default values"
           (reset! (.responses (ds)) [[{:kind "many-defaulted-fields"}]])
-          (should= {:kind "many-defaulted-fields" :field1 nil :field2 nil :field3 nil :field42 nil} (save {})))
+          (should= {:kind "many-defaulted-fields" :field1 nil :field2 nil :field3 nil :field42 nil} (save-empty)))
 
         (it "nil"
           (reset! (.responses (ds)) [[nil]])
-          (should= nil (save {})))
+          (should= nil (save-empty)))
 
         (it "keys which are ds-specific"
           (reset! (.responses (ds)) [[{:kind "keyed" :other-key "abc123"}] "unpacked-abc123"])
-          (should= {:kind "keyed" :other-key "unpacked-abc123"} (save {}))
-          (check-first-call (ds) "ds-save" [{}])
+          (should= {:kind "keyed" :other-key "unpacked-abc123"} (save-empty))
+          (check-first-call (ds) "ds-save" [{:kind "test"}])
           (check-second-call (ds) "ds-unpack-key" "other" "abc123"))
 
         (it "nil key"
           (reset! (.responses (ds)) [[{:kind "keyed" :other-key nil}] "unpacked-abc123"])
-          (should= {:kind "keyed" :other-key nil} (save {}))
-          (check-first-call (ds) "ds-save" [{}])
+          (should= {:kind "keyed" :other-key nil} (save-empty))
+          (check-first-call (ds) "ds-save" [{:kind "test"}])
           (check-second-call (ds) nil))
         )
 
@@ -457,7 +467,7 @@
             (defmethod after-create :unknown-kind-after-create [record]
               (assoc record :my-cool-field :value ))
             (reset! (.responses (ds)) [[{:kind "unknown-kind-after-create"}]])
-            (should= {:kind "unknown-kind-after-create" :my-cool-field :value} (save {}))))
+            (should= {:kind "unknown-kind-after-create" :my-cool-field :value} (save-empty))))
 
         (it "has before save hook"
           (save (hooks :field "waza!"))

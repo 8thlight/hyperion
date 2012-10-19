@@ -172,9 +172,15 @@
     unpack-entity
     after-load))
 
+(defn- ensure-entity-has-kind [entity]
+  (if-not (contains? entity :kind)
+    (throw (Exception. (str "Cannot save without specifying a kind: " entity)))
+    entity))
+
 (defn- prepare-for-save [entity]
   (-> entity
     pack-entity
+    ensure-entity-has-kind
     with-updated-timestamps
     before-save))
 
