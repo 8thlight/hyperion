@@ -139,6 +139,10 @@
   [last-name]
   [address :type :address])
 
+(defentity Thing
+  [thing]
+  [other-thing])
+
 (defmethod pack Integer [_ value]
   (when value
     (Integer. (Integer/parseInt value))))
@@ -229,6 +233,18 @@
       (it "saves records with values as options"
         (save {:kind "one"} :value 42)
         (check-first-call (ds) "ds-save" [{:kind "one" :value 42}]))
+
+      (it "saves a value that is true on a field that has the same name as the kind"
+        (save {:kind "value"} :value true)
+        (check-first-call (ds) "ds-save" [{:kind "value" :value true}]))
+
+      (it "saves a value that is false on a field that has a different name than the kind"
+        (save {:kind "thing"} :other-thing false)
+        (check-first-call (ds) "ds-save" [{:kind "thing" :other-thing false :thing nil}]))
+
+      (it "saves a value that is false on a field that has the same name as the kind"
+        (save {:kind "thing"} :thing false)
+        (check-first-call (ds) "ds-save" [{:kind "thing" :thing false :other-thing nil}]))
 
       (it "saves records with values as a map"
         (save {:kind "one"} {:field "kia" :value 42})

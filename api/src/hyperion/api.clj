@@ -101,7 +101,9 @@
           (if-assoc record :kind kind))))))
 
 (defn- apply-default [field-spec value]
-  (or value (:default field-spec)))
+  (if (nil? value)
+    (:default field-spec)
+    value))
 
 (defn create-entity-with-defaults
   "PRIVATE: Used by the defentity macro to create entities."
