@@ -208,7 +208,7 @@
         [age :packer ->int] ; ->int is a function defined in your code.
         [gender :unpacker ->string] ; ->string is a customer function too.
         [occupation :type my.ns.Occupation] ; and then we define pack/unpack for my.ns.Occupation
-        [spouse-key :type :key] ; :key is a special type that pack string keys into implementation-specific keys
+        [spouse-key :type (foreign-key :citizen)] ; this is a special type that packs string keys into implementation-specific keys
         [country :default \"USA\"] ; newly created records will use the default if no value is provided
         [created-at] ; populated automaticaly
         [updated-at] ; also populated automatically
@@ -228,7 +228,6 @@
        (defn ~kind-fn [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind)))
        (defmethod pack ~kind-key [type# value#] (pack-entity (assoc (or value# {}) :kind ~kind)))
        (defmethod unpack ~kind-key [type# value#] (unpack-entity (assoc (or value# {}) :kind ~kind))))))
-
 
 ; ----- API -----------------------------------------------
 
