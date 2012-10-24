@@ -1,6 +1,6 @@
 # 3.4.0
 
-* fixes abstract :key type
+* fixes :key type by introducing the hyperion.types/foreign-key
 * refactors transactions to support nesting
 
 # 3.3.0
