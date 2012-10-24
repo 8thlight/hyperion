@@ -1,6 +1,5 @@
 # 3.4.0
 
-* adds support for nested types
 * fixes abstract :key type
 * refactors transactions to support nesting
 

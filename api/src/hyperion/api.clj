@@ -225,9 +225,7 @@
         kind-fn (symbol kind)]
     `(do
        (dosync (alter *entity-specs* assoc ~(keyword kind) ~field-map))
-       (defn ~kind-fn [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind)))
-       (defmethod pack ~kind-key [type# value#] (pack-entity (assoc (or value# {}) :kind ~kind)))
-       (defmethod unpack ~kind-key [type# value#] (unpack-entity (assoc (or value# {}) :kind ~kind))))))
+       (defn ~kind-fn [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind))))))
 
 ; ----- API -----------------------------------------------
 

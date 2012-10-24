@@ -153,16 +153,6 @@ The advantage of using entities are:
 Example:
 
 ```clojure
-(defentity UsAddress
-    [line-1]
-    [line-2]
-    [city]
-    [state :packer abbreviate-state]
-    [zip-code]
-    [created-at] ; populated automaticaly
-    [updated-at] ; also populated automatically
-    )
-
 (use 'hyperion.types)
 
 (defentity Citizen
@@ -172,7 +162,6 @@ Example:
     [occupation :type my.ns.Occupation] ; and then we define pack/unpack for my.ns.Occupation
     [spouse-key :type (foreign-key :citizen)] ; :key is a special type that pack string keys into implementation-specific keys
     [country :default "USA"] ; newly created records will use the default if no value is provided
-    [address :type :us-address] ; an embedded map; uses the packing strategy for a UsAddress defined above
     [created-at] ; populated automaticaly
     [updated-at] ; also populated automatically
     )

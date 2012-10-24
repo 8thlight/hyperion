@@ -119,26 +119,6 @@
 (defentity Keyed
   [other-key :type (foreign-key :other)])
 
-(defentity :address
-  [line-1]
-  [postal-code]
-  [state :default "Illinois"])
-
-(defentity :person
-  [first-name]
-  [last-name]
-  [address :type :address])
-
-(defentity :address
-  [line-1]
-  [postal-code]
-  [state :default "Illinois"])
-
-(defentity :person
-  [first-name]
-  [last-name]
-  [address :type :address])
-
 (defentity Thing
   [thing]
   [other-thing])
@@ -365,14 +345,6 @@
           (save {:kind :packable :widget "42"})
           (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :bauble "" :gewgaw nil}]))
 
-        (it "nested types"
-          (save (person :first-name "Myles"))
-          (check-first-call (ds) "ds-save" [{:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 nil :postal-code nil :state "Illinois"}}]))
-
-        (it "nested types merges given nested data"
-          (save (person :first-name "Myles" :address {:line-1 "Home"}))
-          (check-first-call (ds) "ds-save" [{:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 "Home" :postal-code nil :state "Illinois"}}]))
-
         (it "custom functions"
           (save {:kind :packable :bauble "hello"})
           (check-first-call (ds) "ds-save" [{:kind "packable" :widget nil :bauble "olleh" :gewgaw nil}]))
@@ -418,14 +390,6 @@
         (it "types"
           (reset! (.responses (ds)) [[{:kind "packable" :widget 42}]])
           (should= {:kind "packable" :bauble nil :widget "42" :gewgaw nil} (save-empty)))
-
-        (it "nested types does not apply defaults"
-          (reset! (.responses (ds)) [[{:kind "person" :first-name "Myles"}]])
-          (should= {:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 nil :postal-code nil :state nil}} (save-empty)))
-
-        (it "nested types merges given nested data"
-          (reset! (.responses (ds)) [[{:kind "person" :first-name "Myles" :address {:line-1 "Home"}}]])
-          (should= {:kind "person" :first-name "Myles" :last-name nil :address {:kind "address" :line-1 "Home" :postal-code nil :state nil}} (save-empty)))
 
         (it "unknown kinds"
           (reset! (.responses (ds)) [[{:kind "unknown" :widget 42}]])
