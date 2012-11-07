@@ -31,6 +31,7 @@ Indexes should be added externally since Hyperion doesn't support indexes.
  * :host - specifies the host, presumes a single connection
  * :port - defaults to 27017, presumes a single connection
  * :servers - a sequence of [host, port] pairs, for connecting to multiple servers
+ * :ssl - defaults to false, for Mongo servers configured for SSL
 
 ### open-database options
 

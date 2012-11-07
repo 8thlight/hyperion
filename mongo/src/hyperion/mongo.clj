@@ -14,8 +14,10 @@
 (defn open-mongo [& args]
   (let [options (->options args)
         addresses (if (:host options) [(->address [(:host options) (or (:port options) 27017)])] [])
-        addresses (doall (concat addresses (map ->address (:servers options))))]
-    (com.mongodb.Mongo. addresses)))
+        addresses (doall (concat addresses (map ->address (:servers options))))
+        mongo-options (com.mongodb.MongoOptions.)]
+    (when (:ssl options) (.setSocketFactory mongo-options (javax.net.ssl.SSLSocketFactory/getDefault)))
+    (com.mongodb.Mongo. addresses mongo-options)))
 
 (defn ->write-concern [value]
   (case (keyword value)
