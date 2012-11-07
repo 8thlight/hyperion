@@ -4,7 +4,7 @@ A Hyperion implementation for Mongo
 
 ## About
 
-Mongo fits rather well with the Hyperion model.  The AIP is 100% supported with little to no inefficiencies.
+Mongo fits rather well with the Hyperion model.  The API is 100% supported with little to no inefficiencies.
 Indexes should be added externally since Hyperion doesn't support indexes.
 
 ## Usage
@@ -23,7 +23,7 @@ Indexes should be added externally since Hyperion doesn't support indexes.
 (use 'hyperion.mongo)
 (def mongo (open-mongo :host "localhost"))
 (def database (open-database mongo "mydb"))
-(def datastore (new-mongo-datastore db))
+(def datastore (new-mongo-datastore database))
 ```
 
 ### open-mongo options
