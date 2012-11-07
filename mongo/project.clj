@@ -1,6 +1,6 @@
 (def config (load-file "../config.clj"))
 
-(defproject hyperion/hyperion-mongo "3.4.1"
+(defproject hyperion/hyperion-mongo "3.4.2"
   :description "Mongo Datastore for Hyperion"
   :dependencies [[org.clojure/clojure ~(:clojure-version config)]
                  [hyperion/hyperion-api ~(:version config)]

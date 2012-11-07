@@ -11,12 +11,29 @@
 (defn address->seq [address]
   (list (.getHost address) (.getPort address)))
 
+(defn- trusting-ssl-socket-factory []
+  (let [trust-manager
+        (proxy [javax.net.ssl.X509TrustManager] []
+          (getAcceptedIssuers [this] nil)
+          (checkClientTrusted [this certs type] nil)
+          (checkServerTrusted [this certs type] nil))
+        trust-managers (into-array javax.net.ssl.X509TrustManager [trust-manager])
+        ssl-context (javax.net.ssl.SSLContext/getInstance "SSL")]
+    (.init ssl-context nil trust-managers (java.security.SecureRandom.))
+    (.getSocketFactory ssl-context)))
+
+(defn- socket-factory [options]
+  (when-let [ssl (:ssl options)]
+    (if (= :trust ssl)
+      (trusting-ssl-socket-factory)
+      (javax.net.ssl.SSLSocketFactory/getDefault))))
+
 (defn open-mongo [& args]
   (let [options (->options args)
         addresses (if (:host options) [(->address [(:host options) (or (:port options) 27017)])] [])
         addresses (doall (concat addresses (map ->address (:servers options))))
         mongo-options (com.mongodb.MongoOptions.)]
-    (when (:ssl options) (.setSocketFactory mongo-options (javax.net.ssl.SSLSocketFactory/getDefault)))
+    (when (:ssl options) (.setSocketFactory mongo-options (socket-factory options)))
     (com.mongodb.Mongo. addresses mongo-options)))
 
 (defn ->write-concern [value]

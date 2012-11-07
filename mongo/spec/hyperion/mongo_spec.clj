@@ -44,6 +44,13 @@
               socketFactory (.getSocketFactory options)]
           (should= (class (javax.net.ssl.SSLSocketFactory/getDefault)) (class socketFactory)))))
 
+    (it "open a database using trusting SSL"
+      (with-open [mongo (open-mongo :host "127.0.0.1" :port 27017 :ssl :trust)]
+        (let [options (.getMongoOptions mongo)
+              socketFactory (.getSocketFactory options)]
+          ; Silly Java won't let me look in the SocketFactory to see if it's trusting.
+          (should= (class (javax.net.ssl.SSLSocketFactory/getDefault)) (class socketFactory)))))
+
     (it "uses the specified write concern for the database"
       (with-open [mongo (open-mongo :host "127.0.0.1" :port 27017)]
         (should= com.mongodb.WriteConcern/FSYNC_SAFE (.getWriteConcern (open-database mongo "foo" :write-concern :fsync-safe )))
