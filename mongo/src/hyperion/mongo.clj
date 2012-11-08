@@ -14,9 +14,9 @@
 (defn- trusting-ssl-socket-factory []
   (let [trust-manager
         (proxy [javax.net.ssl.X509TrustManager] []
-          (getAcceptedIssuers [this] nil)
-          (checkClientTrusted [this certs type] nil)
-          (checkServerTrusted [this certs type] nil))
+          (getAcceptedIssuers [] nil)
+          (checkClientTrusted [certs type])
+          (checkServerTrusted [certs type]))
         trust-managers (into-array javax.net.ssl.X509TrustManager [trust-manager])
         ssl-context (javax.net.ssl.SSLContext/getInstance "SSL")]
     (.init ssl-context nil trust-managers (java.security.SecureRandom.))
