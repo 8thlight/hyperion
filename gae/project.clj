@@ -1,20 +1,18 @@
-(def config (load-file "../config.clj"))
-
-(defproject hyperion/hyperion-gae (:version config)
+(defproject hyperion/hyperion-gae "3.4.1"
   :description "Google App Engine Datastore for Hyperion"
-  :dependencies [[org.clojure/clojure ~(:clojure-version config)]
-                 [hyperion/hyperion-api ~(:version config)]
+  :dependencies [[org.clojure/clojure "1.4.0"]
+                 [hyperion/hyperion-api ~"3.4.1"]
                  [com.google.appengine/appengine-api-1.0-sdk "1.6.6"]]
 
   ; leiningen 1
-  :dev-dependencies [[speclj ~(:speclj-version config)]
+  :dev-dependencies [[speclj "2.3.4"]
                      [com.google.appengine/appengine-testing "1.6.6"]
                      [com.google.appengine/appengine-api-stubs "1.6.6"]]
   :test-path "spec"
 
   ; leiningen 2
-  :profiles {:dev {:dependencies [[speclj ~(:speclj-version config)]
+  :profiles {:dev {:dependencies [[speclj "2.3.4"]
                                   [com.google.appengine/appengine-testing "1.6.6"]
                                   [com.google.appengine/appengine-api-stubs "1.6.6"]]}}
   :test-paths ["spec/"]
-  :plugins [[speclj ~(:speclj-version config)]])
+  :plugins [[speclj "2.3.4"]])

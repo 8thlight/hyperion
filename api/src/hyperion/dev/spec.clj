@@ -1,8 +1,8 @@
 (ns hyperion.dev.spec
-  (:require [speclj.core :refer :all]
+  (:require [speclj.core :refer :all ]
             [hyperion.types :refer [foreign-key]]
-            [hyperion.api :refer :all]
-            [hyperion.abstr :refer :all]))
+            [hyperion.api :refer :all ]
+            [hyperion.abstr :refer :all ]))
 
 (defn it-saves []
   (context "save"
@@ -212,10 +212,10 @@
           (should (every? #(= "testing" (:kind %)) records)))))))
 
 (defentity OtherShirt
-  [account-key :type (foreign-key :account)])
+  [account-key :type (foreign-key :account )])
 
 (defentity Shirt
-  [account-key :type (foreign-key :account)])
+  [account-key :type (foreign-key :account )])
 
 (defentity Account
   [first-name])
@@ -231,11 +231,17 @@
             account-key (:key account)]
         (should= account-key (:account-key shirt))
         (should= account-key (:account-key found-shirt))
-        (should= account-key (:key found-account))))))
+        (should= account-key (:key found-account))))
+
+    ;    (it "handles bad keys in filters"
+    ;      (should= [] (find-by-kind :shirt :filters [:= :account-key "really-wrong-key"])))
+
+    ))
 
 (defn it-behaves-like-a-datastore []
   (list
     (it-saves)
     (it-deletes)
     (it-can-be-searched)
-    (it-handles-keys)))
+    (it-handles-keys)
+    ))

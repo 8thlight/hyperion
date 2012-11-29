@@ -1,17 +1,15 @@
-(def config (load-file "../config.clj"))
-
-(defproject hyperion/hyperion-api (:version config)
+(defproject hyperion/hyperion-api "3.4.1"
   :description "A generic persistence API for Clojure"
-  :dependencies [[org.clojure/clojure ~(:clojure-version config)]
-                 [chee ~(:chee-version config)]
+  :dependencies [[org.clojure/clojure "1.4.0"]
+                 [chee "1.0.0"]
                  [org.clojure/data.codec "0.1.0"]]
 
   ; leiningen 1
-  :dev-dependencies [[speclj ~(:speclj-version config)]]
+  :dev-dependencies [[speclj "2.3.4"]]
   :test-path "spec"
 
   ; leiningen 2
-  :profiles {:dev {:dependencies [[speclj ~(:speclj-version config)]]}}
+  :profiles {:dev {:dependencies [[speclj "2.3.4"]]}}
   :test-paths ["spec/"]
-  :plugins [[speclj ~(:speclj-version config)]
+  :plugins [[speclj "2.3.4"]
             [lein-autodoc "0.9.0"]])
