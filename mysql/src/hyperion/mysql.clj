@@ -27,8 +27,11 @@
   (get-count [this result]
     (get result "COUNT(*)"))
 
-  (process-result-record [this result given]
+  (process-insert-result-record [this result given]
     (assoc given :id (get result "GENERATED_KEY")))
+
+  (process-update-result-record [this result given id]
+    (assoc given :id id))
 
   (table-listing-query [this]
     (format "SELECT `table_name` FROM `information_schema`.`tables` WHERE `table_schema` = '%s'" database)))

@@ -92,7 +92,7 @@ create_task_for_all(:install)
 
 def clean(dir)
   lein_task(dir, 'clean')
-  rm_script = 'rm -rf lib classes pom.xml .lein-deps-sum'
+  rm_script = 'rm -rf lib target pom.xml .lein-deps-sum'
   sh "cd #{dir} && #{rm_script}"
   sh rm_script
 end

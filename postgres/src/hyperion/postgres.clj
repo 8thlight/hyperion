@@ -35,7 +35,8 @@
   (get-count [this result]
     (get result "count"))
 
-  (process-result-record [this result given] result)
+  (process-insert-result-record [this result given] result)
+  (process-update-result-record [this result given id] result)
 
   (table-listing-query [this]
     "SELECT \"table_name\" FROM \"information_schema\".\"tables\" WHERE \"table_schema\" = 'public'"))

@@ -13,23 +13,25 @@
 
 (defprotocol DBStrategy
   (get-count [this result])
-  (process-result-record [this result given])
+  (process-insert-result-record [this result given])
+  (process-update-result-record [this result given id])
   (table-listing-query [this]))
 
-(defn- update-record [qb kind record]
-  (let [id (last (decompose-key (:key record)))]
-    (assoc (execute-write (build-update qb kind id (record->db record))) "GENERATED_KEY" id)))
+(defn- update-record [db qb kind record]
+  (let [id (last (decompose-key (:key record)))
+        result (execute-write (build-update qb kind id (record->db record)))]
+    (process-update-result-record db result record id)))
 
-(defn- insert-record [qb kind record]
-  (let [row (record->db record)]
-    (execute-write (build-insert qb kind row))))
+(defn- insert-record [db qb kind record]
+  (let [row (record->db record)
+        result (execute-write (build-insert qb kind row))]
+    (process-insert-result-record db result record)))
 
 (defn- save-record [db qb record]
   (let [kind (:kind record)
         result ((if (new? record)
                   insert-record
-                  update-record) qb kind record)
-        result (process-result-record db result record)]
+                  update-record) db qb kind record)]
     (record<-db result kind)))
 
 (deftype SQLDatastore [connection db qb]
@@ -37,7 +39,6 @@
 
   (ds-save [this records]
     (with-connection connection (doall (map #(save-record db qb %) records))))
-
 
   (ds-delete-by-key [this key]
     (let [[kind id] (decompose-key key)]
