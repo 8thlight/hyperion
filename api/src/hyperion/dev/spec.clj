@@ -16,7 +16,7 @@
         (should= "testing" (:kind record))
         (should= "ann" (:name record))))
 
-    (it "it saves an existing record"
+    (it "saves an existing record"
       (let [record1 (save {:kind "other-testing" :name "ann"})
             record2 (save (assoc record1 :name "james"))]
         (should= (:key record1) (:key record2))

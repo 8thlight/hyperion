@@ -37,8 +37,8 @@
 
   (record<-db
     ([this table id]
-      (merge this {:kind table :key (compose-key table id)}))
+      (assoc (dissoc this :id "id") :kind table :key (compose-key table id)))
     ([this table]
       (let [id (or (:id this) (get this "id"))]
-        (assoc this :kind table :key (compose-key table id)))))
+        (record<-db this table id))))
   )

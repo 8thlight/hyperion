@@ -114,7 +114,7 @@ def deploy(dir)
 end
 
 def lein_task(dir, task)
-  sh "cd #{dir} && lein2 #{task}"
+  sh "cd #{dir} && lein #{task}"
 end
 
 task :default => :spec

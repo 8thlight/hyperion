@@ -17,7 +17,8 @@
   (table-listing-query [this]))
 
 (defn- update-record [qb kind record]
-  (execute-write (build-update qb kind (:id record) (record->db record))))
+  (let [id (last (decompose-key (:key record)))]
+    (assoc (execute-write (build-update qb kind id (record->db record))) "GENERATED_KEY" id)))
 
 (defn- insert-record [qb kind record]
   (let [row (record->db record)]
@@ -25,10 +26,9 @@
 
 (defn- save-record [db qb record]
   (let [kind (:kind record)
-        result
-        ((if (new? record)
-           insert-record
-           update-record) qb kind record)
+        result ((if (new? record)
+                  insert-record
+                  update-record) qb kind record)
         result (process-result-record db result record)]
     (record<-db result kind)))
 
