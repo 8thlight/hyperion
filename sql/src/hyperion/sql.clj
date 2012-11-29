@@ -17,7 +17,7 @@
   (table-listing-query [this]))
 
 (defn- update-record [qb kind record]
-  (execute-write (build-update qb kind (:id record) (record->db record))))
+  (execute-write (build-update qb kind (last (decompose-key (:key record))) (record->db record))))
 
 (defn- insert-record [qb kind record]
   (let [row (record->db record)]
