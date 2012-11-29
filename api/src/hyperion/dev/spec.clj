@@ -2,6 +2,7 @@
   (:require [speclj.core :refer :all ]
             [hyperion.types :refer [foreign-key]]
             [hyperion.api :refer :all ]
+            [hyperion.key :refer [compose-key]]
             [hyperion.abstr :refer :all ]))
 
 (defn it-saves []
@@ -233,8 +234,17 @@
         (should= account-key (:account-key found-shirt))
         (should= account-key (:key found-account))))
 
-    ;    (it "handles bad keys in filters"
-    ;      (should= [] (find-by-kind :shirt :filters [:= :account-key "really-wrong-key"])))
+    (it "handles bad keys in filters"
+      (should= [] (find-by-kind :shirt :filters [:= :account-key (compose-key "account" 321)])))
+
+    (it " can be filtered by value"
+      (let [account (save {:kind :account})
+            shirt (save {:kind :shirt :account-key (:key account)})]
+        (should= [shirt] (find-by-kind :shirt :filters [:= :account-key (:key account)]))))
+
+    (it " can be filtered by value"
+      (let [shirt (save {:kind :shirt :account-key nil})]
+        (should= [shirt] (find-by-kind :shirt :filters [:= :account-key nil]))))
 
     ))
 

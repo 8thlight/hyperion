@@ -23,8 +23,12 @@
 
 (defn compose-key
   ([kind] (compose-key kind (generate-id)))
-  ([kind id] (encode-key (str (encode-key (->kind kind)) ":" (encode-key (str id))))))
+  ([kind id] (encode-key (str (->kind kind) ":" (str id)))))
 
 (defn decompose-key [key]
-  (map decode-key (.split (decode-key key) ":")))
+  (let [decoded (decode-key key)
+        colon-index (.indexOf decoded (int \:))]
+    (if (< colon-index 1)
+      (throw (Exception. (str "Invalid key form: " decoded)))
+      (list (.substring decoded 0 colon-index) (.substring decoded (inc colon-index))))))
 

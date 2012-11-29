@@ -1,3 +1,7 @@
+# 3.5.0
+
+* fixes issue where saving entity with reference key in sql failed. (https://github.com/8thlight/hyperion/pull/15)
+
 # 3.4.0
 
 * fixes :key type by introducing the hyperion.types/foreign-key

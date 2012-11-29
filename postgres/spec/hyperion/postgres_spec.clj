@@ -47,10 +47,13 @@
   (with connection-url "jdbc:postgresql://localhost:5432/hyperion")
 
   (context "creation"
+
     (it "with a kv pairs as params"
       (let [ds (new-datastore :implementation :postgres :connection-url @connection-url)]
         (should= false (.isClosed (.connection ds)))
-        (.close (.connection ds)))))
+        (.close (.connection ds))))
+
+    )
 
   (context "live"
 

@@ -1,16 +1,16 @@
-def package(name)
+def package(name, dependencies)
   desc "Clean #{name}"
   task :clean do
     clean(name)
   end
 
   desc "Gather dependencies for #{name}"
-  task :deps do
+  task :deps => [:checkouts] do
     deps(name)
   end
 
   desc "Build #{name}"
-  task :build => [:clean, :deps]
+  task :build => [:checkouts]
 
   desc "Install #{name}"
   task :install => :build do
@@ -26,50 +26,55 @@ def package(name)
   task :spec => :build do
     spec(name)
   end
+
+  desc "Setup checkouts for #{name}"
+  task :checkouts do
+    checkouts(name, dependencies)
+  end
 end
 
 namespace :api do
-  package('api')
+  package('api', [])
 end
 
 namespace :sql do
-  task :build => 'api:install'
-  package('sql')
+  #task :build => 'api:install'
+  package('sql', %w{api})
 end
 
 namespace :postgres do
-  task :build => ['api:install', 'sql:install']
-  package('postgres')
+  #task :build => ['api:install', 'sql:install']
+  package('postgres', %w{api sql})
 end
 
 namespace :mysql do
-  task :build => ['api:install', 'sql:install']
-  package('mysql')
+  #task :build => ['api:install', 'sql:install']
+  package('mysql', %w{api sql})
 end
 
 namespace :sqlite do
-  task :build => ['api:install', 'sql:install']
-  package('sqlite')
+  #task :build => ['api:install', 'sql:install']
+  package('sqlite', %w{api sql})
 end
 
 namespace :gae do
-  task :build => ['api:install']
-  package('gae')
+  #task :build => ['api:install']
+  package('gae', %w{api})
 end
 
 namespace :riak do
-  task :build => ['api:install']
-  package('riak')
+  #task :build => ['api:install']
+  package('riak', %w{api})
 end
 
 namespace :mongo do
-  task :build => ['api:install']
-  package('mongo')
+  #task :build => ['api:install']
+  package('mongo', %w{api})
 end
 
 namespace :redis do
-  task :build => ['api:install']
-  package('redis')
+  #task :build => ['api:install']
+  package('redis', %w{api})
 end
 
 PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :redis, :riak, :mongo]
@@ -77,6 +82,9 @@ PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :redis, :riak, :mongo]
 def create_task_for_all(task_name)
   task task_name => PROJECTS.map {|project| "#{project}:#{task_name}"}
 end
+
+desc 'Setup checkouts for subprojets'
+create_task_for_all(:checkouts)
 
 desc 'Run the specs Hyperion'
 create_task_for_all(:spec)
@@ -115,6 +123,16 @@ end
 
 def lein_task(dir, task)
   sh "cd #{dir} && lein #{task}"
+end
+
+def checkouts(client, servers)
+  Dir.mkdir "#{client}/checkouts" unless File.exists?("#{client}/checkouts")
+  servers.each do |server|
+    ln_path = "#{client}/checkouts/#{server}"
+    if !(File.exists?(ln_path))
+      sh "ln -s #{File.expand_path(File.dirname(__FILE__))}/#{server} #{client}/checkouts/#{server}"
+    end
+  end
 end
 
 task :default => :spec

@@ -9,7 +9,8 @@
 
 (defmacro with-connection-url [url & body]
   `(binding [*conn* (java.sql.DriverManager/getConnection ~url)]
-     ~@body))
+     ~@body
+     (.close *conn*)))
 
 (defmacro with-connection [conn & body]
   `(binding [*conn* ~conn]

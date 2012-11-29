@@ -34,7 +34,9 @@
       (should= ["foo" "abc:123"] (decompose-key key))))
 
   (it "decomposes keys kind as a keyword"
-    (let [key (compose-key :foo "abc:123")]
-      (should= ["foo" "abc:123"] (decompose-key key))))
+    (let [key (compose-key :foo "123")]
+      (should= ["foo" "123"] (decompose-key key))))
 
   )
+
+(run-specs)

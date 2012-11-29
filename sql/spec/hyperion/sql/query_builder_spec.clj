@@ -14,4 +14,6 @@
   (it "builds insert with fields"
     (should= ["INSERT INTO 'foo' ('name') VALUES (?)" ["Joe"]] (build-insert @query-builder "foo" {:name "Joe"})))
 
+  (it "build")
+
   )
