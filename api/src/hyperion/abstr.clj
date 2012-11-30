@@ -42,7 +42,7 @@
 
 (extend-protocol AsField
   java.lang.String
-  (->field [this] (keyword (spear-case this)))
+  (->field [this] (keyword this))
 
   clojure.lang.Keyword
   (->field [this] (->field (name this)))

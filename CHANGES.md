@@ -3,6 +3,7 @@
 * fixes issue where saving entity with reference key in sql failed. (https://github.com/8thlight/hyperion/pull/15)
 * simplifies key composing resulting in shorter keys.
 * adds support for equality filters on nil values (mostly SQL)
+* refactors field formatting out of the core api into sql datastore
 
 # 3.4.0
 

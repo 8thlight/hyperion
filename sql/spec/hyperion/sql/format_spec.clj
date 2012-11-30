@@ -14,5 +14,8 @@
         (should= "table" (:kind record))
         (should= (compose-key "table" 1) (:key record))))
 
+    (it "spear cases and keywordizes column names"
+      (should= :value (:thing-column (record<-db {"thing_column" :value} "table" 1))))
+
     )
   )

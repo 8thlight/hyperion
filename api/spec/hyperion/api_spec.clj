@@ -367,25 +367,35 @@
                                              :field3 ".141592"
                                              :field42 "24eulav"}]))
 
+        (it "doesn't normalize fields to spear case"
+          (save {:kind :unknown :camelCasedFieldName "value"})
+          (check-first-call (ds) "ds-save" [{:kind "unknown"
+                                             :camelCasedFieldName "value"}]))
+
+        (it "doesn't normalize fields to keywords"
+          (save {:kind :unknown "camelCasedFieldName" "value"})
+          (check-first-call (ds) "ds-save" [{:kind "unknown"
+                                             "camelCasedFieldName" "value"}]))
+
                )
 
       (context "unpacking"
-        (context "normalizes"
-          (it "attribues for unknown kind"
-            (reset! (.responses (ds)) [[{"KIND" "unknown" :some_WEIRD_Field :val}]])
-            (should= {:kind "unknown" :some-weird-field :val} (save-empty)))
 
-          (it "kind for unknown kind"
-            (reset! (.responses (ds)) [[{:kind :UNknown}]])
-            (should= {:kind "unknown"} (save-empty)))
+        (it "normalizes kind for unknown kind"
+          (reset! (.responses (ds)) [[{:kind :UNknown}]])
+          (should= {:kind "unknown"} (save-empty)))
 
-          (it "attribues for known kind"
-            (reset! (.responses (ds)) [[{"KIND" "packable" :BAuble "val"}]])
-            (should= {:kind "packable" :bauble "VAL" :widget nil :gewgaw nil} (save-empty)))
+        (it "normalizes attribues to keyword for unknown kind"
+          (reset! (.responses (ds)) [[{:kind "unknown" "some_WEIRD_Field" :val}]])
+          (should= {:kind "unknown" :some_WEIRD_Field :val} (save-empty)))
 
-          (it "kind for known kind"
-            (reset! (.responses (ds)) [[{:kind :packable}]])
-            (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil} (save-empty))))
+        (it "normalizes kind for known kind"
+          (reset! (.responses (ds)) [[{:kind :packable}]])
+          (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil} (save-empty)))
+
+        (it "normalizes attribues for known kind"
+          (reset! (.responses (ds)) [[{:kind "packable" :BAuble "val"}]])
+          (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil} (save-empty)))
 
         (it "types"
           (reset! (.responses (ds)) [[{:kind "packable" :widget 42}]])
