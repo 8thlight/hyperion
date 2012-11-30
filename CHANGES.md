@@ -1,6 +1,7 @@
 # 3.5.0
 
 * fixes issue where saving entity with reference key in sql failed. (https://github.com/8thlight/hyperion/pull/15)
+* adds support for equality filters on nil values (mostly SQL)
 
 # 3.4.0
 
