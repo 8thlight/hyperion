@@ -76,6 +76,10 @@
         (call-fn "packable" :filters [:= :widget "1"])
         (assert-fn "packable" [filter-struct])))
 
+    (it "packs fields"
+      (call-fn "packable" :filters [:= :something-key "1"])
+      (assert-fn "packable" [(make-filter := :something-id "1")]))
+
     (it "handles multiple filters"
       (let [filter-struct (make-filter := :key 1)
             second-filter (make-filter :!= :key 2)]
@@ -112,6 +116,7 @@
   [field42 :default "value42" :packer #(apply str (reverse %))])
 
 (defentity "PACKABLE"
+  [something-key :db-name :something-id]
   [widget :type Integer]
   [bauble :packer #(apply str (reverse %)) :unpacker #(if % (upper-case %) %)]
   [gewgaw :unpacker true])
@@ -246,7 +251,11 @@
 
       (it "packs entities"
         (save {:kind :packable :widget "42"})
-        (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :gewgaw nil :bauble ""}]))
+        (check-first-call (ds) "ds-save" [{:kind "packable"
+                                           :widget 42
+                                           :gewgaw nil
+                                           :bauble ""
+                                           :something-id nil}]))
 
       (it "converts the kind to a string"
         (save {:kind :one})
@@ -343,17 +352,26 @@
       (context "packing"
         (it "types"
           (save {:kind :packable :widget "42"})
-          (check-first-call (ds) "ds-save" [{:kind "packable" :widget 42 :bauble "" :gewgaw nil}]))
+          (check-first-call (ds) "ds-save" [{:kind "packable"
+                                             :widget 42
+                                             :bauble ""
+                                             :gewgaw nil
+                                             :something-id nil}]))
 
         (it "custom functions"
           (save {:kind :packable :bauble "hello"})
-          (check-first-call (ds) "ds-save" [{:kind "packable" :widget nil :bauble "olleh" :gewgaw nil}]))
+          (check-first-call (ds) "ds-save" [{:kind "packable"
+                                             :widget nil
+                                             :bauble "olleh"
+                                             :gewgaw nil
+                                             :something-id nil}]))
 
         (it "keys which are ds-specific"
           (reset! (.responses (ds)) ["packed-abc123"])
           (save {:kind :keyed :other-key "abc123"})
           (check-first-call (ds) "ds-pack-key" "abc123")
-          (check-second-call (ds) "ds-save" [{:kind "keyed" :other-key "packed-abc123"}]))
+          (check-second-call (ds) "ds-save" [{:kind "keyed"
+                                              :other-key "packed-abc123"}]))
 
         (it "nil key"
           (save {:kind :keyed :other-key nil})
@@ -366,6 +384,28 @@
                                              :field2 nil
                                              :field3 ".141592"
                                              :field42 "24eulav"}]))
+
+        (defentity with-db-name
+          [something-key :db-name :something-id :default 45]
+          [other-key :db-name "other-id"])
+
+        (it "packs db-name to field names"
+          (save {:kind :with-db-name :something-key "12345"})
+          (check-first-call (ds) "ds-save" [{:kind "with-db-name"
+                                             :something-id "12345"
+                                             :other-id nil}]))
+
+        (it "packs db-name as string"
+          (save {:kind :with-db-name :other-key "12345"})
+          (check-first-call (ds) "ds-save" [{:kind "with-db-name"
+                                             :something-id 45
+                                             :other-id "12345"}]))
+
+        (it "packs db-name with default"
+          (save {:kind :with-db-name})
+          (check-first-call (ds) "ds-save" [{:kind "with-db-name"
+                                             :something-id 45
+                                             :other-id nil}]))
 
         (it "doesn't normalize fields to spear case"
           (save {:kind :unknown :camelCasedFieldName "value"})
@@ -391,15 +431,22 @@
 
         (it "normalizes kind for known kind"
           (reset! (.responses (ds)) [[{:kind :packable}]])
-          (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil} (save-empty)))
+          (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil :something-key nil} (save-empty)))
 
         (it "normalizes attribues for known kind"
           (reset! (.responses (ds)) [[{:kind "packable" :BAuble "val"}]])
-          (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil} (save-empty)))
+          (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil :something-key nil} (save-empty)))
 
         (it "types"
           (reset! (.responses (ds)) [[{:kind "packable" :widget 42}]])
-          (should= {:kind "packable" :bauble nil :widget "42" :gewgaw nil} (save-empty)))
+          (should= {:kind "packable" :bauble nil :widget "42" :gewgaw nil :something-key nil} (save-empty)))
+
+        (defentity with-other-db-name
+          [something-key :db-name :something-id])
+
+        (it "unpacks db-name"
+          (reset! (.responses (ds)) [[{:kind "with-other-db-name" :something-id 42}]])
+          (should= {:kind "with-other-db-name" :something-key 42} (save-empty)))
 
         (it "unknown kinds"
           (reset! (.responses (ds)) [[{:kind "unknown" :widget 42}]])
@@ -407,7 +454,7 @@
 
         (it "custom functions"
           (reset! (.responses (ds)) [[{:kind "packable" :bauble "hello"}]])
-          (should= {:kind "packable" :bauble "HELLO" :widget nil :gewgaw nil} (save-empty)))
+          (should= {:kind "packable" :bauble "HELLO" :widget nil :gewgaw nil :something-key nil} (save-empty)))
 
         (it "does not apply default values"
           (reset! (.responses (ds)) [[{:kind "many-defaulted-fields"}]])

@@ -74,20 +74,27 @@
       (assoc :unpacker t))
     options))
 
+(defn- normalize-db-name [field options]
+  (let [db-name (if-let [name (:db-name options)] (->field name) field)]
+    (assoc options :db-name db-name)))
+
 (defn- map-fields [fields]
   (reduce
     (fn [spec [key & args]]
-      (let [options (->options args)
-            options (apply-type-packers options)]
-        (assoc spec (->field key) options)))
+      (let [field (->field key)
+            options (->options args)
+            options (apply-type-packers options)
+            options (normalize-db-name field options)]
+        (assoc spec field options)))
     {}
     fields))
 
-(defn- null-val-fn [field-spec value] value)
+(defn- null-val [record entity field spec]
+  (assoc entity field (field record)))
 
 (defn create-entity
   "PRIVATE: Used by the defentity macro to create entities."
-  ([record] (create-entity record null-val-fn))
+  ([record] (create-entity record null-val))
   ([record val-fn]
     (let [kind (->kind record)
           spec (spec-for kind)]
@@ -95,7 +102,7 @@
         (if spec
           (reduce
             (fn [entity [field spec]]
-              (assoc entity field (val-fn spec (field record))))
+              (val-fn record entity field spec))
             (if-assoc {} :kind kind)
             spec)
           (if-assoc record :kind kind))))))
@@ -105,11 +112,17 @@
     (:default field-spec)
     value))
 
+(defn- default-val-fn [val-fn]
+  (fn [record entity field spec]
+    (let [value (field record)
+          defaulted-record (assoc record field (apply-default spec value))]
+      (val-fn defaulted-record entity field spec))))
+
 (defn create-entity-with-defaults
   "PRIVATE: Used by the defentity macro to create entities."
-  ([record] (create-entity-with-defaults record null-val-fn))
+  ([record] (create-entity-with-defaults record null-val))
   ([record val-fn]
-    (create-entity record #(->> %2 (apply-default %1) (val-fn %1)))))
+    (create-entity record (default-val-fn val-fn))))
 
 (defn- packer-fn [packer]
   (if (fn? packer)
@@ -126,11 +139,22 @@
     (map #(packer %) value)
     (packer value)))
 
-(defn- pack-field [field-spec value]
-  (do-packing (packer-fn (:packer field-spec)) value))
+(defn- pack-field-val [spec value]
+  (do-packing (packer-fn (:packer spec)) value))
 
-(defn- unpack-field [field-spec value]
-  (do-packing (unpacker-fn (:unpacker field-spec)) value))
+(defn- pack-field-name [spec field]
+  (or (:db-name spec) field))
+
+(defn- pack-field [record entity field spec]
+  (let [field-name (pack-field-name spec field)
+        value (field record)]
+    (assoc entity field-name (pack-field-val spec value))))
+
+(defn- unpack-field [record entity field spec]
+  (let [field-name (pack-field-name spec field)
+        unpacker (unpacker-fn (:unpacker spec))
+        value (field-name record)]
+    (assoc entity field (do-packing unpacker value))))
 
 (defn- normalize-fields [record]
   (reduce
@@ -276,11 +300,12 @@
         filters (->seq filters)]
     (doall (map
              (fn [[operator field value]]
-               (let [field (->field field)]
+               (let [field (->field field)
+                     spec (field spec)]
                  (filter/make-filter
                    (->filter-operator operator)
-                   (->field field)
-                   (pack-field (field spec) value))))
+                   (pack-field-name spec field)
+                   (pack-field-val spec value))))
              filters))))
 
 (defn- parse-sorts [sorts]

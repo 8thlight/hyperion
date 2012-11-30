@@ -34,13 +34,13 @@
   (do-query
     "CREATE TABLE shirt (
     id INTEGER NOT NULL AUTO_INCREMENT,
-    account_key INTEGER,
+    account_id INTEGER,
     first_name VARCHAR(35),
     inti INTEGER,
     data VARCHAR(32),
     PRIMARY KEY (id),
-    INDEX (account_key),
-    FOREIGN KEY (account_key) REFERENCES account (id)
+    INDEX (account_id),
+    FOREIGN KEY (account_id) REFERENCES account (id)
     )"))
 
 (defn create-table [table-name]

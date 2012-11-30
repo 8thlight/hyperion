@@ -4,6 +4,7 @@
 * simplifies key composing resulting in shorter keys.
 * adds support for equality filters on nil values (mostly SQL)
 * refactors field formatting out of the core api into sql datastore
+* adds the ability to alias the field name for the db
 
 # 3.4.0
 

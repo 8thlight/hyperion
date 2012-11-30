@@ -213,10 +213,10 @@
           (should (every? #(= "testing" (:kind %)) records)))))))
 
 (defentity OtherShirt
-  [account-key :type (foreign-key :account )])
+  [account-key :type (foreign-key :account ) :db-name :account-id])
 
 (defentity Shirt
-  [account-key :type (foreign-key :account )])
+  [account-key :type (foreign-key :account ) :db-name :account-id])
 
 (defentity Account
   [first-name])

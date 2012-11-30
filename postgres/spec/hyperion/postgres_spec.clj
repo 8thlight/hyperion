@@ -31,7 +31,7 @@
     );
     CREATE TABLE shirt (
     id SERIAL PRIMARY KEY,
-    account_key INTEGER REFERENCES account,
+    account_id INTEGER REFERENCES account,
     first_name VARCHAR(35),
     inti INTEGER,
     data VARCHAR(32)
