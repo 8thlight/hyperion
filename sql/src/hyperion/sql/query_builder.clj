@@ -30,20 +30,27 @@
 (defmulti filter->sql #(filter/operator %2))
 
 (defmethod filter->sql :!= [s filter]
-  (build-filter s (filter/field filter) :<> "?"))
+  (if-let [value (filter/value filter)]
+    (list (build-filter s (filter/field filter) :<> "?") (list value))
+    (list (format "%s IS NOT NULL" (column->db (filter/field filter) (quote-tick s))))))
 
 (defmethod filter->sql :contains? [s filter]
-  (build-filter s (filter/field filter) :IN (in-variables (filter/value filter))))
+  (list (build-filter s (filter/field filter) :IN (in-variables (filter/value filter))) (filter/value filter)))
+
+(defmethod filter->sql := [s filter]
+  (if-let [value (filter/value filter)]
+    (list (build-filter s (filter/field filter) (filter/operator filter) "?") (list (filter/value filter)))
+    (list (format "%s IS NULL" (column->db (filter/field filter) (quote-tick s))))))
 
 (defmethod filter->sql :default [s filter]
-  (build-filter s (filter/field filter) (filter/operator filter) "?"))
+  (list (build-filter s (filter/field filter) (filter/operator filter) "?") (list (filter/value filter))))
 
 (defn apply-filters [query s filters]
   (if (empty? filters)
     query
-    (let [values (flatten (map filter/value filters))
-          where-clause (str "WHERE " (join " AND " (map #(filter->sql s %) filters)))]
-      (add-to-query query where-clause values))))
+    (let [filter-pairs (map #(filter->sql s %) filters)
+          where-clause (str "WHERE " (join " AND " (map first filter-pairs)))]
+      (add-to-query query where-clause (flatten (mapcat second filter-pairs))))))
 
 (def select-query "SELECT %s FROM %s")
 

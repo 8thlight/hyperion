@@ -1,13 +1,10 @@
-(def config (load-file "../config.clj"))
-
-(defproject hyperion/hyperion-redis (:version config)
+(defproject hyperion/hyperion-redis "3.4.1"
   :description "Redis Datastore for Hyperion"
-  :dependencies [[org.clojure/clojure ~(:clojure-version config)]
-                 [hyperion/hyperion-api ~(:version config)]
+  :dependencies [[org.clojure/clojure "1.4.0"]
+                 [hyperion/hyperion-api "3.4.1"]
                  [com.taoensso/carmine "0.10.3"]]
 
   ; leiningen 2
-  :profiles {:dev {:dependencies [[speclj ~(:speclj-version config)]]}}
+  :profiles {:dev {:dependencies [[speclj "2.3.4"]]}}
   :test-paths ["spec/"]
-  :plugins [[speclj ~(:speclj-version config)]])
-
+  :plugins [[speclj "2.3.4"]])

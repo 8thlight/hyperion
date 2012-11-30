@@ -1,17 +1,15 @@
-(def config (load-file "../config.clj"))
-
-(defproject hyperion/hyperion-sqlite (:version config)
+(defproject hyperion/hyperion-sqlite "3.4.1"
   :description "SQLite Datastore for Hyperion"
-  :dependencies [[org.clojure/clojure ~(:clojure-version config)]
-                 [hyperion/hyperion-api ~(:version config)]
-                 [hyperion/hyperion-sql ~(:version config)]
+  :dependencies [[org.clojure/clojure "1.4.0"]
+                 [hyperion/hyperion-api "3.4.1"]
+                 [hyperion/hyperion-sql "3.4.1"]
                  [org.xerial/sqlite-jdbc "3.7.2"]]
 
   ; leiningen 1
-  :dev-dependencies [[speclj ~(:speclj-version config)]]
+  :dev-dependencies [[speclj "2.3.4"]]
   :test-path "spec"
 
   ; leiningen 2
-  :profiles {:dev {:dependencies [[speclj ~(:speclj-version config)]]}}
+  :profiles {:dev {:dependencies [[speclj "2.3.4"]]}}
   :test-paths ["spec/"]
-  :plugins [[speclj ~(:speclj-version config)]])
+  :plugins [[speclj "2.3.4"]])

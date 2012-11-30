@@ -147,9 +147,9 @@
     [:= :int ] (IntValueQuery. (IntIndex/named (name field)) bucket (int value))
     [:<= :int ] (IntRangeQuery. (IntIndex/named (name field)) bucket Integer/MIN_VALUE (int value))
     [:>= :int ] (IntRangeQuery. (IntIndex/named (name field)) bucket (int value) Integer/MAX_VALUE)
-    [:= :bin ] (BinValueQuery. (BinIndex/named (name field)) bucket value)
-    [:<= :bin ] (BinRangeQuery. (BinIndex/named (name field)) bucket "0" value)
-    [:>= :bin ] (BinRangeQuery. (BinIndex/named (name field)) bucket value "zzzzz")
+    [:= :bin ] (BinValueQuery. (BinIndex/named (name field)) bucket (str value))
+    [:<= :bin ] (BinRangeQuery. (BinIndex/named (name field)) bucket "0" (str value))
+    [:>= :bin ] (BinRangeQuery. (BinIndex/named (name field)) bucket (str value) "zzzzz")
     (throw (Exception. (str "Don't know how to create query from filter: " filter)))))
 
 (defn filters->queries [bucket filters]

@@ -34,7 +34,7 @@
   (do-query
     "CREATE TABLE shirt (
     id INTEGER NOT NULL AUTO_INCREMENT,
-    account_key INTEGER NOT NULL,
+    account_key INTEGER,
     first_name VARCHAR(35),
     inti INTEGER,
     data VARCHAR(32),

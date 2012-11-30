@@ -6,16 +6,11 @@
             [hyperion.sql.key :refer [compose-key]]
             [hyperion.sql.query-builder :refer [new-query-builder]]
             [hyperion.sql.fake-query-builder]
+            [hyperion.sql.fake-db-strategy]
             [hyperion.sql.jdbc :refer [execute-write execute-mutation execute-query]]
             [hyperion.sql.fake-driver])
-  (:import [hyperion.sql.fake_query_builder FakeQueryBuilderStrategy]))
-
-(deftype FakeDBStrategy [log]
-  DBStrategy
-  (get-count [this result] (swap! log conj [:get-count result]) 42)
-  (process-insert-result-record [this result given] (swap! log conj [:process-insert-result-record result given]) result)
-  (process-update-result-record [this result given id] (swap! log conj [:process-update-result-record result given id]) result)
-  (table-listing-query [this] (swap! log conj [:table-listing-query]) "table-listing-query"))
+  (:import [hyperion.sql.fake_query_builder FakeQueryBuilderStrategy]
+           [hyperion.sql.fake_db_strategy FakeDBStrategy]))
 
 (describe "Hyperion SQL"
 
