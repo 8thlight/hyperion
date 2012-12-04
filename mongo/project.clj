@@ -1,7 +1,7 @@
-(defproject hyperion/hyperion-mongo "3.4.2"
+(defproject hyperion/hyperion-mongo "3.5.0"
   :description "Mongo Datastore for Hyperion"
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [hyperion/hyperion-api "3.4.1"]
+                 [hyperion/hyperion-api "3.5.0"]
                  [org.mongodb/mongo-java-driver	"2.8.0"]]
 
   ; leiningen 2

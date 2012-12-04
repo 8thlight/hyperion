@@ -1,8 +1,8 @@
-(defproject hyperion/hyperion-sqlite "3.4.1"
+(defproject hyperion/hyperion-sqlite "3.5.0"
   :description "SQLite Datastore for Hyperion"
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [hyperion/hyperion-api "3.4.1"]
-                 [hyperion/hyperion-sql "3.4.1"]
+                 [hyperion/hyperion-api "3.5.0"]
+                 [hyperion/hyperion-sql "3.5.0"]
                  [org.xerial/sqlite-jdbc "3.7.2"]]
 
   ; leiningen 1
