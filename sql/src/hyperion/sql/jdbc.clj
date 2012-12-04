@@ -1,9 +1,9 @@
 (ns hyperion.sql.jdbc
-  (:use
-    [hyperion.key :only [generate-id]]
-    [hyperion.sql.connection :only [connection]]
-    [hyperion.sql.query :only [query-str params]]
-    [hyperion.sql.query-builder]))
+  (:require [hyperion.key :refer [generate-id]]
+            [hyperion.log :as log]
+            [hyperion.sql.connection :refer [connection]]
+            [hyperion.sql.query :refer [query-str params]]
+            [hyperion.sql.query-builder :refer :all ]))
 
 (defn result-set->seq [rs]
   (let [rsmeta (.getMetaData rs)
@@ -11,8 +11,8 @@
         columns (map #(.getColumnLabel rsmeta %) idxs)
         values (fn [] (map (fn [i] (.getObject rs i)) idxs))
         result (java.util.ArrayList.)]
-      (while (.next rs)
-        (.add result (zipmap columns (values))))
+    (while (.next rs)
+      (.add result (zipmap columns (values))))
     result))
 
 (defprotocol SetObject
@@ -88,23 +88,30 @@
     (catch Exception e
       (.prepareStatement (connection) query-str))))
 
+(defmacro log-query [form query]
+  `(let [start# (System/nanoTime)
+         result# ~form
+         time# (/ (- (System/nanoTime) start#) 1000000.0)]
+     (log/debug (format "Query (time %s ms): %s" time# ~query))
+     result#))
+
 (defn execute-write [query]
   (with-open [stmt (prepare-statement (query-str query))]
     (set-parameters stmt (params query))
-    (.executeUpdate stmt)
+    (log-query (.executeUpdate stmt) query)
     (with-open [result-set (.getGeneratedKeys stmt)]
       (first (result-set->seq result-set)))))
 
 (defn execute-query [query]
   (with-open [stmt (.prepareStatement (connection) (query-str query) java.sql.ResultSet/TYPE_FORWARD_ONLY, java.sql.ResultSet/CONCUR_READ_ONLY)]
     (set-parameters stmt (params query))
-    (with-open [result-set (.executeQuery stmt)]
+    (with-open [result-set (log-query (.executeQuery stmt) query)]
       (result-set->seq result-set))))
 
 (defn execute-mutation [query]
   (with-open [stmt (.prepareStatement (connection) (query-str query))]
     (set-parameters stmt (params query))
-    (.executeUpdate stmt)))
+    (log-query (.executeUpdate stmt) query)))
 
 (defmacro without-auto-commit [& body]
   `(let [conn# (connection)
@@ -119,7 +126,7 @@
 
 (defn exec [query]
   (let [stmt (.createStatement (connection))]
-    (.executeUpdate stmt query)
+    (log-query (.executeUpdate stmt query) query)
     (.close stmt)))
 
 (defn new-savepoint-id []

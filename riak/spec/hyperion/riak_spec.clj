@@ -2,6 +2,7 @@
   (:require [speclj.core :refer :all ]
             [hyperion.api :refer :all ]
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
+            [hyperion.log :as log]
             [hyperion.riak.spec-helper :refer [with-testable-riak-datastore]]
             [hyperion.riak :refer :all ]
             [clojure.data.codec.base64 :refer [encode decode]])
@@ -14,6 +15,8 @@
 ; http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-October/006048.html
 
 (describe "Riak Datastore"
+
+  (before (log/error!))
 
   (context "Connection Config"
 

@@ -171,6 +171,24 @@ Example:
 ;=> #<{:kind "citizen" :key "some generated key" :country "USA" :created-at #<java.util.Date just-now> :updated-at #<java.util.Date just-now> ...)
 ```
 
+## Logging
+
+Many of the Hyperion components will log informative information (more logging has yet to be added).  The default log level is _Info_.
+Not much is logged at the info level.  To get more informative log message, turn on the _Debug_ log level.
+
+```clojure
+(hyperion.log/debug!)
+```
+
+You can also log your own messages.
+
+```clojure
+(hyperion.log/debug "This is a debug message")
+(hyperion.log/info "Hey, here's some info!")
+```
+
+The complete list of log levels (which come from [timbre](https://github.com/ptaoussanis/timbre)) are `[:trace :debug :info :warn :error :fatal :report]`.
+
 ## Full API
 
 To learn more, downlaod hyperion.api and load up the REPL.

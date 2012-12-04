@@ -7,6 +7,7 @@
             [hyperion.abstr :refer [Datastore]]
             [hyperion.filtering :as filter]
             [hyperion.key :refer (compose-key decompose-key)]
+            [hyperion.log :as log]
             [hyperion.memory :as memory]
             [hyperion.sorting :as sort])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
@@ -122,7 +123,7 @@
     (let [response (.fetch client bucket id)]
       (when (.hasValue response)
         (when (.hasSiblings response)
-          (println "Whao! Siblings! Siblings are not allowed by default.  Someone must have tweaked things! bucket:" bucket " key:" id))
+          (log/warn "Whao! Siblings! Siblings are not allowed by default.  Someone must have tweaked things! bucket:" bucket " key:" id))
         (native->record (first (.getRiakObjects response)) kind id)))))
 
 (defn- delete-by-key
@@ -165,6 +166,7 @@
 (defn- find-by-kind [client kind filters sorts limit offset]
   (let [bucket (bucket-name kind)
         [pre-filters post-filters] (optimize-filters filters)
+        _ (when (seq post-filters) (log/warn "The following filters will be appied in memory because they can't be done using Riak secondary indexes:" post-filters))
         filter-fn (memory/build-filter kind post-filters)
         ids (ids-by-kind client bucket pre-filters)
         records (map (partial find-by-key client bucket kind) ids)]

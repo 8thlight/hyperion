@@ -1,8 +1,9 @@
 (ns hyperion.api
   (:require [clojure.string :as str]
-            [hyperion.abstr :refer :all]
-            [hyperion.sorting :as sort]
+            [hyperion.abstr :refer :all ]
             [hyperion.filtering :as filter]
+            [hyperion.log :as log]
+            [hyperion.sorting :as sort]
             [chee.datetime :refer [now]]
             [chee.util :refer [->options]]))
 
@@ -13,6 +14,7 @@
 (defn set-ds!
   "Uses alter-var-root to set *ds*. A violent, but effective way to install a datastore."
   [^hyperion.abstr.Datastore ds]
+  (log/debug "focefully setting datastore:" ds)
   (alter-var-root (var *ds*) (fn [_] ds)))
 
 (defn ds
@@ -53,17 +55,17 @@
 
 (defmulti pack
   "Packers may be any object and are added to defentity specs.
-  When an entity is saved, values are 'packed' before getting shipped
-  off to the persistence implementation.
-  You may add your own packer by declare a defmethod for your type."
+When an entity is saved, values are 'packed' before getting shipped
+off to the persistence implementation.
+You may add your own packer by declare a defmethod for your type."
   (fn [type value] type))
 (defmethod pack :default [type value] value)
 
 (defmulti unpack
   "Unpackers may be any object and are added to defentity specs.
-  When an entity is loaded, values are 'unpacked' from the data in the
-  persistence implementation.
-  You may add your own packer by declare a defmethod for your type."
+When an entity is loaded, values are 'unpacked' from the data in the
+persistence implementation.
+You may add your own packer by declare a defmethod for your type."
   (fn [type value] type))
 (defmethod unpack :default [type value] value)
 
@@ -197,7 +199,7 @@
     after-load))
 
 (defn- ensure-entity-has-kind [entity]
-  (if-not (contains? entity :kind)
+  (if-not (contains? entity :kind )
     (throw (Exception. (str "Cannot save without specifying a kind: " entity)))
     entity))
 
@@ -322,7 +324,7 @@
 
 (defn find-by-key
   "Retrieves the value associated with the given key from the datastore.
-  nil if it doesn't exist."
+nil if it doesn't exist."
   [key]
   (native->entity
     (ds-find-by-key (ds) key)))
@@ -368,7 +370,7 @@
 
 (defn find-all-kinds
   "Same as find-by-kind except that it'll returns results of any kind
-  WARNING: This methods is almost certainly horribly inefficient.  Use with caution."
+WARNING: This methods is almost certainly horribly inefficient.  Use with caution."
   [& args]
   (let [options (->options args)
         kinds (ds-all-kinds (ds))
@@ -404,7 +406,7 @@
 
 (defn delete-by-key
   "Removes the record stored with the given key.
-  Returns nil no matter what."
+Returns nil no matter what."
   [key]
   (ds-delete-by-key (ds) key)
   nil)
@@ -433,7 +435,11 @@
       (try
         (let [ns-sym (symbol (str "hyperion." (name implementation)))]
           (require ns-sym)
-          ((ns-resolve (the-ns ns-sym) (symbol (format "new-%s-datastore" (name implementation)))) options))
+          (let [constructor-sym (symbol (format "new-%s-datastore" (name implementation)))
+                constructor (ns-resolve (the-ns ns-sym) constructor-sym)
+                datastore (constructor options)]
+            (log/debug "new-datastore.  config:" options "datastore:" datastore)
+            datastore))
         (catch java.io.FileNotFoundException e
           (throw (Exception. (str "Can't find datastore implementation: " implementation) e))))
       (throw (Exception. "new-datastore requires an :implementation entry (:memory, :mysql, :mongo, ...)"))
