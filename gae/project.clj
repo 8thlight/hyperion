@@ -1,7 +1,7 @@
-(defproject hyperion/hyperion-gae "3.5.0"
+(defproject hyperion/hyperion-gae "3.6.0"
   :description "Google App Engine Datastore for Hyperion"
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [hyperion/hyperion-api "3.5.0"]
+                 [hyperion/hyperion-api "3.6.0"]
                  [com.google.appengine/appengine-api-1.0-sdk "1.6.6"]]
 
   ; leiningen 1

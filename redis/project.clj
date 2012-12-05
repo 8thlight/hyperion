@@ -1,7 +1,7 @@
-(defproject hyperion/hyperion-redis "3.5.0"
+(defproject hyperion/hyperion-redis "3.6.0"
   :description "Redis Datastore for Hyperion"
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [hyperion/hyperion-api "3.5.0"]
+                 [hyperion/hyperion-api "3.6.0"]
                  [com.taoensso/carmine "0.10.3"]]
 
   ; leiningen 2

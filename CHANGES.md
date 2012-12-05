@@ -1,6 +1,9 @@
-# 3.5.1
+# 3.6.0
 
 * fixes equality filters on nil values
+* after-create only called in ctor
+* fields set to nil in ctor will not get overridden with default values
+* extra params will stick around on newly created entities
 
 # 3.5.0
 
