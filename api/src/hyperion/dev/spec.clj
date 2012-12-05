@@ -295,7 +295,7 @@
 
     (it "saves records with foreign keys"
       (let [account (save {:kind :account})
-            shirt (save {:kind :shirt :account-key (:key account)})
+            shirt (save (shirt :account-key (:key account)))
             found-shirt (find-by-key (:key shirt))
             found-account (find-by-key (:key account))
             account-key (:key account)]
@@ -307,8 +307,8 @@
       (should= [] (find-by-kind :shirt :filters [:= :account-key (compose-key "account" 321)])))
 
     (it " can be filtered by value"
-      (let [account (save {:kind :account})
-            shirt (save {:kind :shirt :account-key (:key account)})]
+      (let [account (save (account))
+            shirt (save (shirt :account-key (:key account)))]
         (should= [shirt] (find-by-kind :shirt :filters [:= :account-key (:key account)]))))
 
     (it " can be filtered by value"
@@ -324,3 +324,5 @@
     (it-can-be-searched)
     (it-handles-keys)
     ))
+
+(run-specs)

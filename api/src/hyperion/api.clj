@@ -91,40 +91,22 @@ You may add your own packer by declare a defmethod for your type."
     {}
     fields))
 
-(defn- null-val [record entity field spec]
-  (assoc entity field (field record)))
+(defn- apply-default [entity field-name field-spec]
+  (if (contains? entity field-name)
+    (get entity field-name)
+    (:default field-spec)))
 
-(defn create-entity
+(defn construct-entity
   "PRIVATE: Used by the defentity macro to create entities."
-  ([record] (create-entity record null-val))
-  ([record val-fn]
-    (let [kind (->kind record)
-          spec (spec-for kind)]
-      (after-create
-        (if spec
-          (reduce
-            (fn [entity [field spec]]
-              (val-fn record entity field spec))
-            (if-assoc {} :kind kind)
-            spec)
-          (if-assoc record :kind kind))))))
-
-(defn- apply-default [field-spec value]
-  (if (nil? value)
-    (:default field-spec)
-    value))
-
-(defn- default-val-fn [val-fn]
-  (fn [record entity field spec]
-    (let [value (field record)
-          defaulted-record (assoc record field (apply-default spec value))]
-      (val-fn defaulted-record entity field spec))))
-
-(defn create-entity-with-defaults
-  "PRIVATE: Used by the defentity macro to create entities."
-  ([record] (create-entity-with-defaults record null-val))
-  ([record val-fn]
-    (create-entity record (default-val-fn val-fn))))
+  [entity]
+  (after-create
+    (if-let [spec (spec-for (->kind entity))]
+      (reduce
+        (fn [created [field-name field-spec]]
+          (assoc created field-name (apply-default entity field-name field-spec)))
+        entity
+        spec)
+      (throw (Exception. (format "Missing entity spec in constructor for %s." (->kind entity)))))))
 
 (defn- packer-fn [packer]
   (if (fn? packer)
@@ -141,41 +123,46 @@ You may add your own packer by declare a defmethod for your type."
     (map #(packer %) value)
     (packer value)))
 
-(defn- pack-field-val [spec value]
+(defn- pack-field-value [spec value]
   (do-packing (packer-fn (:packer spec)) value))
 
-(defn- pack-field-name [spec field]
+(defn- packed-field-name [spec field]
   (or (:db-name spec) field))
 
-(defn- pack-field [record entity field spec]
-  (let [field-name (pack-field-name spec field)
-        value (field record)]
-    (assoc entity field-name (pack-field-val spec value))))
+(defn- base-entity [entity]
+  (if-let [key (:key entity)]
+    {:key key}
+    {}))
 
-(defn- unpack-field [record entity field spec]
-  (let [field-name (pack-field-name spec field)
-        unpacker (unpacker-fn (:unpacker spec))
-        value (field-name record)]
-    (assoc entity field (do-packing unpacker value))))
+(defn packed-kind [entity]
+  (if-let [kind (->kind entity)]
+    (name kind)
+    nil))
 
-(defn- normalize-fields [record]
+(defn- pack-fields [entity]
+  (if-let [spec (spec-for entity)]
+    (reduce
+      (fn [packed [field-name field-spec]] (assoc packed (packed-field-name field-spec field-name) (pack-field-value field-spec (get entity field-name))))
+      (assoc (base-entity entity) :kind (packed-kind entity))
+      spec)
+    (assoc entity :kind (packed-kind entity))))
+
+(defn- unpack-field-value [spec value]
+  (do-packing (unpacker-fn (:unpacker spec)) value))
+
+(defn- unpack-fields [entity]
+  (if-let [spec (spec-for entity)]
+    (reduce
+      (fn [unpacked [field-name field-spec]] (assoc unpacked field-name (unpack-field-value field-spec (get entity (packed-field-name field-spec field-name)))))
+      (assoc (base-entity entity) :kind (->kind entity))
+      spec)
+    (assoc entity :kind (->kind entity))))
+
+(defn- normalize-field-names [record]
   (reduce
-    (fn [record [field value]]
-      (assoc record (->field field) value))
+    (fn [record [field value]] (assoc record (->field field) value))
     {}
     record))
-
-(defn unpack-entity [record]
-  "PRIVATE: Used by the defentity macro to unpack entities."
-  (when record
-    (let [record (normalize-fields record)
-          entity (create-entity record unpack-field)]
-      (if-assoc entity :key (:key record)))))
-
-(defn pack-entity [record]
-  "PRIVATE: Used by the defentity macro to pack entities."
-  (let [entity (create-entity-with-defaults record pack-field)]
-    (if-assoc entity :key (:key record))))
 
 (defn- with-created-at [record spec]
   (if (and (or (contains? spec :created-at ) (contains? record :created-at )) (= nil (:created-at record)))
@@ -193,22 +180,25 @@ You may add your own packer by declare a defmethod for your type."
       (with-created-at spec)
       (with-updated-at spec))))
 
-(defn- native->entity [native]
-  (-> native
-    unpack-entity
-    after-load))
+(defn- unpack-entity [entity]
+  (when entity
+    (-> entity
+      normalize-field-names
+      unpack-fields
+      after-load)))
 
 (defn- ensure-entity-has-kind [entity]
   (if-not (contains? entity :kind )
     (throw (Exception. (str "Cannot save without specifying a kind: " entity)))
     entity))
 
-(defn- prepare-for-save [entity]
-  (-> entity
-    pack-entity
-    ensure-entity-has-kind
-    with-updated-timestamps
-    before-save))
+(defn- pack-entity [entity]
+  (when entity
+    (-> entity
+      ensure-entity-has-kind
+      with-updated-timestamps
+      before-save
+      pack-fields)))
 
 (defmacro defentity
   "Used to define entities. An entity is simply an encapulation of data that
@@ -251,7 +241,7 @@ You may add your own packer by declare a defmethod for your type."
         kind-fn (symbol kind)]
     `(do
        (dosync (alter *entity-specs* assoc ~(keyword kind) ~field-map))
-       (defn ~kind-fn [& args#] (create-entity-with-defaults (assoc (->options args#) :kind ~kind))))))
+       (defn ~kind-fn [& args#] (construct-entity (assoc (->options args#) :kind ~kind))))))
 
 ; ----- API -----------------------------------------------
 
@@ -273,14 +263,14 @@ You may add your own packer by declare a defmethod for your type."
   [record & args]
   (let [attrs (->options args)
         record (merge record attrs)
-        entity (prepare-for-save record)
+        entity (pack-entity record)
         saved (first (ds-save (ds) [entity]))]
-    (native->entity saved)))
+    (unpack-entity saved)))
 
 (defn save*
   "Saves multiple records at once."
   [& records]
-  (doall (map native->entity (ds-save (ds) (map prepare-for-save records)))))
+  (doall (map unpack-entity (ds-save (ds) (map pack-entity records)))))
 
 (defn- ->filter-operator [operator]
   (case (name operator)
@@ -306,8 +296,8 @@ You may add your own packer by declare a defmethod for your type."
                      spec (field spec)]
                  (filter/make-filter
                    (->filter-operator operator)
-                   (pack-field-name spec field)
-                   (pack-field-val spec value))))
+                   (packed-field-name spec field)
+                   (pack-field-value spec value))))
              filters))))
 
 (defn- parse-sorts [sorts]
@@ -320,13 +310,13 @@ You may add your own packer by declare a defmethod for your type."
              sorts))))
 
 (defn- find-records-by-kind [kind filters sorts limit offset]
-  (map native->entity (ds-find-by-kind (ds) kind (parse-filters kind filters) sorts limit offset)))
+  (map unpack-entity (ds-find-by-kind (ds) kind (parse-filters kind filters) sorts limit offset)))
 
 (defn find-by-key
   "Retrieves the value associated with the given key from the datastore.
 nil if it doesn't exist."
   [key]
-  (native->entity
+  (unpack-entity
     (ds-find-by-key (ds) key)))
 
 (defn reload

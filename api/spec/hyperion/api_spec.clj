@@ -99,30 +99,20 @@
     (context "filters"
       (it-parses-filters call-fn assert-fn))))
 
-(defentity Hollow)
-
-(defentity OneField
-  [field])
-
-(defentity :many-fields [field1]
-  [field2]
-  [field42])
-
-(defn this-fn [here] here)
-
 (defentity :many-defaulted-fields [field1]
   [field2]
-  [field3 :default ".141592" :packer this-fn]
+  [field3 :default ".141592" :packer identity]
+  [field4 :default 12345]
   [field42 :default "value42" :packer #(apply str (reverse %))])
 
 (defentity "PACKABLE"
-  [something-key :db-name :something-id]
+  [something-key :db-name :something-id ]
   [widget :type Integer]
   [bauble :packer #(apply str (reverse %)) :unpacker #(if % (upper-case %) %)]
   [gewgaw :unpacker true])
 
 (defentity Keyed
-  [other-key :type (foreign-key :other)])
+  [other-key :type (foreign-key :other )])
 
 (defentity Thing
   [thing]
@@ -137,7 +127,10 @@
     (str value)))
 
 (defentity Hooks
-  [field])
+  [field]
+  [create-message]
+  [save-message]
+  [load-message])
 
 (defn save-empty []
   (save {:kind "test"}))
@@ -278,18 +271,18 @@
           (check-first-call (ds) "ds-count-by-kind" kind filters))))
 
     (it "reloads"
-      (let [response {:thing 1}]
-        (reset! (.responses (ds)) [response])
-        (should= response (reload {:kind "kind" :key 1}))
-        (check-first-call (ds) "ds-find-by-key" 1)))
+      (reset! (.responses (ds)) [{:thing 1 :kind "none"}])
+      (should= {:thing 1 :kind "none"} (reload {:kind "kind" :key 1}))
+      (check-first-call (ds) "ds-find-by-key" 1))
 
     (it "find by key"
       (find-by-key "one42")
       (check-first-call (ds) "ds-find-by-key" "one42"))
 
     (context "find by kind"
+
       (it "finds with only a kind"
-        (let [response [{:thing 1}]]
+        (let [response [{:thing 1 :kind "none"}]]
           (reset! (.responses (ds)) [response])
           (should= response (find-by-kind "hollow"))
           (check-first-call (ds) "ds-find-by-kind" "hollow" [] [] nil nil)))
@@ -340,6 +333,10 @@
           (check-third-call (ds) "ds-find-by-kind" "kind2" [] nil nil nil))))
 
     (context "entities"
+
+      (defentity OneField
+        [field])
+
       (it "saves the fields defined in the entity"
         (let [unsaved {:kind "one-field" :field "field" :foo "foo"}]
           (save unsaved)
@@ -378,11 +375,21 @@
           (check-first-call (ds) "ds-save" [{:kind "keyed" :other-key nil}]))
 
         (it "applies default values and packs them"
-          (save {:kind :many-defaulted-fields})
+          (save (many-defaulted-fields))
           (check-first-call (ds) "ds-save" [{:kind "many-defaulted-fields"
                                              :field1 nil
                                              :field2 nil
                                              :field3 ".141592"
+                                             :field4 12345
+                                             :field42 "24eulav"}]))
+
+        (it "doesn't apply defaults when nil or false is set on a field"
+          (save (many-defaulted-fields :field3 nil :field4 false))
+          (check-first-call (ds) "ds-save" [{:kind "many-defaulted-fields"
+                                             :field1 nil
+                                             :field2 nil
+                                             :field3 nil
+                                             :field4 false
                                              :field42 "24eulav"}]))
 
         (defentity with-db-name
@@ -396,13 +403,13 @@
                                              :other-id nil}]))
 
         (it "packs db-name as string"
-          (save {:kind :with-db-name :other-key "12345"})
+          (save (with-db-name :other-key "12345"))
           (check-first-call (ds) "ds-save" [{:kind "with-db-name"
                                              :something-id 45
                                              :other-id "12345"}]))
 
         (it "packs db-name with default"
-          (save {:kind :with-db-name})
+          (save (with-db-name))
           (check-first-call (ds) "ds-save" [{:kind "with-db-name"
                                              :something-id 45
                                              :other-id nil}]))
@@ -417,7 +424,7 @@
           (check-first-call (ds) "ds-save" [{:kind "unknown"
                                              "camelCasedFieldName" "value"}]))
 
-               )
+        )
 
       (context "unpacking"
 
@@ -431,7 +438,7 @@
 
         (it "normalizes kind for known kind"
           (reset! (.responses (ds)) [[{:kind :packable}]])
-          (should= {:kind "packable" :bauble nil :widget nil :gewgaw nil :something-key nil} (save-empty)))
+          (should= "packable" (:kind (save-empty))))
 
         (it "normalizes attribues for known kind"
           (reset! (.responses (ds)) [[{:kind "packable" :BAuble "val"}]])
@@ -442,7 +449,7 @@
           (should= {:kind "packable" :bauble nil :widget "42" :gewgaw nil :something-key nil} (save-empty)))
 
         (defentity with-other-db-name
-          [something-key :db-name :something-id])
+          [something-key :db-name :something-id ])
 
         (it "unpacks db-name"
           (reset! (.responses (ds)) [[{:kind "with-other-db-name" :something-id 42}]])
@@ -458,7 +465,7 @@
 
         (it "does not apply default values"
           (reset! (.responses (ds)) [[{:kind "many-defaulted-fields"}]])
-          (should= {:kind "many-defaulted-fields" :field1 nil :field2 nil :field3 nil :field42 nil} (save-empty)))
+          (should= {:kind "many-defaulted-fields" :field1 nil :field2 nil :field3 nil :field4 nil :field42 nil} (save-empty)))
 
         (it "nil"
           (reset! (.responses (ds)) [[nil]])
@@ -484,18 +491,29 @@
               (should= "waza!" (:field unsaved))
               (should= "created with: waza!" (:create-message unsaved))))
 
-          (it "unknown kind"
+          (it "on unknown kind never runs"
             (defmethod after-create :unknown-kind-after-create [record]
               (assoc record :my-cool-field :value ))
             (reset! (.responses (ds)) [[{:kind "unknown-kind-after-create"}]])
-            (should= {:kind "unknown-kind-after-create" :my-cool-field :value} (save-empty))))
+            (should= {:kind "unknown-kind-after-create"} (save-empty)))
+          )
+
+        (context "after load"
+
+          (it "on unknown kind is called"
+            (defmethod after-load :unknown-kind-after-load [record]
+              (assoc record :my-cool-field :value ))
+            (reset! (.responses (ds)) [[{:kind "unknown-kind-after-load"}]])
+            (should= {:kind "unknown-kind-after-load" :my-cool-field :value} (save-empty)))
+          )
 
         (it "has before save hook"
           (save (hooks :field "waza!"))
           (check-first-call (ds) "ds-save" [{:kind "hooks"
                                              :field "waza!"
                                              :create-message "created with: waza!"
-                                             :save-message "saving with: waza!"}]))
+                                             :save-message "saving with: waza!"
+                                             :load-message nil}]))
 
         (it "has after load hook"
           (let [response [{:kind "hooks" :field "waza!"}]
@@ -539,12 +557,18 @@
                                                  :created-at existing-date
                                                  :updated-at mock-date}]))))
         )
+
+      (it "can have extra fields when created"
+        (let [unsaved-thing (thing :extra "goodies")
+              saved-thing (save unsaved-thing)]
+          (should= "goodies" (:extra unsaved-thing))
+          (should= nil (:extra saved-thing))))
       )
     )
 
   (context "factory"
 
-    (it "bombs on unkown implementation"
+    (it "bombs on unknown implementation"
       (should-throw Exception "Can't find datastore implementation: nonexistent"
         (new-datastore :implementation "nonexistent")))
 
@@ -553,8 +577,9 @@
         (new-datastore)))
 
     (it "manufactures a memory database"
-      (let [ds (new-datastore :implementation :memory)]
+      (let [ds (new-datastore :implementation :memory )]
         (should= "hyperion.memory.MemoryDatastore" (.getName (class ds)))))
 
     )
   )
+

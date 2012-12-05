@@ -34,7 +34,7 @@
   (->kind [this] (->kind (:kind this)))
 
   nil
-  (->kind [this] this))
+  (->kind [this] nil))
 
 (defprotocol AsField
   "Protocol to coerce values into a field name"
@@ -45,10 +45,10 @@
   (->field [this] (keyword this))
 
   clojure.lang.Keyword
-  (->field [this] (->field (name this)))
+  (->field [this] this)
 
   clojure.lang.Symbol
-  (->field [this] (->field (name this))))
+  (->field [this] (keyword this)))
 
 (defprotocol Specable
   "Protocol to retrieve an entity-spec as defined in defentity."
@@ -65,4 +65,4 @@
   (spec-for [this] (spec-for (keyword this)))
 
   nil
-  (spec-for [this] this))
+  (spec-for [this] nil))
