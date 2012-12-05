@@ -171,6 +171,63 @@ Example:
 ;=> #<{:kind "citizen" :key "some generated key" :country "USA" :created-at #<java.util.Date just-now> :updated-at #<java.util.Date just-now> ...)
 ```
 
+#### Foreign Keys
+
+In a traditional SQL database, you may have a schema that looks like this:
+
+users:
+  * id
+  * first_name
+  * created_at
+  * updated_at
+
+profiles:
+  * id
+  * user_id
+  * created_at
+  * updated_at
+
+Since Hyperion presents every underlying datastore as a key-value store, configuring Hyperion to use this schema is a little tricky, but certainly possible.
+
+This is what the coresponding `defentity` notation would be:
+
+``` clojure
+(use 'hyperion.api)
+(use 'hyperion.types)
+
+(defentity :users
+  [first-name]
+  [created-at]
+  [updated-at]
+  )
+
+(defentity :profiles
+  [user-key :type (foreign-key :users) :db-name :user-id]
+  [created-at]
+  [updated-at]
+  )
+
+(let [myles (save {:kind :users :first-name "Myles"})
+      myles-profile (save {:kind :profiles :user-key (:key myles)})]
+; myles => {:key "b26316a0248244bab65c699778897ab9", :created-at #inst "2012-12-05T15:41:23.589-00:00", :updated-at #inst "2012-12-05T15:41:23.589-00:00", :first-name "Myles", :kind "users"}
+; myles is stored in the users table as:
+; | id | first_name | created_at | updated_at |
+; | 1  | Myles      | <time>     | <time>     |
+
+; myles-profile => {:key "7202968b5ecf47aab686990750a3238a", :user-key "b26316a0248244bab65c699778897ab9", :created-at #inst "2012-12-05T15:43:16.529-00:00", :updated-at #inst "2012-12-05T15:43:16.529-00:00", :kind "profiles"}
+; myles' profile is stored in the profiles table as:
+; | id | user_id | created_at | updated_at |
+; | 1  | 1       | <time>     | <time>     |
+
+  (= (find-by-key (:user-key myles-profile)) myles) ;=> true
+  )
+
+```
+
+Using the `foreign-key` type, our foreign key references are stored following the conventions of the underlying datastore. In this example, the `user-key` field will be packed as an integer id, as stored in the `user-id` column.
+
+If your schema requires foreign keys, **ALWAYS USE THE FOREIGN KEY TYPE**. If you do not, you will be storing generated keys instead of actual database ids. **DO NOT DO THIS**. If Hyperion changes the way it generates keys, all of your foreign key data will be useless.
+
 ## Logging
 
 Many of the Hyperion components will log informative information (more logging has yet to be added).  The default log level is _Info_.
