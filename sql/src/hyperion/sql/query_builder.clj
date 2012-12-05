@@ -3,7 +3,7 @@
         [hyperion.sql.query :only [add-str]]
         [hyperion.sql.format]
         [hyperion.sql.query :only [make-query add-to-query]])
-  (:require [hyperion.filtering :as filter]
+  (:require [hyperion.filtering :as flt]
             [hyperion.sorting :as sort]))
 
 (defprotocol QueryBuilderStrategy
@@ -27,23 +27,33 @@
 (defn- build-filter [s column operator variable]
   (format "%s %s %s" (column->db column (quote-tick s)) (operator->db operator) variable))
 
-(defmulti filter->sql #(filter/operator %2))
+(defmulti filter->sql #(flt/operator %2))
 
 (defmethod filter->sql :!= [s filter]
-  (if-let [value (filter/value filter)]
-    (list (build-filter s (filter/field filter) :<> "?") (list value))
-    (list (format "%s IS NOT NULL" (column->db (filter/field filter) (quote-tick s))))))
+  (let [value (flt/value filter)
+        field (flt/field filter)
+        column (column->db (flt/field filter) (quote-tick s))]
+    (if-not (nil? value)
+      (list (format "(%s <> ? OR %s IS NULL)" column column) (list value))
+      (list (format "%s IS NOT NULL" column)))))
 
 (defmethod filter->sql :contains? [s filter]
-  (list (build-filter s (filter/field filter) :IN (in-variables (filter/value filter))) (filter/value filter)))
+  (let [value (flt/value filter)
+        variables (in-variables value)]
+    (if (some #(nil? %) value)
+      (let [column (column->db (flt/field filter) (quote-tick s))]
+        (list (format "(%s IN %s OR %s IS NULL)" column variables column) value))
+      (list
+        (build-filter s (flt/field filter) :IN variables)
+        value))))
 
 (defmethod filter->sql := [s filter]
-  (if-let [value (filter/value filter)]
-    (list (build-filter s (filter/field filter) (filter/operator filter) "?") (list (filter/value filter)))
-    (list (format "%s IS NULL" (column->db (filter/field filter) (quote-tick s))))))
+  (if-let [value (flt/value filter)]
+    (list (build-filter s (flt/field filter) (flt/operator filter) "?") (list (flt/value filter)))
+    (list (format "%s IS NULL" (column->db (flt/field filter) (quote-tick s))))))
 
 (defmethod filter->sql :default [s filter]
-  (list (build-filter s (filter/field filter) (filter/operator filter) "?") (list (filter/value filter))))
+  (list (build-filter s (flt/field filter) (flt/operator filter) "?") (list (flt/value filter))))
 
 (defn apply-filters [query s filters]
   (if (empty? filters)

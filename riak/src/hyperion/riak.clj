@@ -149,14 +149,14 @@
     [:<= :int ] (IntRangeQuery. (IntIndex/named (name field)) bucket Integer/MIN_VALUE (int value))
     [:>= :int ] (IntRangeQuery. (IntIndex/named (name field)) bucket (int value) Integer/MAX_VALUE)
     [:= :bin ] (BinValueQuery. (BinIndex/named (name field)) bucket (str value))
-    [:<= :bin ] (BinRangeQuery. (BinIndex/named (name field)) bucket "0" (str value))
+    [:<= :bin ] (BinRangeQuery. (BinIndex/named (name field)) bucket "" (str value))
     [:>= :bin ] (BinRangeQuery. (BinIndex/named (name field)) bucket (str value) "zzzzz")
     (throw (Exception. (str "Don't know how to create query from filter: " filter)))))
 
 (defn filters->queries [bucket filters]
   (if (seq filters)
     (map (partial filter->query bucket) filters)
-    [(BinRangeQuery. KeyIndex/index bucket "0" "zzzzz")]))
+    [(BinRangeQuery. KeyIndex/index bucket "" "zzzzz")]))
 
 (defn- ids-by-kind [client bucket filters]
   (let [queries (filters->queries bucket filters)

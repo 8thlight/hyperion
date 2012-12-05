@@ -64,14 +64,36 @@
 (def sort-directions {:asc Query$SortDirection/ASCENDING
                       :desc Query$SortDirection/DESCENDING})
 
+(defn- -add-filter [query filter]
+  (.addFilter
+    query
+    (name (filter/field filter))
+    ((filter/operator filter) filter-operators)
+    (filter/value filter)))
+
+(defmulti add-filter (fn [query filter] (filter/operator filter)))
+
+(defn- build-not-equals [filter]
+  (filter/make-filter
+    :!=
+    (filter/field filter)
+    (filter/value nil)))
+
+(defmethod add-filter :<= [query filter]
+  (-add-filter query filter)
+  (-add-filter query (build-not-equals filter)))
+
+(defmethod add-filter :< [query filter]
+  (-add-filter query filter)
+  (-add-filter query (build-not-equals filter)))
+
+(defmethod add-filter :default [query filter]
+  (-add-filter query filter))
+
 (defn- build-query [service kind filters sorts]
   (let [query (Query. (name kind))]
     (doseq [filter filters]
-      (.addFilter
-        query
-        (name (filter/field filter))
-        ((filter/operator filter) filter-operators)
-        (filter/value filter)))
+      (add-filter query filter))
     (doseq [sort sorts]
       (.addSort
         query

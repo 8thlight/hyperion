@@ -20,6 +20,12 @@
     (should= "abcde" (decode-key "YWJjZGU"))
     (should= "abcdef" (decode-key "YWJjZGVm")))
 
+  (it "composes and decomposes a large key"
+    (let [kind "testing"
+          id "BLODQF0Z1DMEfQr7S3eBwfsX4ku"
+          key (compose-key kind id)]
+      (should= [kind, id] (decompose-key key))))
+
   (it "composes unique keys"
     (should= 100 (count (into #{} (take 100 (repeatedly #(compose-key "foo"))))))
     (should= 100 (count (into #{} (take 100 (repeatedly #(compose-key "bar"))))))

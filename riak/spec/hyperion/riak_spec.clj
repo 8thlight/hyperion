@@ -135,7 +135,7 @@
         (should= BinRangeQuery (class query))
         (should= "hole-in-the" (.getBucket query))
         (should= "$key" (.getIndex query))
-        (should= "0" (.from query))
+        (should= "" (.from query))
         (should= "zzzzz" (.to query))))
 
     (it "creates a bin :>= query"
@@ -155,7 +155,7 @@
         (should= BinRangeQuery (class query))
         (should= "hole-in-the" (.getBucket query))
         (should= "foo_bin" (.getIndex query))
-        (should= "0" (.from query))
+        (should= "" (.from query))
         (should= "bar" (.to query))))
 
     (it "creates a bin := query"
