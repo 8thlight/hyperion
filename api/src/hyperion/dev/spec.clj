@@ -287,6 +287,9 @@
 (defentity Shirt
   [account-key :type (foreign-key :account ) :db-name :account-id])
 
+(defentity TShirt ; configure to use the shirt table
+  [account-key :type (foreign-key :account ) :db-name "account_id"])
+
 (defentity Account
   [first-name])
 
@@ -302,6 +305,13 @@
         (should= account-key (:account-key shirt))
         (should= account-key (:account-key found-shirt))
         (should= account-key (:key found-account))))
+
+    (it "saves records with foreign keys and db-name as string with underscore"
+      (pending "pending configuring table name so I don't need to create a new table")
+      (let [account (save (account))
+            shirt (save (tshirt :account-key (:key account)))
+            account-key (:key account)]
+        (should= account-key (:account-key shirt))))
 
     (it "handles bad keys in filters"
       (should= [] (find-by-kind :shirt :filters [:= :account-key (compose-key "account" 321)])))
