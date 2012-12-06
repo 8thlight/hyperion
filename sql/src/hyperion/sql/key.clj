@@ -4,7 +4,7 @@
 
 (defn compose-key [^String kind id]
   (when (or (nil? id) (not (integer? id)))
-    (throw (Exception. (str "id must be integer to create key. was: " id))))
+    (throw (Exception. (str "id must be integer to create key. was: " (pr-str id)))))
   (base/compose-key kind (str id)))
 
 (defn decompose-key [^String key]
