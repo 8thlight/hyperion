@@ -317,7 +317,8 @@ You may add your own packer by declare a defmethod for your type."
 nil if it doesn't exist."
   [key]
   (unpack-entity
-    (ds-find-by-key (ds) key)))
+    (when (not (or (nil? key) (str/blank? (str key))))
+      (ds-find-by-key (ds) key))))
 
 (defn reload
   "Returns a freshly loaded record based on the key of the given record."

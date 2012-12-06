@@ -13,6 +13,9 @@
      (should= ~name (first call#))
      (should= (seq ~params) (second call#))))
 
+(defmacro did-not-call [ds name]
+  `(should-not-contain ~name (map first @(.calls ~ds))))
+
 (defmacro check-first-call [ds name & params]
   `(check-call ~ds 0 ~name ~(vec params)))
 
@@ -275,9 +278,20 @@
       (should= {:thing 1 :kind "none"} (reload {:kind "kind" :key 1}))
       (check-first-call (ds) "ds-find-by-key" 1))
 
-    (it "find by key"
-      (find-by-key "one42")
-      (check-first-call (ds) "ds-find-by-key" "one42"))
+    (context "find by key"
+      (it "returns nil for a nil key"
+        (should-be-nil (find-by-key nil))
+        (did-not-call (ds) "ds-find-by-key"))
+
+      (it "returns nil for a empty string key"
+        (should-be-nil (find-by-key ""))
+        (did-not-call (ds) "ds-find-by-key"))
+
+      (it "finds the key in the ds"
+        (find-by-key "one42")
+        (check-first-call (ds) "ds-find-by-key" "one42"))
+
+      )
 
     (context "find by kind"
 
