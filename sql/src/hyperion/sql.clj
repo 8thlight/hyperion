@@ -9,6 +9,7 @@
             [hyperion.sql.format :refer [record->db record<-db]]
             [hyperion.sql.key :refer [decompose-key compose-key]]
             [hyperion.filtering :as filter]
+            [hyperion.log :as log]
             [chee.util :refer [->options]]))
 
 (defprotocol DBStrategy
@@ -34,6 +35,14 @@
                   update-record) db qb kind record)]
     (record<-db result kind)))
 
+(defn- find-by-key [ds key]
+  (try
+    (let [[kind id] (decompose-key key)]
+      (first (ds-find-by-kind ds kind [(filter/make-filter := :id id)] nil 1 nil)))
+    (catch Exception e
+      (log/warn (format "find-by-key error: %s" (.getMessage e)))
+      nil)))
+
 (deftype SQLDatastore [connection db qb]
   Datastore
 
@@ -52,9 +61,7 @@
       (let [results (execute-query (build-select qb "COUNT(*)" kind filters nil nil nil))]
         (get-count db (first results)))))
 
-  (ds-find-by-key [this key]
-    (let [[kind id] (decompose-key key)]
-      (first (ds-find-by-kind this kind [(filter/make-filter := :id id)] nil nil nil))))
+  (ds-find-by-key [this key] (find-by-key this key))
 
   (ds-find-by-kind [this kind filters sorts limit offset]
     (with-connection connection

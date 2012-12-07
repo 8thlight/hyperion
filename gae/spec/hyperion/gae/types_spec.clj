@@ -1,7 +1,6 @@
 (ns hyperion.gae.types-spec
-  (:use
-    [speclj.core]
-    [hyperion.gae.types]))
+  (:require [speclj.core :refer :all]
+            [hyperion.gae.types :refer :all]))
 
 (describe "GAE Types"
 

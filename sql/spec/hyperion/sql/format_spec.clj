@@ -1,7 +1,7 @@
 (ns hyperion.sql.format-spec
-  (:use [speclj.core]
-        [hyperion.sql.format]
-        [hyperion.sql.key :only [compose-key]]))
+  (:require [speclj.core :refer :all]
+            [hyperion.sql.format :refer :all]
+            [hyperion.sql.key :refer [compose-key]]))
 
 (describe "Sql Formating"
   (context "return from db"

@@ -1,9 +1,8 @@
 (ns hyperion.sql.transaction-spec
-  (:use
-    [speclj.core]
-    [hyperion.sql.query :only [make-query]]
-    [hyperion.sql.connection :only [connection]]
-    [hyperion.sql.jdbc]))
+  (:require [speclj.core :refer :all]
+    [hyperion.sql.query :refer [make-query]]
+    [hyperion.sql.connection :refer [connection]]
+    [hyperion.sql.jdbc :refer :all]))
 
 (defn create-table [name]
   (execute-mutation

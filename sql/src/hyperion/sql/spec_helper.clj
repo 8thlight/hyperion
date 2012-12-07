@@ -1,8 +1,7 @@
 (ns hyperion.sql.spec-helper
-  (:use
-    [speclj.core]
-    [hyperion.sql.connection :only [with-connection-url]]
-    [hyperion.sql.jdbc :only [rollback]])
+  (:require [speclj.core :refer :all]
+            [hyperion.sql.connection :refer [with-connection-url]]
+            [hyperion.sql.jdbc :refer [rollback]])
   (:import [speclj SpecFailure]))
 
 (defn str-contains? [s sub]

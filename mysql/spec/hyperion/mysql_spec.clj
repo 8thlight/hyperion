@@ -1,12 +1,15 @@
 (ns hyperion.mysql-spec
-  (:use [speclj.core]
-        [hyperion.sql.spec-helper]
-        [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
-        [hyperion.sql.transaction-spec :only [include-transaction-specs]]
-        [hyperion.api :only [*ds* new-datastore save find-by-key]]
-        [hyperion.sql.connection :only [with-connection-url]]
-        [hyperion.sql.jdbc :only [execute-mutation]]
-        [hyperion.sql.query]))
+  (:require [speclj.core :refer :all]
+            [hyperion.api :refer [*ds* new-datastore save find-by-key]]
+            [hyperion.log :as log]
+            [hyperion.sql.spec-helper :refer :all]
+            [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
+            [hyperion.sql.transaction-spec :refer [include-transaction-specs]]
+            [hyperion.sql.connection :refer [with-connection-url]]
+            [hyperion.sql.jdbc :refer [execute-mutation]]
+            [hyperion.sql.query :refer :all]))
+
+(log/error!)
 
 (defn do-query [query]
   (execute-mutation

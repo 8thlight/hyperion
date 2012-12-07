@@ -1,7 +1,7 @@
 (ns hyperion.sql.format
-  (:use [chee.string :only [snake-case spear-case gsub]]
-        [hyperion.sql.key :only [compose-key decompose-key]])
-  (:require [clojure.string :as str]))
+  (:require [chee.string :refer [snake-case spear-case gsub]]
+            [hyperion.sql.key :refer [compose-key decompose-key]]
+            [clojure.string :as str]))
 
 (defn- add-quotes [s quote]
   (str quote (.replaceAll s quote (str quote quote)) quote))

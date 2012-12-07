@@ -1,10 +1,10 @@
 (ns hyperion.sql.query-builder
-  (:use [clojure.string :only [join]]
-        [hyperion.sql.query :only [add-str]]
-        [hyperion.sql.format]
-        [hyperion.sql.query :only [make-query add-to-query]])
-  (:require [hyperion.filtering :as flt]
-            [hyperion.sorting :as sort]))
+  (:require [clojure.string :refer [join]]
+            [hyperion.sql.query :refer [add-str]]
+            [hyperion.sql.format :refer :all]
+            [hyperion.filtering :as flt]
+            [hyperion.sorting :as sort]
+            [hyperion.sql.query :refer [make-query add-to-query]]))
 
 (defprotocol QueryBuilderStrategy
   (quote-tick [this])

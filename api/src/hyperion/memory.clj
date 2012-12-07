@@ -1,10 +1,9 @@
 (ns hyperion.memory
-  (:require
-    [hyperion.api :refer [new?]]
-    [hyperion.abstr :refer [Datastore ]]
-    [hyperion.key :refer [generate-id]]
-    [hyperion.sorting :as sort]
-    [hyperion.filtering :as filter]))
+  (:require [hyperion.api :refer [new?]]
+            [hyperion.abstr :refer [Datastore ]]
+            [hyperion.key :refer [generate-id]]
+            [hyperion.sorting :as sort]
+            [hyperion.filtering :as filter]))
 
 (defn- != [a b]
   (not (= a b)))

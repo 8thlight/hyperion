@@ -1,13 +1,16 @@
 (ns hyperion.gae-spec
-  (:use [speclj.core]
-        [hyperion.api]
-        [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
-        [hyperion.gae.spec-helper :only (with-local-datastore)]
-        [hyperion.gae :only (new-gae-datastore) :as gae]
-        [clojure.string :only (upper-case)])
+  (:require [speclj.core :refer :all]
+            [hyperion.api :refer :all]
+            [hyperion.log :as log]
+            [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
+            [hyperion.gae.spec-helper :refer (with-local-datastore)]
+            [hyperion.gae :refer (new-gae-datastore) :as gae]
+            [clojure.string :refer (upper-case)])
   (:import [com.google.appengine.api.datastore Key ShortBlob Blob Category Email GeoPt Link IMHandle PostalAddress Rating PhoneNumber Text]
            [com.google.appengine.api.users User]
            [com.google.appengine.api.blobstore BlobKey]))
+
+(log/error!)
 
 (defentity Hollow)
 

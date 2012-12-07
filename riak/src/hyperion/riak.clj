@@ -117,8 +117,12 @@
 
 (defn- find-by-key
   ([client key]
-    (let [[kind id] (decompose-key key)]
-      (find-by-key client (bucket-name kind) kind id)))
+    (try
+      (let [[kind id] (decompose-key key)]
+        (find-by-key client (bucket-name kind) kind id))
+      (catch Exception e
+        (log/warn (format "find-by-key error: %s" (.getMessage e)))
+        nil)))
   ([client bucket kind id]
     (let [response (.fetch client bucket id)]
       (when (.hasValue response)

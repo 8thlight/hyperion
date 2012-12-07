@@ -2,6 +2,7 @@
   (:require [speclj.core :refer :all]
             [hyperion.abstr :refer :all]
             [hyperion.api :refer :all]
+            [hyperion.log :as log]
             [hyperion.sql :refer :all]
             [hyperion.sql.key :refer [compose-key]]
             [hyperion.sql.query-builder :refer [new-query-builder]]
@@ -11,6 +12,8 @@
             [hyperion.sql.fake-driver])
   (:import [hyperion.sql.fake_query_builder FakeQueryBuilderStrategy]
            [hyperion.sql.fake_db_strategy FakeDBStrategy]))
+
+(hyperion.log/error!)
 
 (describe "Hyperion SQL"
 

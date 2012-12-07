@@ -1,6 +1,5 @@
 (ns hyperion.fake
-  (:require
-    [hyperion.abstr :refer [Datastore]]))
+  (:require [hyperion.abstr :refer [Datastore]]))
 
 (defn- stub-call [ds name & params]
   (swap! (.calls ds) conj [name params])

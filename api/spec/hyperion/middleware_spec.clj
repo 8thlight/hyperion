@@ -1,9 +1,8 @@
 (ns hyperion.middleware-spec
-  (:use
-    [speclj.core]
-    [hyperion.api :only [*ds*]]
-    [hyperion.fake :only [new-fake-datastore]]
-    [hyperion.middleware :only [with-datastore]]))
+  (:require [speclj.core :refer :all]
+            [hyperion.api :refer [*ds*]]
+            [hyperion.fake :refer [new-fake-datastore]]
+            [hyperion.middleware :refer [with-datastore]]))
 
 (describe "Hyperion Ring Middleware"
   (it "binds a ds"

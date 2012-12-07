@@ -1,12 +1,14 @@
 (ns hyperion.riak-spec
   (:require [speclj.core :refer :all ]
             [hyperion.api :refer :all ]
-            [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.log :as log]
+            [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.riak.spec-helper :refer [with-testable-riak-datastore]]
             [hyperion.riak :refer :all ]
             [clojure.data.codec.base64 :refer [encode decode]])
   (:import [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery IntValueQuery IntRangeQuery]))
+
+(hyperion.log/error!)
 
 ; Required Configuration:
 ; Add the following to the riak_kv section of Riak's config.

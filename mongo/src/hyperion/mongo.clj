@@ -1,6 +1,7 @@
 (ns hyperion.mongo
   (:require [hyperion.abstr :refer [Datastore]]
             [hyperion.key :refer (compose-key decompose-key)]
+            [hyperion.log :as log]
             [chee.util :refer [->options]]))
 
 (defn- ->address [spec]
@@ -114,10 +115,14 @@
           insert-groups)))))
 
 (defn- find-by-key [db key]
+  (try
   (let [[kind _] (decompose-key key)
         collection (.getCollection db kind)]
     (when-let [db-object (.findOne collection (key-query key))]
-      (->record kind db-object))))
+      (->record kind db-object)))
+    (catch Exception e
+      (log/warn (format "find-by-key error: %s" (.getMessage e)))
+      nil)))
 
 (defn- delete-by-key [db key]
   (let [[kind _] (decompose-key key)

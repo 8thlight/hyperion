@@ -1,9 +1,12 @@
 (ns hyperion.mongo-spec
   (:require [speclj.core :refer :all ]
             [hyperion.api :refer :all ]
+            [hyperion.log :as log]
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.mongo.spec-helper :refer [with-testable-mongo-datastore]]
             [hyperion.mongo :refer :all ]))
+
+(hyperion.log/error!)
 
 (describe "Mongo Datastore"
 

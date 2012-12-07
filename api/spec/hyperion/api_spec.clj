@@ -1,12 +1,15 @@
 (ns hyperion.api-spec
-  (:use [speclj.core]
-        [hyperion.api]
-        [hyperion.filtering :only [make-filter]]
-        [hyperion.sorting :only [make-sort]]
-        [hyperion.fake]
-        [hyperion.types :only [foreign-key]]
-        [clojure.string :only (upper-case)]
-        [chee.datetime :only [now before? seconds-ago between? seconds-from-now]]))
+  (:require [speclj.core :refer :all]
+            [hyperion.api :refer :all]
+            [hyperion.log :as log]
+            [hyperion.filtering :refer [make-filter]]
+            [hyperion.sorting :refer [make-sort]]
+            [hyperion.fake :refer :all]
+            [hyperion.types :refer [foreign-key]]
+            [clojure.string :refer (upper-case)]
+            [chee.datetime :refer [now before? seconds-ago between? seconds-from-now]]))
+
+(log/error!)
 
 (defmacro check-call [ds index name params]
   `(let [call# (get @(.calls ~ds) ~index)]

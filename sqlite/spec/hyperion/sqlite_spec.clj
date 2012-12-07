@@ -1,12 +1,15 @@
 (ns hyperion.sqlite-spec
-  (:use [speclj.core]
-        [hyperion.dev.spec :only [it-behaves-like-a-datastore]]
-        [hyperion.api :only [*ds* new-datastore]]
-        [hyperion.sql.connection :only [with-connection-url]]
-        [hyperion.sql.jdbc :only [execute-mutation]]
-        [hyperion.sql.query]
-        [hyperion.sql.transaction-spec :only [include-transaction-specs]]
-        [hyperion.sqlite :only [new-sqlite-datastore]]))
+  (:require [speclj.core :refer :all]
+            [hyperion.api :refer [*ds* new-datastore]]
+            [hyperion.log :as log]
+            [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
+            [hyperion.sql.connection :refer [with-connection-url]]
+            [hyperion.sql.jdbc :refer [execute-mutation]]
+            [hyperion.sql.query :refer :all]
+            [hyperion.sql.transaction-spec :refer [include-transaction-specs]]
+            [hyperion.sqlite :refer [new-sqlite-datastore]]))
+
+(log/error!)
 
 (defn do-query [query]
   (execute-mutation

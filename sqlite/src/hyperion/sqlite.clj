@@ -1,11 +1,10 @@
 (ns hyperion.sqlite
-  (:require
-    [hyperion.sql.query :refer [add-to-query]]
-    [hyperion.sql.query-builder :refer :all]
-    [hyperion.sql.format :refer [column->db]]
-    [hyperion.sql :refer :all]
-    [hyperion.sorting :as sort]
-    [chee.util :refer [->options]]))
+  (:require [hyperion.sql.query :refer [add-to-query]]
+            [hyperion.sql.query-builder :refer :all]
+            [hyperion.sql.format :refer [column->db]]
+            [hyperion.sql :refer :all]
+            [hyperion.sorting :as sort]
+            [chee.util :refer [->options]]))
 
 (clojure.lang.RT/loadClassForName "org.sqlite.JDBC")
 

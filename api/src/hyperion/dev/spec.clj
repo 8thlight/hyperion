@@ -258,7 +258,15 @@
               found (find-by-key (:key one))]
           (should= "my stuff" (:data found))
           (should= "testing" (:kind found))
-          (should= (:key one) (:key found)))))
+          (should= (:key one) (:key found))))
+
+      (it "returns nil for an invalid non existant key"
+        (should-be-nil (find-by-key "blah")))
+
+      (it "returns nil for an valid non existant key"
+        (should-be-nil (find-by-key (compose-key "unknown-kind" 1))))
+
+             )
 
     (context "with multiple kinds"
       (before
