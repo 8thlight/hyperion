@@ -6,7 +6,7 @@
             [hyperion.gae.spec-helper :refer (with-local-datastore)]
             [hyperion.gae :refer (new-gae-datastore) :as gae]
             [clojure.string :refer (upper-case)])
-  (:import [com.google.appengine.api.datastore Key ShortBlob Blob Category Email GeoPt Link IMHandle PostalAddress Rating PhoneNumber Text]
+  (:import [com.google.appengine.api.datastore Key ShortBlob Blob Category Email GeoPt Link IMHandle PostalAddress Rating PhoneNumber Text KeyFactory]
            [com.google.appengine.api.users User]
            [com.google.appengine.api.blobstore BlobKey]))
 
@@ -70,18 +70,8 @@
 
     (context "Keys"
 
-      (it "can create a key"
-        (should= "one-field" (.getKind (gae/create-key "one-field" 42)))
-        (should= 42 (.getId (gae/create-key "one-field" 42)))
-        (should= "foo" (.getName (gae/create-key "one-field" "foo"))))
-
-      (it "knows a key when it sees one"
-        (should= false (gae/key? "foo"))
-        (should= false (gae/key? 42))
-        (should= true (gae/key? (gae/create-key "one-field" 42))))
-
       (it "converts a key to a string and back"
-        (let [key (gae/create-key "one-field" 42)
+        (let [key (KeyFactory/createKey "-kind" (long 1))
               str-value (gae/unpack-key key)]
           (should= String (class str-value))
           (should= key (gae/pack-key str-value))))

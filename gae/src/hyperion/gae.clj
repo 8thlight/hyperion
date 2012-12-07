@@ -11,11 +11,6 @@
             Query$SortDirection FetchOptions$Builder EntityNotFoundException KeyFactory Key]
             [java.lang IllegalArgumentException]))
 
-(defn create-key [kind id]
-  (if (number? id)
-    (KeyFactory/createKey kind (long id))
-    (KeyFactory/createKey kind (str id))))
-
 (defn key? [key]
   (isa? (class key) Key))
 

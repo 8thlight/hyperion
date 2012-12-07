@@ -299,27 +299,42 @@ You may add your own packer by declare a defmethod for your type."
 (defn- parse-filters [kind filters]
   (let [spec (spec-for kind)
         filters (->seq filters)]
-    (doall (map
-             (fn [[operator field value]]
-               (let [field (->field field)
-                     spec (field spec)]
-                 (filter/make-filter
-                   (->filter-operator operator)
-                   (packed-field-name spec field)
-                   (pack-field-value spec value))))
-             filters))))
+    (doall
+      (map
+        (fn [[operator field value]]
+          (let [field (->field field)
+                spec (field spec)]
+            (filter/make-filter
+              (->filter-operator operator)
+              (packed-field-name spec field)
+              (pack-field-value spec value))))
+        filters))))
 
-(defn- parse-sorts [sorts]
-  (let [sorts (->seq sorts)]
-    (doall (map
-             (fn [[field direction]]
-               (sort/make-sort
-                 (->field field)
-                 (->sort-direction direction)))
-             sorts))))
+(defn- parse-sorts
+  ([kind sorts]
+    (let [spec (spec-for kind)
+          sorts (->seq sorts)]
+      (doall
+        (map
+          (fn [[field direction]]
+            (let [field (->field field)
+                  spec (field spec)]
+              (sort/make-sort
+                (packed-field-name spec field)
+                (->sort-direction direction))))
+          sorts))))
+  ([sorts]
+    (let [sorts (->seq sorts)]
+      (doall
+        (map
+          (fn [[field direction]]
+              (sort/make-sort
+                (->field field)
+                (->sort-direction direction)))
+          sorts)))))
 
 (defn- find-records-by-kind [kind filters sorts limit offset]
-  (map unpack-entity (ds-find-by-kind (ds) kind (parse-filters kind filters) sorts limit offset)))
+  (map unpack-entity (ds-find-by-kind (ds) kind (parse-filters kind filters) (parse-sorts kind sorts) limit offset)))
 
 (defn- key-present? [key]
   (not (or (nil? key) (str/blank? (str key)))))
@@ -372,7 +387,7 @@ nil if it doesn't exist."
           kind (name kind)]
       (find-records-by-kind kind
         (:filters options)
-        (parse-sorts (:sorts options))
+        (:sorts options)
         (:limit options)
         (:offset options)))
     (catch IllegalArgumentException e

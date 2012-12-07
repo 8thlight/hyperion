@@ -356,8 +356,8 @@
           (reset! (.responses (ds)) responses)
           (find-all-kinds)
           (check-first-call (ds) "ds-all-kinds")
-          (check-second-call (ds) "ds-find-by-kind" "kind1" [] nil nil nil)
-          (check-third-call (ds) "ds-find-by-kind" "kind2" [] nil nil nil))))
+          (check-second-call (ds) "ds-find-by-kind" "kind1" [] [] nil nil)
+          (check-third-call (ds) "ds-find-by-kind" "kind2" [] [] nil nil))))
 
     (context "entities"
 
@@ -428,6 +428,14 @@
           (check-first-call (ds) "ds-save" [{:kind "with-db-name"
                                              :something-id "12345"
                                              :other-id nil}]))
+
+        (it "packs db-name to field names in filters"
+          (find-by-kind "with-db-name" :filters [:= :something-key "12345"])
+          (check-first-call (ds) "ds-find-by-kind" "with-db-name" [[:= :something-id "12345"]] [] nil nil))
+
+        (it "packs db-name to field names in sorts"
+          (find-by-kind "with-db-name" :sorts [:something-key :asc])
+          (check-first-call (ds) "ds-find-by-kind" "with-db-name" [] [[:something-id :asc]] nil nil))
 
         (it "packs db-name as string"
           (save (with-db-name :other-key "12345"))
