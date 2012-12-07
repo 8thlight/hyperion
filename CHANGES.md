@@ -3,6 +3,7 @@
 * find-by-key returns nil for invalid/missing/nil keys
 * delete-by-key returns nil for invalid/missing/nil keys
 * fixes bad keys in filters
+* fixes packing the field name on sorting
 
 # 3.6.0
 
