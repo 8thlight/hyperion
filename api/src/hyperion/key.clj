@@ -1,6 +1,7 @@
 (ns hyperion.key
   (:require [clojure.data.codec.base64 :refer [encode decode]]
-            [hyperion.abstr :refer :all]))
+            [hyperion.abstr :refer :all])
+  (:import  [java.lang IllegalArgumentException]))
 
 (defn encode-key [value]
   (.replace
@@ -29,6 +30,6 @@
   (let [decoded (decode-key key)
         colon-index (.indexOf decoded (int \:))]
     (if (< colon-index 1)
-      (throw (Exception. (str "Invalid key form: " decoded)))
+      (throw (IllegalArgumentException. (str "Invalid key form: " decoded)))
       (list (.substring decoded 0 colon-index) (.substring decoded (inc colon-index))))))
 

@@ -9,7 +9,7 @@
             [hyperion.sql.connection :refer [with-connection-url]]
             [hyperion.sql.query :refer :all]))
 
-(hyperion.log/error!)
+(log/error!)
 
 (defn do-query [query]
   (execute-mutation

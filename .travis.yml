@@ -1,6 +1,7 @@
 before_script:
   - mysql -e 'create database hyperion;'
   - psql -c 'create database hyperion;' -U postgres
+  - rake install
 
 script: rake spec
 

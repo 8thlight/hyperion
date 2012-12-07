@@ -8,7 +8,8 @@
             [hyperion.gae.types]
             [hyperion.sorting :as sort])
   (:import [com.google.appengine.api.datastore Entity Entities Query DatastoreService DatastoreServiceFactory Query$FilterOperator
-            Query$SortDirection FetchOptions$Builder EntityNotFoundException KeyFactory Key]))
+            Query$SortDirection FetchOptions$Builder EntityNotFoundException KeyFactory Key]
+            [java.lang IllegalArgumentException]))
 
 (defn create-key [kind id]
   (if (number? id)
@@ -18,41 +19,40 @@
 (defn key? [key]
   (isa? (class key) Key))
 
-(defn key->string [^Key key]
+(defn unpack-key [^Key key]
   (try
     (KeyFactory/keyToString key)
     (catch Exception e nil)))
 
-(defn string->key [value]
+(defn pack-key [value]
   (try
     (KeyFactory/stringToKey value)
-    (catch Exception e nil)))
+    (catch Exception e
+      (throw (IllegalArgumentException. (.getMessage e))))))
 
-(defn ->key [value]
-  (cond
-    (key? value) value
-    (string? value) (string->key value)
-    (nil? value) nil
-    :else (string->key (:key value))))
+(defn- build-native [record]
+  (try
+    (Entity. (pack-key (:key record)))
+    (catch IllegalArgumentException e
+      (Entity. (:kind record)))))
 
-(defn ->native [entity]
-  (let [key (string->key (:key entity))
-        native (if key (Entity. key) (Entity. (:kind entity)))]
+(defn pack-entity [entity]
+  (let [native (build-native entity)]
     (doseq [[field value] (dissoc entity :kind :key )]
       (.setProperty native (name field) value))
     native))
 
-(defn <-native [native]
+(defn unpack-entity [native]
   (reduce
     (fn [record entry]
       (assoc record (key entry) (val entry)))
-    {:kind (.getKind native) :key (key->string (.getKey native))}
+    {:kind (.getKind native) :key (unpack-key (.getKey native))}
     (.getProperties native)))
 
 (defn save-record [service record]
-  (let [native (->native record)]
+  (let [native (pack-entity record)]
     (.put service native)
-    (<-native native)))
+    (unpack-entity native)))
 
 (def filter-operators {:= Query$FilterOperator/EQUAL
                        :< Query$FilterOperator/LESS_THAN
@@ -111,10 +111,7 @@
 (defn- find-by-kind [service kind filters sorts limit offset]
   (let [query (build-query service kind filters sorts)
         fetching (build-fetch-options limit offset)]
-    (map <-native (iterator-seq (.asQueryResultIterator query fetching)))))
-
-(defn- delete-records [service keys]
-  (.delete service (map ->key keys)))
+    (map unpack-entity (iterator-seq (.asQueryResultIterator query fetching)))))
 
 (defn- delete-by-kind [service kind filters]
   (let [query (build-query service kind filters nil)
@@ -126,11 +123,12 @@
   (.countEntities (build-query service kind filters nil)))
 
 (defn- find-by-key [service value]
-  (when-let [key (->key value)]
-    (try
-      (<-native (.get service key))
-      (catch EntityNotFoundException e
-        nil))))
+  (try
+    (when-let [key (pack-key value)]
+      (unpack-entity (.get service key)))
+    (catch EntityNotFoundException e
+      (log/warn (format "find-by-key error: %s" (.getMessage e)))
+      nil)))
 
 (defn- all-kinds [service]
   (let [query (.prepare service (Query. Entities/KIND_METADATA_KIND))
@@ -143,19 +141,15 @@
   (ds-delete-by-kind [this kind filters]
     (delete-by-kind service kind filters))
   (ds-delete-by-key [this key]
-    (if-let [gae-key (->key key)]
-      (.delete service [gae-key])
-      (do
-        (log/warn (format "delete-by-key error: invalid key"))
-        nil)))
+    (.delete service [(pack-key key)]))
   (ds-count-by-kind [this kind filters] (count-by-kind service kind filters))
   (ds-find-by-key [this key]
     (find-by-key service key))
   (ds-find-by-kind [this kind filters sorts limit offset]
     (find-by-kind service kind filters sorts limit offset))
   (ds-all-kinds [this] (all-kinds service))
-  (ds-pack-key [this value] (string->key value))
-  (ds-unpack-key [this kind value] (key->string value)))
+  (ds-pack-key [this value] (pack-key value))
+  (ds-unpack-key [this kind value] (unpack-key value)))
 
 (defn new-gae-datastore [& args]
   (cond

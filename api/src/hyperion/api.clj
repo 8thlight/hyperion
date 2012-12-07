@@ -5,7 +5,8 @@
             [hyperion.log :as log]
             [hyperion.sorting :as sort]
             [chee.datetime :refer [now]]
-            [chee.util :refer [->options]]))
+            [chee.util :refer [->options]])
+  (:import  [java.lang IllegalArgumentException]))
 
 (declare ^{:dynamic true
            :tag hyperion.abstr.Datastore
@@ -120,7 +121,15 @@ You may add your own packer by declare a defmethod for your type."
 
 (defn- do-packing [packer value]
   (if (or (sequential? value) (isa? (class value) java.util.List))
-    (map #(packer %) value)
+    (reduce
+      (fn [acc item]
+        (try
+          (conj acc (packer item))
+          (catch IllegalArgumentException e
+            (log/warn (format "error packing %s: %s" (pr-str item) (.getMessage e)))
+            acc)))
+      []
+      value)
     (packer value)))
 
 (defn- pack-field-value [spec value]
@@ -319,9 +328,13 @@ You may add your own packer by declare a defmethod for your type."
   "Retrieves the value associated with the given key from the datastore.
 nil if it doesn't exist."
   [key]
-  (unpack-entity
-    (when (key-present? key)
-      (ds-find-by-key (ds) key))))
+  (try
+    (unpack-entity
+      (when (key-present? key)
+        (ds-find-by-key (ds) key)))
+    (catch IllegalArgumentException e
+      (log/warn (format "find-by-key error: %s" (.getMessage e)))
+      nil)))
 
 (defn reload
   "Returns a freshly loaded record based on the key of the given record."
@@ -354,17 +367,21 @@ nil if it doesn't exist."
     :desc \"desc\" :descending \"descending\"
   "
   [kind & args]
-  (let [options (->options args)
-        kind (name kind)]
-    (find-records-by-kind kind
-      (:filters options)
-      (parse-sorts (:sorts options))
-      (:limit options)
-      (:offset options))))
+  (try
+    (let [options (->options args)
+          kind (name kind)]
+      (find-records-by-kind kind
+        (:filters options)
+        (parse-sorts (:sorts options))
+        (:limit options)
+        (:offset options)))
+    (catch IllegalArgumentException e
+      (log/warn (format "find-by-kind error: %s" (.getMessage e)))
+      [])))
 
 (defn find-all-kinds
   "Same as find-by-kind except that it'll returns results of any kind
-WARNING: This methods is almost certainly horribly inefficient.  Use with caution."
+WARNING: This method is almost certainly horribly inefficient.  Use with caution."
   [& args]
   (let [options (->options args)
         kinds (ds-all-kinds (ds))
@@ -383,9 +400,13 @@ WARNING: This methods is almost certainly horribly inefficient.  Use with cautio
 (defn count-by-kind
   "Counts records of the specified kind that match the filters provided."
   [kind & args]
-  (let [options (->options args)
-        kind (name kind)]
-    (count-records-by-kind kind (:filters options))))
+  (try
+    (let [options (->options args)
+          kind (name kind)]
+      (count-records-by-kind kind (:filters options)))
+    (catch IllegalArgumentException e
+      (log/warn (format "count-by-kind error: %s" (.getMessage e)))
+      0)))
 
 (defn- count-records-by-all-kinds [filters]
   (let [kinds (ds-all-kinds (ds))
@@ -402,17 +423,25 @@ WARNING: This methods is almost certainly horribly inefficient.  Use with cautio
   "Removes the record stored with the given key.
 Returns nil no matter what."
   [key]
-  (when (key-present? key)
-    (ds-delete-by-key (ds) key))
-  nil)
+  (try
+    (when (key-present? key)
+      (ds-delete-by-key (ds) key)
+      nil)
+    (catch IllegalArgumentException e
+      (log/warn (format "find-by-key error: %s" (.getMessage e)))
+      nil)))
 
 (defn delete-by-kind
   "Deletes all records of the specified kind that match the filters provided."
   [kind & args]
-  (let [options (->options args)
-        kind (->kind kind)]
-    (ds-delete-by-kind (ds) kind (parse-filters kind (:filters options)))
-    nil))
+  (try
+    (let [options (->options args)
+          kind (->kind kind)]
+      (ds-delete-by-kind (ds) kind (parse-filters kind (:filters options)))
+      nil)
+    (catch IllegalArgumentException e
+      (log/warn (format "delete-by-kind error: %s" (.getMessage e)))
+      nil)))
 
 ; ----- Factory -------------------------------------------
 
