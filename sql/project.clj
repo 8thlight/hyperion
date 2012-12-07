@@ -1,7 +1,7 @@
-(defproject hyperion/hyperion-sql "3.6.1"
+(defproject hyperion/hyperion-sql "3.7.0"
   :description "SQL utilities for hyperion"
   :dependencies [[org.clojure/clojure "1.4.0"]
-                 [hyperion/hyperion-api "3.6.1"]
+                 [hyperion/hyperion-api "3.7.0"]
                  [org.clojure/data.codec "0.1.0"]]
 
   ; leiningen 1
