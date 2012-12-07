@@ -2,6 +2,7 @@
 
 * find-by-key returns nil for invalid/missing/nil keys
 * delete-by-key returns nil for invalid/missing/nil keys
+* fixes bad keys in filters
 
 # 3.6.0
 
