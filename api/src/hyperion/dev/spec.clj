@@ -94,11 +94,20 @@
 
 (defn it-deletes []
   (list
-    (it "deletes by key"
-      (let [kind :testing one (save {:kind kind :name "jim"})
-            key (:key one)]
-        (delete-by-key key)
-        (should= nil (find-by-key key))))
+    (context "delete by key"
+      (it "deletes by key"
+        (let [kind :testing one (save {:kind kind :name "jim"})
+              key (:key one)]
+          (delete-by-key key)
+          (should= nil (find-by-key key))))
+
+      (it "returns nil for an invalid non existant key"
+        (should-be-nil (delete-by-key "blah")))
+
+      (it "returns nil for an valid non existant key"
+        (should-be-nil (delete-by-key (compose-key "unknown-kind" 1))))
+
+      )
 
     (context "deletes by kind"
       (before

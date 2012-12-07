@@ -132,8 +132,12 @@
 
 (defn- delete-by-key
   ([client key]
+    (try
     (let [[kind id] (decompose-key key)]
-      (delete-by-key client (bucket-name kind) id)))
+      (delete-by-key client (bucket-name kind) id))
+      (catch Exception e
+        (log/warn (format "delete-by-key error: %s" (.getMessage e)))
+        nil)))
   ([client bucket id] (.delete client bucket id)))
 
 (defn optimize-filters [filters]

@@ -1,6 +1,7 @@
 # 3.7.0
 
 * find-by-key returns nil for invalid/missing/nil keys
+* delete-by-key returns nil for invalid/missing/nil keys
 
 # 3.6.0
 

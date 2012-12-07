@@ -2,6 +2,7 @@
   (:require [chee.string :refer [gsub spear-case]]
             [chee.util :refer [->options]]
             [clojure.string :as str]
+            [hyperion.log :as log]
             [hyperion.abstr :refer [Datastore]]
             [hyperion.filtering :as filter]
             [hyperion.gae.types]
@@ -142,7 +143,11 @@
   (ds-delete-by-kind [this kind filters]
     (delete-by-kind service kind filters))
   (ds-delete-by-key [this key]
-    (.delete service [(->key key)]))
+    (if-let [gae-key (->key key)]
+      (.delete service [gae-key])
+      (do
+        (log/warn (format "delete-by-key error: invalid key"))
+        nil)))
   (ds-count-by-kind [this kind filters] (count-by-kind service kind filters))
   (ds-find-by-key [this key]
     (find-by-key service key))

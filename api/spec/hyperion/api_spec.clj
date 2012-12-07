@@ -260,9 +260,20 @@
         (save {:kind :one})
         (check-first-call (ds) "ds-save" [{:kind "one"}])))
 
-    (it "delete by key"
-      (delete-by-key "one42")
-      (check-first-call (ds) "ds-delete-by-key" "one42"))
+    (context "delete by key"
+      (it "delete by key"
+        (delete-by-key "one42")
+        (check-first-call (ds) "ds-delete-by-key" "one42"))
+
+      (it "returns nil for a empty string key"
+        (should-be-nil (delete-by-key ""))
+        (did-not-call (ds) "ds-delete-by-key"))
+
+      (it "finds the key in the ds"
+        (delete-by-key "one42")
+        (check-first-call (ds) "ds-delete-by-key" "one42"))
+
+      )
 
     (context "delete by kind"
       (it-calls-by-kind
@@ -297,7 +308,6 @@
       )
 
     (context "find by kind"
-
       (it "finds with only a kind"
         (let [response [{:thing 1 :kind "none"}]]
           (reset! (.responses (ds)) [response])

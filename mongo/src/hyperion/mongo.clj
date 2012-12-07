@@ -125,9 +125,13 @@
       nil)))
 
 (defn- delete-by-key [db key]
-  (let [[kind _] (decompose-key key)
-        collection (.getCollection db kind)]
-    (.remove collection (key-query key))))
+  (try
+    (let [[kind _] (decompose-key key)
+          collection (.getCollection db kind)]
+      (.remove collection (key-query key)))
+    (catch Exception e
+      (log/warn (format "delete-by-key error: %s" (.getMessage e)))
+      nil)))
 
 (defn- ->query [[operator field value]]
   (case operator

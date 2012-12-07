@@ -312,12 +312,15 @@ You may add your own packer by declare a defmethod for your type."
 (defn- find-records-by-kind [kind filters sorts limit offset]
   (map unpack-entity (ds-find-by-kind (ds) kind (parse-filters kind filters) sorts limit offset)))
 
+(defn- key-present? [key]
+  (not (or (nil? key) (str/blank? (str key)))))
+
 (defn find-by-key
   "Retrieves the value associated with the given key from the datastore.
 nil if it doesn't exist."
   [key]
   (unpack-entity
-    (when (not (or (nil? key) (str/blank? (str key))))
+    (when (key-present? key)
       (ds-find-by-key (ds) key))))
 
 (defn reload
@@ -399,7 +402,8 @@ WARNING: This methods is almost certainly horribly inefficient.  Use with cautio
   "Removes the record stored with the given key.
 Returns nil no matter what."
   [key]
-  (ds-delete-by-key (ds) key)
+  (when (key-present? key)
+    (ds-delete-by-key (ds) key))
   nil)
 
 (defn delete-by-kind

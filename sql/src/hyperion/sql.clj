@@ -50,8 +50,12 @@
     (with-connection connection (doall (map #(save-record db qb %) records))))
 
   (ds-delete-by-key [this key]
-    (let [[kind id] (decompose-key key)]
-      (ds-delete-by-kind this kind [(filter/make-filter := :id id)])))
+    (try
+      (let [[kind id] (decompose-key key)]
+        (ds-delete-by-kind this kind [(filter/make-filter := :id id)]))
+      (catch Exception e
+        (log/warn (format "delete-by-key error: %s" (.getMessage e)))
+        nil)))
 
   (ds-delete-by-kind [this kind filters]
     (with-connection connection (execute-mutation (build-delete qb kind filters))))
