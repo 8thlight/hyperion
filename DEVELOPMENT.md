@@ -8,7 +8,7 @@
 
 ## Structure
 
-Hyperion is split into serveral submodule.  The root, and client facing, module is 'api'.  All other modules depend on this module.
+Hyperion is split into serveral submodules.  The root, and client facing, module is 'api'.  All other modules depend on this module.
 
 ## Setup
 
