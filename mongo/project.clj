@@ -4,6 +4,10 @@
                  [hyperion/hyperion-api "3.7.0"]
                  [org.mongodb/mongo-java-driver	"2.8.0"]]
 
+  ; leiningen 1
+  :dev-dependencies [[speclj "2.4.0"]]
+  :test-path "spec"
+
   ; leiningen 2
   :profiles {:dev {:dependencies [[speclj "2.4.0"]]}}
   :test-paths ["spec/"]

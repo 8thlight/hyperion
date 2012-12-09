@@ -5,6 +5,10 @@
                  [com.basho.riak/riak-client "1.0.5"]
                  [cheshire "4.0.1"]]
 
+  ; leiningen 1
+  :dev-dependencies [[speclj "2.4.0"]]
+  :test-path "spec"
+
   ; leiningen 2
   :profiles {:dev {:dependencies [[speclj "2.4.0"]]}}
   :test-paths ["spec/"]
