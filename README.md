@@ -14,7 +14,7 @@ There are a few guiding principles for Hyperion.
 
 Hyperion Implementations:
 
- * [memory](https://github.com/8thlight/hyperion/blob/master/api/src/hyperion/memory.clj) - an in-memory datastore, ideal for testing, included in hyperion-api.jar
+ * [memory](https://github.com/8thlight/hyperion/blob/master/api/src/hyperion/memory.clj) - an in-memory datastore, ideal for testing, included in hyperion-api package
  * [gae](https://github.com/8thlight/hyperion/tree/master/gae) - [Google App Engine Datastore](https://developers.google.com/appengine/docs/python/datastore/overview)
  * [mongo](https://github.com/8thlight/hyperion/tree/master/mongo) - [Mongo DB](http://www.mongodb.org/)
  * [mysql](https://github.com/8thlight/hyperion/tree/master/mysql) - [MySQL](http://www.mysql.com/)

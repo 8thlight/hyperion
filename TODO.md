@@ -2,16 +2,21 @@
 2. Logging
   * All queries should be logged and profiled with the debug flag
   * All dangerous actions logged with the warn flag
-3. Extend the Datastore spec for packing/unpacking/filtering/sorting on the following Java types:
-  * `null`
-  * `byte`
-  * `short`
-  * `int`
-  * `long`
-  * `float`
-  * `double`
+3. Extend the Datastore spec for packing/unpacking/filtering/sorting on the following types:
   * `boolean`
+  * `byte`
   * `char`
+  * `clojure.lang.Keyword`
+  * `double`
+  * `float`
+  * `int`
+  * `java.io.InputStream`
+  * `java.lang.Boolean`
+  * `java.lang.Character`
+  * `java.lang.Number`
+  * `java.lang.String`
+  * `java.lang.StringBuffer` (in as StringBuffer, out as String)
+  * `java.lang.StringBuilder` (in as StringBuilder, out as String)
   * `java.math.AtomicInteger`
   * `java.math.AtomicLong`
   * `java.math.BigDecimal`
@@ -22,9 +27,11 @@
   * `java.math.Integer`
   * `java.math.Long`
   * `java.math.Short`
-  * `java.io.InputStream`
-  * `java.util.Date`
   * `java.net.Url`
+  * `java.util.Date`
+  * `long`
+  * `null`
+  * `short`
 4. Whatever Java types cannot be natively supported by the Database should have a packer and unpacker included with the Datastore implementation. Documentation on what is natively supported and what is not should be included as well.
 5. Improve Riak Performance
   * Optimize filters for secondary indexes
