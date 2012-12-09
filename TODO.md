@@ -1,18 +1,47 @@
-* Logging: For debugging.  For runtime monitoring.  For warning of dangerous actions.
-* Connection pooling for Sql implementations
-* Website?
-* Indexes:
-    * Riak: currently indexes ALL fields.  That's inefficient.
-    Yet it can't search efficiently without index.  If defentity allowed
-    fields to be marked as indexed, would help riak a great deal.
-    Indexes are needed at runtime to:
+1. Connection pooling for Sql implementations
+2. Logging
+  * All queries should be logged and profiled with the debug flag
+  * All dangerous actions logged with the warn flag
+3. Extend the Datastore spec for packing/unpacking/filtering/sorting on the following Java types:
+  * `null`
+  * `byte`
+  * `short`
+  * `int`
+  * `long`
+  * `float`
+  * `double`
+  * `boolean`
+  * `char`
+  * `java.math.AtomicInteger`
+  * `java.math.AtomicLong`
+  * `java.math.BigDecimal`
+  * `java.math.BigInteger`
+  * `java.math.Byte`
+  * `java.math.Double`
+  * `java.math.Float`
+  * `java.math.Integer`
+  * `java.math.Long`
+  * `java.math.Short`
+  * `java.io.InputStream`
+  * `java.util.Date`
+  * `java.net.Url`
+4. Whatever Java types cannot be natively supported by the Database should have a packer and unpacker included with the Datastore implementation. Documentation on what is natively supported and what is not should be included as well.
+5. Improve Riak Performance
+  * Optimize filters for secondary indexes
+  * Everything not optimized should be a Map/Reduce query using Javascript
+  * Nothing done in-memory
+6. Improve Redis Datastore
+  * Serialize data so that it is compatible with Hyperion-Ruby (aka not marshalled into bytes as it is currently)
+  * Optimize filter/sort/limit/offset operations to use the Redis `SORT` query
+  * Whatever cannot be optimized should use Lua scripting
+  * Nothing done in-memory
+7. [Ragtime](https://github.com/weavejester/ragtime) integration for migrations
+8. Indexes:
+    * Riak: currently indexes ALL fields.  That's inefficient. Yet it can't search efficiently without index.  If defentity allowed fields to be marked as indexed, would help riak a great deal. Indexes are needed at runtime to:
         - save (to know which indexes to add)
         - find-by-kind (so we know how to search)
-    * Mongo: really only need indexes at defentity time to "ensure"
-    they exist.  Indexes are not needed at runtime.
-    * GAE: Indexes are handled externally.  Would be useless.
-    * SQL: Same as Mongo I suppose.
+    * Mongo: really only need indexes at defentity time to "ensure" they exist.  Indexes are not needed at runtime. This could be build into the future migration system instead of application level configuration.
+    * GAE: Indexes are handled externally. Would be useless.
+    * SQL: Same as Mongo.
     * Implement indexes as datastore decorators?
-* Ragtime integration for migrations (https://github.com/weavejester/ragtime)
-* Datomic - maybe?
-
+9. Website. Ahhh...maybe someday we will get this far down on the list.
