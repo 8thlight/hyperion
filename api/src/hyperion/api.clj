@@ -58,7 +58,7 @@
   "Packers may be any object and are added to defentity specs.
 When an entity is saved, values are 'packed' before getting shipped
 off to the persistence implementation.
-You may add your own packer by declare a defmethod for your type."
+You may add your own packer by declaring a defmethod for your type."
   (fn [type value] type))
 (defmethod pack :default [type value] value)
 
@@ -66,7 +66,7 @@ You may add your own packer by declare a defmethod for your type."
   "Unpackers may be any object and are added to defentity specs.
 When an entity is loaded, values are 'unpacked' from the data in the
 persistence implementation.
-You may add your own packer by declare a defmethod for your type."
+You may add your own packer by declaring a defmethod for your type."
   (fn [type value] type))
 (defmethod unpack :default [type value] value)
 
