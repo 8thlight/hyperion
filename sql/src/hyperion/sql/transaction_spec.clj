@@ -1,7 +1,7 @@
 (ns hyperion.sql.transaction-spec
   (:require [speclj.core :refer :all]
     [hyperion.sql.query :refer [make-query]]
-    [hyperion.sql.connection :refer [connection]]
+    [hyperion.sql.connection :refer [connection with-connection]]
     [hyperion.sql.jdbc :refer :all]))
 
 (defn create-table [name]
@@ -20,14 +20,19 @@
   (execute-write
     (make-query query)))
 
-(defn include-transaction-specs []
+(defn include-transaction-specs [url]
   (describe "Transactions"
-    (around [it]
-      (try
-        (create-table "test")
-        (it)
-        (finally
-          (drop-table "test"))))
+    (before
+      (with-connection url
+        (create-table "test")))
+
+    (around [spec]
+      (with-connection url
+        (spec)))
+
+    (after
+      (with-connection url
+        (drop-table "test")))
 
     (context "rollback"
 

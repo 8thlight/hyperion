@@ -5,7 +5,7 @@
             [hyperion.sql.spec-helper :refer :all]
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.sql.transaction-spec :refer [include-transaction-specs]]
-            [hyperion.sql.connection :refer [with-connection-url]]
+            [hyperion.sql.connection :refer [with-connection]]
             [hyperion.sql.jdbc :refer [execute-mutation]]
             [hyperion.sql.query :refer :all]))
 
@@ -52,39 +52,37 @@
 (defn drop-table [table-name]
   (do-query (format "DROP TABLE IF EXISTS %s" table-name)))
 
+(def connection-url "jdbc:mysql://localhost:3306/hyperion?user=root")
+
 (describe "MySQL Datastore"
-  (with connection-url "jdbc:mysql://localhost:3306/hyperion?user=root")
 
   (it "with factory fn"
-    (let [ds (new-datastore :implementation :mysql :connection-url @connection-url :database "hyperion")]
+    (let [ds (new-datastore :implementation :mysql :connection-url connection-url :database "hyperion")]
       (should= "hyperion" (.database (.db ds)))))
 
   (context "live"
 
     (before
-      (with-connection-url @connection-url
+      (with-connection connection-url
         (create-table "testing")
         (create-table "other_testing")
         (create-key-tables)))
 
     (after
-      (with-connection-url @connection-url
+      (with-connection connection-url
         (drop-table "testing")
         (drop-table "other_testing")
         (drop-table "shirt")
         (drop-table "account")))
 
     (around [it]
-      (binding [*ds* (new-datastore :implementation :mysql :connection-url @connection-url :database "hyperion")]
+      (binding [*ds* (new-datastore :implementation :mysql :connection-url connection-url :database "hyperion")]
         (it)))
 
     (it-behaves-like-a-datastore)
 
     (context "Transactions"
-      (around [it]
-        (with-connection-url @connection-url
-          (it)))
-      (include-transaction-specs))
+      (include-transaction-specs connection-url))
 
     (context "SQL Injection"
       (it "sanitizes strings to be inserted"

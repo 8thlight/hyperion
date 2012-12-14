@@ -16,8 +16,8 @@
 
 ;(java.sql.DriverManager/setLogWriter (java.io.PrintWriter. System/out))
 
-(let [driver (FakeDriver.)]
-  (java.sql.DriverManager/deregisterDriver driver)
-  (java.sql.DriverManager/registerDriver driver))
+(doto (FakeDriver.)
+  (java.sql.DriverManager/deregisterDriver)
+  (java.sql.DriverManager/registerDriver))
 
 

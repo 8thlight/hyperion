@@ -17,6 +17,9 @@
   (it "build filters"
     (should= ["SELECT projection FROM 'cat' WHERE 'color' = ?" ["blue"]] (build-select @query-builder "projection" "cat" [[:= :color "blue"]] nil nil nil)))
 
+  (it "inequality queries include NULL"
+    (should= ["SELECT projection FROM 'cat' WHERE ('color' <> ? OR 'color' IS NULL)" ["blue"]] (build-select @query-builder "projection" "cat" [[:!= :color "blue"]] nil nil nil)))
+
   (it "build filters checking for equality with nil"
     (should= ["SELECT projection FROM 'cat' WHERE 'color' IS NULL" []] (build-select @query-builder "projection" "cat" [[:= :color nil]] nil nil nil))
     (should= ["SELECT projection FROM 'cat' WHERE 'color' IS NOT NULL" []] (build-select @query-builder "projection" "cat" [[:!= :color nil]] nil nil nil)))

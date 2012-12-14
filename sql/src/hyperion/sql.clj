@@ -43,11 +43,12 @@
       (log/warn (format "find-by-key error: %s" (.getMessage e)))
       nil)))
 
-(deftype SQLDatastore [connection db qb]
+(deftype SQLDatastore [connection-url db qb]
   Datastore
 
   (ds-save [this records]
-    (with-connection connection (doall (map #(save-record db qb %) records))))
+    (with-connection connection-url
+      (doall (map #(save-record db qb %) records))))
 
   (ds-delete-by-key [this key]
     (try
@@ -58,23 +59,23 @@
         nil)))
 
   (ds-delete-by-kind [this kind filters]
-    (with-connection connection (execute-mutation (build-delete qb kind filters))))
+    (with-connection connection-url (execute-mutation (build-delete qb kind filters))))
 
   (ds-count-by-kind [this kind filters]
-    (with-connection connection
+    (with-connection connection-url
       (let [results (execute-query (build-select qb "COUNT(*)" kind filters nil nil nil))]
         (get-count db (first results)))))
 
   (ds-find-by-key [this key] (find-by-key this key))
 
   (ds-find-by-kind [this kind filters sorts limit offset]
-    (with-connection connection
+    (with-connection connection-url
       (let [query (build-select qb "*" kind filters sorts limit offset)
             results (execute-query query)]
         (map #(record<-db % kind) results))))
 
   (ds-all-kinds [this]
-    (with-connection connection
+    (with-connection connection-url
       (let [results (execute-query (make-query (table-listing-query db)))]
         (map #(get % "table_name") results))))
 
@@ -85,6 +86,5 @@
   )
 
 (defn new-sql-datastore [& args]
-  (let [options (->options args)
-        connection (or (:connection options) (java.sql.DriverManager/getConnection (:connection-url options)))]
-    (SQLDatastore. connection (:db options) (:qb options))))
+  (let [options (->options args)]
+    (SQLDatastore. (:connection-url options) (:db options) (:qb options))))

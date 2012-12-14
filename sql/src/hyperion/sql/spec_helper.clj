@@ -1,6 +1,6 @@
 (ns hyperion.sql.spec-helper
   (:require [speclj.core :refer :all]
-            [hyperion.sql.connection :refer [with-connection-url]]
+            [hyperion.sql.connection :refer [with-connection]]
             [hyperion.sql.jdbc :refer [rollback]])
   (:import [speclj SpecFailure]))
 
@@ -22,12 +22,12 @@
 
 (defn with-rollback [url]
   (around [it]
-    (with-connection-url url
+    (with-connection url
       (rollback
         (it)))))
 
 (defn with-connection-and-rollback [url]
   (around [it]
-    (with-connection-url url
+    (with-connection url
       (rollback
         (it)))))

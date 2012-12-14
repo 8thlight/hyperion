@@ -6,7 +6,7 @@
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.sql.transaction-spec :refer [include-transaction-specs]]
             [hyperion.sql.jdbc :refer [execute-mutation]]
-            [hyperion.sql.connection :refer [with-connection-url]]
+            [hyperion.sql.connection :refer [with-connection]]
             [hyperion.sql.query :refer :all]))
 
 (log/error!)
@@ -46,59 +46,44 @@
 (defn drop-table [table-name]
   (do-query (format "DROP TABLE IF EXISTS %s" table-name)))
 
+(def connection-url "jdbc:postgresql://localhost:5432/hyperion")
+
 (describe "Postgres Datastore"
-  (with connection-url "jdbc:postgresql://localhost:5432/hyperion")
+  (around [it]
+    (binding [*ds* (new-datastore :implementation :postgres :connection-url connection-url)]
+      (it)))
 
-  (context "creation"
+  (before
+    (with-connection connection-url
+      (create-table "testing")
+      (create-table "other_testing")
+      (create-key-tables)))
 
-    (it "with a kv pairs as params"
-      (let [ds (new-datastore :implementation :postgres :connection-url @connection-url)]
-        (should= false (.isClosed (.connection ds)))
-        (.close (.connection ds))))
+  (after
+    (with-connection connection-url
+      (drop-table "testing")
+      (drop-table "other_testing")
+      (drop-table "shirt")
+      (drop-table "account")))
 
-    )
+  (it-behaves-like-a-datastore)
 
-  (context "live"
+  (context "SQL Injection"
+    (it "sanitizes strings to be inserted"
+      (let [evil-string "my evil string' --"
+            record (save {:kind :testing :name evil-string})]
+        (should= evil-string (:name (find-by-key (:key record))))))
 
-    (around [it]
-      (binding [*ds* (new-datastore :implementation :postgres :connection-url @connection-url)]
-        (it)))
+    (it "sanitizes table names"
+      (error-msg-contains?
+        "relation \"my_evil_name\"___\" does not exist"
+        (save {:kind "my-evil-name\" --" :name "test"})))
 
-    (before
-      (with-connection-url @connection-url
-        (create-table "testing")
-        (create-table "other_testing")
-        (create-key-tables)))
+    (it "sanitizes column names"
+      (error-msg-contains?
+        "column \"my_evil_name\"___\" of relation \"testing\" does not exist"
+        (save {:kind :testing (keyword "my-evil-name\" --") "test"}))))
 
-    (after
-      (with-connection-url @connection-url
-        (drop-table "testing")
-        (drop-table "other_testing")
-        (drop-table "shirt")
-        (drop-table "account")))
-
-    (it-behaves-like-a-datastore)
-
-    (context "Transactions"
-      (around [it]
-        (with-connection-url @connection-url
-          (it)))
-      (include-transaction-specs))
-
-    (context "SQL Injection"
-      (it "sanitizes strings to be inserted"
-        (let [evil-string "my evil string' --"
-              record (save {:kind :testing :name evil-string})]
-          (should= evil-string (:name (find-by-key (:key record))))))
-
-      (it "sanitizes table names"
-        (error-msg-contains?
-          "relation \"my_evil_name\"___\" does not exist"
-          (save {:kind "my-evil-name\" --" :name "test"})))
-
-      (it "sanitizes column names"
-        (error-msg-contains?
-          "column \"my_evil_name\"___\" of relation \"testing\" does not exist"
-          (save {:kind :testing (keyword "my-evil-name\" --") "test"}))))
-    )
+  (context "Transactions"
+    (include-transaction-specs connection-url))
   )

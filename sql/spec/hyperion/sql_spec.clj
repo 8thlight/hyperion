@@ -15,13 +15,15 @@
 
 (hyperion.log/error!)
 
+(clojure.lang.RT/loadClassForName "org.sqlite.JDBC")
+
 (describe "Hyperion SQL"
 
   (with log (atom []))
   (with db-strategy (FakeDBStrategy. (atom [])))
   (with qb-strategy (FakeQueryBuilderStrategy. (atom [])))
   (with qb (new-query-builder @qb-strategy))
-  (with db (new-sql-datastore :connection-url "jdbc:fake" :db @db-strategy :qb @qb))
+  (with db (new-sql-datastore :connection-url "jdbc:sqlite::memory:" :db @db-strategy :qb @qb))
   (around [it]
     (with-redefs [execute-write (fn [query] (swap! @log conj [:write query]) {:write-response 42 :id 42})
                   execute-mutation (fn [query] (swap! @log conj [:mutation query]) :mutation-response)
