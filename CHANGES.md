@@ -4,6 +4,7 @@
 * delete-by-key returns nil for invalid/missing/nil keys
 * fixes bad keys in filters
 * fixes packing the field name on sorting
+* adds connection pooling for sql datastores
 
 # 3.6.0
 
