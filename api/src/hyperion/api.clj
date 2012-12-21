@@ -15,7 +15,7 @@
 (defn set-ds!
   "Uses alter-var-root to set *ds*. A violent, but effective way to install a datastore."
   [^hyperion.abstr.Datastore ds]
-  (log/debug "focefully setting datastore:" ds)
+  (log/debug "forcefully setting datastore:" ds)
   (alter-var-root (var *ds*) (fn [_] ds)))
 
 (defn ds
