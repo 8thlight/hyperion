@@ -32,7 +32,7 @@
            [[nil 1 1 44 45]       [[:!= :inti 12] [:!= :inti 23] [:!= :inti 34]]]
            [[nil 1 1 44 45]       [[:not :inti 12] [:not :inti 23] [:not :inti 34]]]
            ]]
-      (it (str "filters ints to " expected " with fitlers: " filters)
+      (it (str "filters ints to " expected " with filters: " filters)
         (should=coll expected (intis (find :filters filters)))))
 
     (for [[expected filters]
@@ -47,7 +47,7 @@
            [[]                                                            [[:> :data "qux"] [:< :data "qux"]]]
            [["" "the one" "thirty4" "forty4" "forty5"]                    [[:!= :data "one"] [:!= :data "twelve"] [:!= :data "twenty3"]]]
            ]]
-      (it (str "filters strings to " expected " with fitlers: " filters)
+      (it (str "filters strings to " expected " with filters: " filters)
         (should=coll expected (datas (find :filters filters)))))
 
     (it "applies sorts"
@@ -69,7 +69,8 @@
     (it "applies formating to filters with dashes"
       (let [with-dashes (save {:kind "testing" :first-name "sam"})
             found-record (first (find :filters [[:= :first-name "sam"]]))]
-        (should= "sam" (:first-name found-record))))))
+        (should= "sam" (:first-name found-record)))))
+  )
 
 (defn save-testing-data []
   (save*

@@ -135,6 +135,8 @@ Sort orders and acceptable syntax:
  * `:asc` `"asc"` `:ascending` `"ascending"`
  * `:desc` `"desc"` `:descending` `"descending"`
 
+<em>Note:</em> Filters and Sorts on `:key` are not supported.  Some datastore implementations don't store the `:key` along with the data, so you can't very well filter or sort something that aint there.
+
 ### Entities
 
 Used to define entities. An entity is simply an encapsulation of data that is persisted.

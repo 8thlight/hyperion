@@ -89,11 +89,11 @@
       (.prepareStatement (connection) query-str))))
 
 (defmacro log-query [form query]
-  `(let [start# (System/nanoTime)
-         result# ~form
-         time# (/ (- (System/nanoTime) start#) 1000000.0)]
-     (log/debug (format "Query (time %s ms): %s" time# ~query))
-     result#))
+  `(let [start# (System/nanoTime)]
+     (try
+       ~form
+       (finally
+         (log/debug (format "Query (time %s ms): %s" (/ (- (System/nanoTime) start#) 1000000.0) ~query))))))
 
 (defn execute-write [query]
   (with-open [stmt (prepare-statement (query-str query))]
