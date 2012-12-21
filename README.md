@@ -120,6 +120,8 @@ Ideally, bind the datastore once at a high level in your application, if you can
 (delete-by-kind :dog :filters [[:> :age 2][:< :age 5]]) ; deletes all dogs between the age of 2 and 5 (exclusive)
 ```
 
+### Filters and Sorts
+
 Filter operations and acceptable syntax:
 
   * `:=` `"="` `"eq"`
@@ -134,6 +136,8 @@ Sort orders and acceptable syntax:
 
  * `:asc` `"asc"` `:ascending` `"ascending"`
  * `:desc` `"desc"` `:descending` `"descending"`
+
+The `:filter` and `:sort` options are usable in `find-by-kind`, `find-by-all-kinds`, and `delete-by-kind`.  The `:limit` option may also be used in the `find-by-` functions.
 
 <em>Note:</em> Filters and Sorts on `:key` are not supported.  Some datastore implementations don't store the `:key` along with the data, so you can't very well filter or sort something that aint there.
 
