@@ -4,6 +4,7 @@
             [hyperion.dev.spec.deleting :refer [it-deletes-by-key it-deletes-by-kind]]
             [hyperion.dev.spec.searching :refer [it-finds-all-kinds it-finds-by-kind it-searches-multiple-kinds it-counts-by-kind it-finds-by-key]]
             [hyperion.dev.spec.foreign-keys :refer [it-handles-foreign-keys]]
+            [hyperion.dev.spec.types :refer [it-handles-types]]
             ))
 
 (defn it-behaves-like-a-datastore []
@@ -26,6 +27,8 @@
       (it-deletes-by-key))
     (context "delete-by-kind"
       (it-deletes-by-kind))
+    (context "types"
+      (it-handles-types))
 
     ))
 

@@ -1,4 +1,5 @@
-# Mongo
+hyperion.mongo
+============
 
 A Hyperion implementation for Mongo
 
@@ -46,6 +47,12 @@ Indexes should be added externally since Hyperion doesn't support indexes.
     * :normal - Exceptions are raised for network issues, but not server errors
     * :replicas-safe - Exceptions are raised for network issues, and server errors; waits for at least 2 servers for the write operation
     * :safe - DEFAULT - Exceptions are raised for network issues, and server errors; waits on a server for the write operation
+
+## Types
+
+### Natively Supported
+
+* `java.lang.Boolean`
 
 ## License
 

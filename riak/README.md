@@ -1,7 +1,7 @@
-# riak
+hyperion.riak
+============
 
 A Hyperion implementation for Riak
-
 
 ## About
 
@@ -74,6 +74,12 @@ The specs require that riak's delete_mode is immediate.  Add the following to th
 ```
 
 For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-October/006048.html
+
+## Types
+
+### Natively Supported
+
+* `java.lang.Boolean`
 
 ## License
 

@@ -16,7 +16,7 @@
     (make-query query)))
 
 (def create-table-query
-  "CREATE TABLE %s (
+  "CREATE TABLE IF NOT EXISTS %s (
     id INTEGER NOT NULL AUTO_INCREMENT,
     name VARCHAR(35),
     first_name VARCHAR(35),
@@ -27,7 +27,7 @@
 
 (defn create-key-tables []
   (do-query
-    "CREATE TABLE account (
+    "CREATE TABLE IF NOT EXISTS account (
     id INTEGER NOT NULL AUTO_INCREMENT,
     first_name VARCHAR(35),
     inti INTEGER,
@@ -35,7 +35,7 @@
     PRIMARY KEY (id)
     );")
   (do-query
-    "CREATE TABLE shirt (
+    "CREATE TABLE IF NOT EXISTS shirt (
     id INTEGER NOT NULL AUTO_INCREMENT,
     account_id INTEGER,
     first_name VARCHAR(35),
@@ -44,6 +44,17 @@
     PRIMARY KEY (id),
     INDEX (account_id),
     FOREIGN KEY (account_id) REFERENCES account (id)
+    )"))
+
+(defn create-types-table []
+  (do-query
+    "CREATE TABLE IF NOT EXISTS types (
+    id INTEGER NOT NULL AUTO_INCREMENT,
+    first_name VARCHAR(35),
+    inti INTEGER,
+    data VARCHAR(32),
+    bool BOOLEAN,
+    PRIMARY KEY (id)
     )"))
 
 (defn create-table [table-name]
@@ -62,22 +73,24 @@
 
   (context "live"
 
+    (around [it]
+      (binding [*ds* (new-datastore :implementation :mysql :connection-url connection-url :database "hyperion")]
+        (it)))
+
     (before
       (with-connection connection-url
         (create-table "testing")
         (create-table "other_testing")
-        (create-key-tables)))
+        (create-key-tables)
+        (create-types-table)))
 
     (after
       (with-connection connection-url
         (drop-table "testing")
         (drop-table "other_testing")
         (drop-table "shirt")
-        (drop-table "account")))
-
-    (around [it]
-      (binding [*ds* (new-datastore :implementation :mysql :connection-url connection-url :database "hyperion")]
-        (it)))
+        (drop-table "account")
+        (drop-table "types")))
 
     (it-behaves-like-a-datastore)
 
@@ -99,5 +112,6 @@
         (error-msg-contains?
           "Unknown column 'my_evil_name`___' in 'field list'"
           (save {:kind :testing (keyword "my-evil-name` --") "test"}))))
+
     )
   )

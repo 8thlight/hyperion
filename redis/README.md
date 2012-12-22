@@ -1,4 +1,5 @@
-# Redis
+hyperion.redis
+============
 
 A Hyperion implementation for Redis
 
@@ -26,6 +27,12 @@ Hyperion datastore.
  * :password - if the redis-server has one
  * :timeout - defaults to 300 seconds
  * :db - if you are running multiple dbs on a redis-server
+
+## Types
+
+### Natively Supported
+
+* `java.lang.Boolean`
 
 ## License
 
