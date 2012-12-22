@@ -7,7 +7,6 @@
   * `clojure.lang.Keyword`
   * `double`
   * `float`
-  * `int`
   * `java.io.InputStream`
   * `java.lang.Character`
   * `java.lang.Number`
@@ -21,7 +20,6 @@
   * `java.math.Byte`
   * `java.math.Double`
   * `java.math.Float`
-  * `java.math.Integer`
   * `java.math.Long`
   * `java.math.Short`
   * `java.net.Url`

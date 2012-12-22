@@ -8,6 +8,7 @@ A Hyperion implementation for the Google App Engine datastore
 ### Natively Supported
 
 * `java.lang.Boolean`
+* `java.lang.Integer`
 
 ## License
 

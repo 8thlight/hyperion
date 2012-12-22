@@ -53,7 +53,8 @@
     )"))
 
 (defentity :types
-  [bool :type java.lang.Boolean])
+  [bool :type java.lang.Boolean]
+  [inti])
 
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))

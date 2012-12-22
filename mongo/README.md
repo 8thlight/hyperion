@@ -53,6 +53,7 @@ Indexes should be added externally since Hyperion doesn't support indexes.
 ### Natively Supported
 
 * `java.lang.Boolean`
+* `java.lang.Integer`
 
 ## License
 

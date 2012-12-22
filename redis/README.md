@@ -33,6 +33,7 @@ Hyperion datastore.
 ### Natively Supported
 
 * `java.lang.Boolean`
+* `java.lang.Integer`
 
 ## License
 

@@ -80,6 +80,7 @@ For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-
 ### Natively Supported
 
 * `java.lang.Boolean`
+* `java.lang.Integer`
 
 ## License
 
