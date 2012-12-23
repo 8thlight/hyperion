@@ -1,10 +1,11 @@
 (ns hyperion.postgres
-  (:require [hyperion.sql.query :refer [add-to-query]]
+  (:require [chee.util :refer [->options]]
+            [hyperion.sorting :as sort]
+            [hyperion.sql.query :refer [add-to-query]]
             [hyperion.sql.query-builder :refer :all ]
             [hyperion.sql.format :refer [column->db]]
             [hyperion.sql :refer :all ]
-            [hyperion.sorting :as sort]
-            [chee.util :refer [->options]]))
+            [hyperion.sql.types]))
 
 (clojure.lang.RT/loadClassForName "org.postgresql.Driver")
 

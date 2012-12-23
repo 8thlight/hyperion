@@ -54,6 +54,7 @@ Indexes should be added externally since Hyperion doesn't support indexes.
 
 * `java.lang.Boolean`
 * `java.lang.Integer`
+* `java.lang.Float`
 
 ## License
 

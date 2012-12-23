@@ -9,6 +9,7 @@ A Hyperion implementation for the Google App Engine datastore
 
 * `java.lang.Boolean`
 * `java.lang.Integer`
+* `java.lang.Float`
 
 ## License
 

@@ -9,5 +9,7 @@
       (it-handles-booleans))
     (context "integers"
       (it-handles-ints))
+    (context "floats"
+      (it-handles-floats))
 
     ))

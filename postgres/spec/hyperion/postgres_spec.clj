@@ -1,6 +1,6 @@
 (ns hyperion.postgres-spec
   (:require [speclj.core :refer :all]
-            [hyperion.api :refer [*ds* new-datastore save find-by-key]]
+            [hyperion.api :refer :all]
             [hyperion.log :as log]
             [hyperion.sql.spec-helper :refer :all]
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
@@ -45,9 +45,16 @@
     "CREATE TABLE IF NOT EXISTS types (
     id SERIAL PRIMARY KEY,
     inti INTEGER,
+    flt FLOAT,
     data VARCHAR(32),
+    first_name VARCHAR(35),
     bool BOOLEAN
     )"))
+
+(defentity :types
+  [bool]
+  [inti]
+  [flt :type java.lang.Float])
 
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))

@@ -1,6 +1,6 @@
 (ns hyperion.mysql-spec
   (:require [speclj.core :refer :all]
-            [hyperion.api :refer [*ds* new-datastore save find-by-key]]
+            [hyperion.api :refer :all]
             [hyperion.log :as log]
             [hyperion.sql.spec-helper :refer :all]
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
@@ -52,10 +52,16 @@
     id INTEGER NOT NULL AUTO_INCREMENT,
     first_name VARCHAR(35),
     inti INTEGER,
+    flt DOUBLE,
     data VARCHAR(32),
     bool BOOLEAN,
     PRIMARY KEY (id)
     )"))
+
+(defentity :types
+  [bool]
+  [inti]
+  [flt :type java.lang.Float])
 
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))

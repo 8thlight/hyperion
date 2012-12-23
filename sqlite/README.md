@@ -12,6 +12,7 @@ A Hyperion implementation for SQLite3
 ### Supported by Packer/Unpacker
 
 * `java.lang.Boolean`
+* `java.lang.Float` as column type `DOUBLE` or `FLOAT`
 
 ## License
 

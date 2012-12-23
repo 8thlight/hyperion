@@ -1,6 +1,6 @@
 (ns hyperion.riak
   (:require [chee.util :refer [->options]]
-            [cheshire.core :refer [generate-string parse-string]]
+            [clj-json.core :refer [generate-string parse-string]]
             [clojure.data.codec.base64 :refer [encode decode]]
             [clojure.set :refer [intersection]]
             [clojure.string :as string]
@@ -9,7 +9,8 @@
             [hyperion.key :refer (compose-key decompose-key)]
             [hyperion.log :as log]
             [hyperion.memory :as memory]
-            [hyperion.sorting :as sort])
+            [hyperion.sorting :as sort]
+            [hyperion.api :refer [pack unpack]])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
            [com.basho.riak.client.query.functions NamedErlangFunction JSSourceFunction]
            [com.basho.riak.client.query.indexes BinIndex KeyIndex IntIndex]
@@ -20,6 +21,51 @@
            [com.basho.riak.client.raw RawClient]
            [com.basho.riak.client.raw StoreMeta StoreMeta$Builder]
            ))
+
+(defprotocol AsFloat
+  (->float [this]))
+
+(defprotocol AsDouble
+  (->double [this]))
+
+(extend-protocol AsDouble
+  java.lang.Float
+  (->double [this] (.doubleValue this))
+
+  java.lang.Double
+  (->double [this] this)
+
+  nil
+  (->double [this] nil)
+
+  )
+
+(extend-protocol AsFloat
+  java.lang.String
+  (->float [this] (Float. this))
+
+  java.lang.Float
+  (->float [this] this)
+
+  java.lang.Long
+  (->float [this] (.floatValue this))
+
+  java.lang.Integer
+  (->float [this] (.floatValue this))
+
+  java.lang.Double
+  (->float [this] (.floatValue this))
+
+  nil
+  (->float [this] nil)
+
+  )
+
+(defmethod pack java.lang.Float [_ value]
+  (->double value))
+
+(defmethod unpack java.lang.Float [_ value]
+  (->float value))
 
 (defn pbc-config [options]
   (let [^PBClientConfig$Builder config (PBClientConfig$Builder.)]
@@ -142,23 +188,19 @@
 
 (defn optimize-filters [filters]
   (reduce
-    (fn [[q nq] [operator field value]]
-      (case operator
-        (:= :<= :>= ) [(conj q [operator field value]) nq]
-        :< [(conj q [:<= field value]) (conj nq [:!= field value])]
-        :> [(conj q [:>= field value]) (conj nq [:!= field value])]
-        (:!= :contains? ) [q (conj nq [operator field value])]))
+    (fn [[q nq] filter]
+      (let [op (filter/operator filter)
+            not-nil (append-not-nil-fn (filter/field filter) (filter/value filter))]
+        (cond
+          (= := op) [(conj q filter) nq]
+          :else [q (conj nq filter)])))
     [[] []]
     filters))
 
 (defn filter->query [bucket [operator field value]]
   (case [operator (if (integer? value) :int :bin )]
     [:= :int ] (IntValueQuery. (IntIndex/named (name field)) bucket (int value))
-    [:<= :int ] (IntRangeQuery. (IntIndex/named (name field)) bucket Integer/MIN_VALUE (int value))
-    [:>= :int ] (IntRangeQuery. (IntIndex/named (name field)) bucket (int value) Integer/MAX_VALUE)
     [:= :bin ] (BinValueQuery. (BinIndex/named (name field)) bucket (str value))
-    [:<= :bin ] (BinRangeQuery. (BinIndex/named (name field)) bucket "" (str value))
-    [:>= :bin ] (BinRangeQuery. (BinIndex/named (name field)) bucket (str value) "zzzzz")
     (throw (Exception. (str "Don't know how to create query from filter: " filter)))))
 
 (defn filters->queries [bucket filters]

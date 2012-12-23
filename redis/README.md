@@ -34,6 +34,7 @@ Hyperion datastore.
 
 * `java.lang.Boolean`
 * `java.lang.Integer`
+* `java.lang.Float`
 
 ## License
 

@@ -8,6 +8,11 @@ A Hyperion implementation for MySQL
 ### Natively Supported
 
 * `java.lang.Boolean`
+* `java.lang.Integer`
+
+### Supported by Packer/Unpacker
+
+* `java.lang.Float` as column type `DOUBLE` (`FLOAT` will truncate)
 
 ## License
 

@@ -10,6 +10,10 @@ A Hyperion implementation for PostgreSQL
 * `java.lang.Boolean`
 * `java.lang.Integer`
 
+### Supported by Packer/Unpacker
+
+* `java.lang.Float` as column type `FLOAT`
+
 ## License
 
 Copyright © 2012 8th Light, Inc.

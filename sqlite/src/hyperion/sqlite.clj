@@ -4,8 +4,9 @@
             [hyperion.sql.query :refer [add-to-query]]
             [hyperion.sql.query-builder :refer :all]
             [hyperion.sql.format :refer [column->db]]
+            [hyperion.sql.types]
             [hyperion.sql :refer :all]
-            [hyperion.sqlite.types :refer :all]))
+            [hyperion.sqlite.types]))
 
 (clojure.lang.RT/loadClassForName "org.sqlite.JDBC")
 

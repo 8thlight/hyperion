@@ -82,6 +82,10 @@ For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-
 * `java.lang.Boolean`
 * `java.lang.Integer`
 
+### Supported by Packer/Unpacker
+
+* `java.lang.Float` (packed to a double)
+
 ## License
 
 Copyright © 2012 8th Light, Inc.

@@ -1,10 +1,11 @@
 (ns hyperion.mysql
-  (:require [hyperion.sorting :as sort]
+  (:require [chee.util :refer [->options]]
+            [hyperion.sorting :as sort]
             [hyperion.sql.query :refer [add-to-query]]
             [hyperion.sql.query-builder :refer :all ]
             [hyperion.sql.format :refer [column->db]]
-            [hyperion.sql :refer :all ]
-            [chee.util :refer [->options]]))
+            [hyperion.sql.types]
+            [hyperion.sql :refer :all ]))
 
 (clojure.lang.RT/loadClassForName "com.mysql.jdbc.Driver")
 
