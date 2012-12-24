@@ -24,4 +24,21 @@
       (should-be-nil (pack Boolean nil)))
 
     )
+
+  (context "longs"
+    (it "packs to a long"
+      (should= (long 1) (pack Long (int 1)))
+      (should (instance? Long (pack Long (int 1)))))
+
+    (it "packs nil"
+      (should-be-nil (pack Long nil)))
+
+    (it "unpacks to a long"
+      (should= (long 1) (unpack Long (int 1)))
+      (should (instance? Long (unpack Long (int 1)))))
+
+    (it "unpacks nil"
+      (should-be-nil (unpack Long nil)))
+
+    )
   )

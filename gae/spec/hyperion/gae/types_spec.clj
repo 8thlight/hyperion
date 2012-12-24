@@ -1,8 +1,31 @@
 (ns hyperion.gae.types-spec
   (:require [speclj.core :refer :all]
-            [hyperion.gae.types :refer :all]))
+            [hyperion.gae.types :refer :all]
+            [hyperion.api :refer [pack unpack]]))
 
 (describe "GAE Types"
+
+  (context "floats"
+    (it "packs a float"
+      (should= (float 1.0) (pack Float (double 1.0)))
+      (should= Float (type (pack Float (double 1.0)))))
+
+    (it "unpacks a float"
+      (should= (float 1.0) (unpack Float (double 1.0)))
+      (should= Float (type (unpack Float (double 1.0)))))
+
+    )
+
+  (context "integers"
+    (it "packs an integer"
+      (should= (int 1) (pack Integer (long 1)))
+      (should= Integer (type (pack Integer (long 1)))))
+
+    (it "unpacks a Integer"
+      (should= (int 1) (unpack Integer (long 1)))
+      (should= Integer (type (unpack Integer (long 1)))))
+
+    )
 
   (context "User conversion"
 

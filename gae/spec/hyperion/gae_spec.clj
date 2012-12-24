@@ -33,6 +33,12 @@
   [text :type Text]
   [other :type Key])
 
+(defentity :types
+  [bool]
+  [inti :type java.lang.Integer]
+  [flt :type java.lang.Float]
+  [lng])
+
 (describe "Google AppEngine Datastore"
 
   (context "creation"

@@ -54,7 +54,11 @@ Indexes should be added externally since Hyperion doesn't support indexes.
 
 * `java.lang.Boolean`
 * `java.lang.Integer`
-* `java.lang.Float`
+* `java.lang.Long`
+
+### Supported by Packer/Unpacker
+
+* `java.lang.Float` (if type is not specified, Mongo will unpack to Double)
 
 ## License
 

@@ -84,7 +84,7 @@ For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-
 
 ### Supported by Packer/Unpacker
 
-* `java.lang.Float` (packed to a double)
+* `java.lang.Float` (packed/unpacked to a Double unless the Float type is specified)
 
 ## License
 

@@ -12,6 +12,17 @@
 (defmethod pack java.lang.Boolean [_ value]
   (->bool value))
 
+; TODO - replace with ->bool from chee
 (defmethod unpack java.lang.Boolean [_ value]
   (when value
     (= value 1)))
+
+; TODO - replace with ->long from chee
+(defmethod pack java.lang.Long [_ value]
+  (when value
+    (long value)))
+
+; TODO - replace with ->long from chee
+(defmethod unpack java.lang.Long [_ value]
+  (when value
+    (long value)))

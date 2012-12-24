@@ -7,8 +7,9 @@ A Hyperion implementation for MySQL
 
 ### Natively Supported
 
-* `java.lang.Boolean`
-* `java.lang.Integer`
+* `java.lang.Boolean` as column type `BOOLEAN`
+* `java.lang.Integer` as column type `INTEGER`
+* `java.lang.Long` as column type `BIGINT`
 
 ### Supported by Packer/Unpacker
 

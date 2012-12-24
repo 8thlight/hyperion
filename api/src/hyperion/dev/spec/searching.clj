@@ -1,6 +1,5 @@
 (ns hyperion.dev.spec.searching
   (:require [speclj.core :refer :all ]
-            [hyperion.dev.spec-helper :refer [should=coll]]
             [hyperion.api :refer [save save* find-by-kind find-all-kinds count-by-kind find-by-key count-all-kinds]]
             [hyperion.key :refer [compose-key]]))
 
@@ -33,7 +32,7 @@
            [[nil 1 1 44 45]       [[:not :inti 12] [:not :inti 23] [:not :inti 34]]]
            ]]
       (it (str "filters ints to " expected " with filters: " filters)
-        (should=coll expected (intis (find :filters filters)))))
+        (should== expected (intis (find :filters filters)))))
 
     (for [[expected filters]
           [
@@ -48,7 +47,7 @@
            [["" "the one" "thirty4" "forty4" "forty5"]                    [[:!= :data "one"] [:!= :data "twelve"] [:!= :data "twenty3"]]]
            ]]
       (it (str "filters strings to " expected " with filters: " filters)
-        (should=coll expected (datas (find :filters filters)))))
+        (should== expected (datas (find :filters filters)))))
 
     (it "applies sorts"
       (should= [1 1 12 23 34 44 45] (intis (find :sorts [:inti :asc ]  :filters [:!= :inti nil])))

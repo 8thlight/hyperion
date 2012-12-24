@@ -50,18 +50,20 @@
   (do-query
     "CREATE TABLE IF NOT EXISTS types (
     id INTEGER NOT NULL AUTO_INCREMENT,
-    first_name VARCHAR(35),
+    bool BOOLEAN,
     inti INTEGER,
     flt DOUBLE,
+    lng BIGINT,
     data VARCHAR(32),
-    bool BOOLEAN,
+    first_name VARCHAR(35),
     PRIMARY KEY (id)
     )"))
 
 (defentity :types
   [bool]
   [inti]
-  [flt :type java.lang.Float])
+  [flt :type java.lang.Float]
+  [lng])
 
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))

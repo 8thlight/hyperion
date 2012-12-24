@@ -1,6 +1,5 @@
 (ns hyperion.dev.spec.types.boolean
   (:require [speclj.core :refer :all ]
-            [hyperion.dev.spec-helper :refer [should=coll]]
             [hyperion.api :refer [save save* find-by-kind find-by-key]]))
 
 (defn it-handles-booleans []
@@ -43,12 +42,12 @@
         ))
 
       (it "finds with contains?"
-        (should=coll [true] (map :bool (find-by-kind :types :filters [:in :bool [true]])))
-        (should=coll [true false] (map :bool (find-by-kind :types :filters [:in :bool [true false]])))
-        (should=coll [true nil] (map :bool (find-by-kind :types :filters [:in :bool [true nil]])))
-        (should=coll [false] (map :bool (find-by-kind :types :filters [:in :bool [false]])))
-        (should=coll [false nil] (map :bool (find-by-kind :types :filters [:in :bool [false nil]])))
-        (should=coll [nil] (map :bool (find-by-kind :types :filters [:in :bool [nil]]))))
+        (should== [true] (map :bool (find-by-kind :types :filters [:in :bool [true]])))
+        (should== [true false] (map :bool (find-by-kind :types :filters [:in :bool [true false]])))
+        (should== [true nil] (map :bool (find-by-kind :types :filters [:in :bool [true nil]])))
+        (should== [false] (map :bool (find-by-kind :types :filters [:in :bool [false]])))
+        (should== [false nil] (map :bool (find-by-kind :types :filters [:in :bool [false nil]])))
+        (should== [nil] (map :bool (find-by-kind :types :filters [:in :bool [nil]]))))
 
       )
 

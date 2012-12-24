@@ -1,6 +1,6 @@
 (ns hyperion.riak
   (:require [chee.util :refer [->options]]
-            [clj-json.core :refer [generate-string parse-string]]
+            [cheshire.core :refer [generate-string parse-string]]
             [clojure.data.codec.base64 :refer [encode decode]]
             [clojure.set :refer [intersection]]
             [clojure.string :as string]
@@ -10,62 +10,23 @@
             [hyperion.log :as log]
             [hyperion.memory :as memory]
             [hyperion.sorting :as sort]
-            [hyperion.api :refer [pack unpack]])
+            [hyperion.riak.map-reduce.filter :refer [filter-js]]
+            [hyperion.riak.map-reduce.sort :refer [sort-js]]
+            [hyperion.riak.map-reduce.offset :refer [offset-js]]
+            [hyperion.riak.map-reduce.limit :refer [limit-js]]
+            [hyperion.riak.map-reduce.count :refer [count-js]]
+            [hyperion.riak.map-reduce.ids :refer [ids-js]]
+            [hyperion.riak.map-reduce.pass-thru :refer [pass-thru-js]]
+            [hyperion.riak.types])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
-           [com.basho.riak.client.query.functions NamedErlangFunction JSSourceFunction]
+           [com.basho.riak.client.query.functions JSSourceFunction]
            [com.basho.riak.client.query.indexes BinIndex KeyIndex IntIndex]
-           [com.basho.riak.client.query IndexMapReduce]
+           [com.basho.riak.client.query IndexMapReduce BucketMapReduce]
            [com.basho.riak.client.raw.http HTTPClientConfig$Builder HTTPRiakClientFactory]
            [com.basho.riak.client.raw.pbc PBClientConfig$Builder PBRiakClientFactory]
            [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery IntValueQuery IntRangeQuery]
            [com.basho.riak.client.raw RawClient]
-           [com.basho.riak.client.raw StoreMeta StoreMeta$Builder]
-           ))
-
-(defprotocol AsFloat
-  (->float [this]))
-
-(defprotocol AsDouble
-  (->double [this]))
-
-(extend-protocol AsDouble
-  java.lang.Float
-  (->double [this] (.doubleValue this))
-
-  java.lang.Double
-  (->double [this] this)
-
-  nil
-  (->double [this] nil)
-
-  )
-
-(extend-protocol AsFloat
-  java.lang.String
-  (->float [this] (Float. this))
-
-  java.lang.Float
-  (->float [this] this)
-
-  java.lang.Long
-  (->float [this] (.floatValue this))
-
-  java.lang.Integer
-  (->float [this] (.floatValue this))
-
-  java.lang.Double
-  (->float [this] (.floatValue this))
-
-  nil
-  (->float [this] nil)
-
-  )
-
-(defmethod pack java.lang.Float [_ value]
-  (->double value))
-
-(defmethod unpack java.lang.Float [_ value]
-  (->float value))
+           [com.basho.riak.client.raw StoreMeta StoreMeta$Builder]))
 
 (defn pbc-config [options]
   (let [^PBClientConfig$Builder config (PBClientConfig$Builder.)]
@@ -135,7 +96,7 @@
         builder (RiakObjectBuilder/newBuilder (bucket-name kind) id)]
     (.withValue builder json)
     (doseq [[k v] record]
-      (if (integer? v)
+      (if (instance? Integer v)
         (.addIndex builder (name k) (int v))
         (.addIndex builder (name k) (str v))))
     (.build builder)))
@@ -189,8 +150,7 @@
 (defn optimize-filters [filters]
   (reduce
     (fn [[q nq] filter]
-      (let [op (filter/operator filter)
-            not-nil (append-not-nil-fn (filter/field filter) (filter/value filter))]
+      (let [op (filter/operator filter)]
         (cond
           (= := op) [(conj q filter) nq]
           :else [q (conj nq filter)])))
@@ -198,7 +158,7 @@
     filters))
 
 (defn filter->query [bucket [operator field value]]
-  (case [operator (if (integer? value) :int :bin )]
+  (case [operator (if (instance? Integer value) :int :bin )]
     [:= :int ] (IntValueQuery. (IntIndex/named (name field)) bucket (int value))
     [:= :bin ] (BinValueQuery. (BinIndex/named (name field)) bucket (str value))
     (throw (Exception. (str "Don't know how to create query from filter: " filter)))))
@@ -208,29 +168,42 @@
     (map (partial filter->query bucket) filters)
     [(BinRangeQuery. KeyIndex/index bucket "" "zzzzz")]))
 
-(defn- ids-by-kind [client bucket filters]
-  (let [queries (filters->queries bucket filters)
-        results (map #(.fetchIndex client %) queries)]
-    (reduce #(intersection %1 %2) (map set results))))
+(defn- parse-record [kind raw-record]
+  (assoc (dissoc raw-record :id)
+         :key (compose-key kind (:id raw-record))
+         :kind kind))
+
+(defn- build-map-reduce [client kind filters sorts limit offset]
+  (-> (BucketMapReduce. client (bucket-name kind))
+    (.addMapPhase (JSSourceFunction. (str (filter-js filters))) false)
+    (#(if (not (or (nil? sorts) (empty? sorts)))
+      (.addReducePhase % (JSSourceFunction. (str (sort-js sorts))) false) %))
+    (#(if offset (.addReducePhase % (JSSourceFunction. (str (offset-js offset))) false) %))
+    (#(if limit (.addReducePhase % (JSSourceFunction. (str (limit-js limit))) false) %))))
+
+(defn- execute-mr [mr]
+  (-> mr
+    (.execute)
+    (.getResultRaw)
+    (parse-string true)))
 
 (defn- find-by-kind [client kind filters sorts limit offset]
-  (let [bucket (bucket-name kind)
-        [pre-filters post-filters] (optimize-filters filters)
-        _ (when (seq post-filters) (log/warn "The following filters will be appied in memory because they can't be done using Riak secondary indexes:" post-filters))
-        filter-fn (memory/build-filter kind post-filters)
-        ids (ids-by-kind client bucket pre-filters)
-        records (map (partial find-by-key client bucket kind) ids)]
-    (->> records
-      (filter filter-fn)
-      (sort/sort-results sorts)
-      (filter/offset-results offset)
-      (filter/limit-results limit))))
+  (-> (build-map-reduce client kind filters sorts limit offset)
+    (.addReducePhase (JSSourceFunction. (str (pass-thru-js))) true)
+    (execute-mr)
+    (#(map (partial parse-record kind) %))))
+
+(defn- count-by-kind [client kind filters]
+  (-> (build-map-reduce client kind filters nil nil nil)
+    (.addReducePhase (JSSourceFunction. (str (count-js))) true)
+    (execute-mr)
+    (first)))
 
 (defn- delete-by-kind [client kind filters]
-  (let [records (find-by-kind client kind filters nil nil nil)
-        ids (map #(second (decompose-key (:key %))) records)
-        bucket (bucket-name kind)]
-    (doseq [id ids] (delete-by-key client bucket id))))
+  (-> (build-map-reduce client kind filters nil nil nil)
+    (.addReducePhase (JSSourceFunction. (str (ids-js))) true)
+    (execute-mr)
+    (#(doseq [id %] (delete-by-key client (bucket-name kind) id)))))
 
 (defn- find-all-kinds [client]
   (let [buckets (.listBuckets client)
@@ -242,9 +215,10 @@
   (ds-save [this records] (doall (map #(save-record client %) records)))
   (ds-delete-by-kind [this kind filters] (delete-by-kind client kind filters))
   (ds-delete-by-key [this key] (delete-by-key client key))
-  (ds-count-by-kind [this kind filters] (count (find-by-kind client kind filters nil nil nil)))
+  (ds-count-by-kind [this kind filters] (count-by-kind client kind filters))
   (ds-find-by-key [this key] (find-by-key client key))
-  (ds-find-by-kind [this kind filters sorts limit offset] (find-by-kind client kind filters sorts limit offset))
+  (ds-find-by-kind [this kind filters sorts limit offset]
+    (find-by-kind client kind filters sorts limit offset))
   (ds-all-kinds [this] (find-all-kinds client))
   (ds-pack-key [this value] (second (decompose-key value)))
   (ds-unpack-key [this kind value] (compose-key kind value)))

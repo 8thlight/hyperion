@@ -8,8 +8,13 @@
     (context "booleans"
       (it-handles-booleans))
     (context "integers"
+      (tags :int)
       (it-handles-ints))
+    (context "longs"
+      (tags :long)
+      (it-handles-longs))
     (context "floats"
+      (tags :float)
       (it-handles-floats))
 
     ))

@@ -47,16 +47,18 @@
   (do-query
     "CREATE TABLE IF NOT EXISTS types (
     id INTEGER PRIMARY KEY,
+    bool BOOLEAN,
     inti INTEGER,
     flt DOUBLE,
-    data VARCHAR(32),
-    bool BOOLEAN
+    lng BIGINT,
+    data VARCHAR(32)
     )"))
 
 (defentity :types
   [bool :type java.lang.Boolean]
   [inti]
-  [flt :type java.lang.Float])
+  [flt :type java.lang.Float]
+  [lng :type java.lang.Long])
 
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))

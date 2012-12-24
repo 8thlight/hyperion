@@ -7,12 +7,13 @@ A Hyperion implementation for SQLite3
 
 ### Natively Supported
 
-* `java.lang.Integer`
+* `java.lang.Integer` as column type `INTEGER`
 
 ### Supported by Packer/Unpacker
 
-* `java.lang.Boolean`
+* `java.lang.Boolean` as column type `BOOLEAN`
 * `java.lang.Float` as column type `DOUBLE` or `FLOAT`
+* `java.lang.Long` as column type `BIGINT`
 
 ## License
 

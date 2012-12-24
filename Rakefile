@@ -77,7 +77,7 @@ namespace :redis do
   package('redis', %w{api})
 end
 
-PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :redis, :riak, :mongo]
+PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :redis, :mongo, :riak]
 
 def create_task_for_all(task_name)
   task task_name => PROJECTS.map {|project| "#{project}:#{task_name}"}

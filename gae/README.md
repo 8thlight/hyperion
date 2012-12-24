@@ -8,8 +8,12 @@ A Hyperion implementation for the Google App Engine datastore
 ### Natively Supported
 
 * `java.lang.Boolean`
-* `java.lang.Integer`
-* `java.lang.Float`
+* `java.lang.Long`
+
+### Supported by Packer/Unpacker
+
+* `java.lang.Integer` (if type is not specified, GAE unpacks integers as longs)
+* `java.lang.Float` (if type is not specified, GAE unpacks floats as doubles)
 
 ## License
 

@@ -44,17 +44,19 @@
   (do-query
     "CREATE TABLE IF NOT EXISTS types (
     id SERIAL PRIMARY KEY,
+    bool BOOLEAN,
     inti INTEGER,
     flt FLOAT,
+    lng BIGINT,
     data VARCHAR(32),
-    first_name VARCHAR(35),
-    bool BOOLEAN
+    first_name VARCHAR(35)
     )"))
 
 (defentity :types
   [bool]
   [inti]
-  [flt :type java.lang.Float])
+  [flt :type java.lang.Float]
+  [lng])
 
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))

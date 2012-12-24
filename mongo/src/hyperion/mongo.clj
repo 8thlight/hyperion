@@ -1,8 +1,9 @@
 (ns hyperion.mongo
-  (:require [hyperion.abstr :refer [Datastore]]
+  (:require [chee.util :refer [->options]]
+            [hyperion.abstr :refer [Datastore]]
             [hyperion.key :refer (compose-key decompose-key)]
             [hyperion.log :as log]
-            [chee.util :refer [->options]]))
+            [hyperion.mongo.types]))
 
 (defn- ->address [spec]
   (let [host (first spec)

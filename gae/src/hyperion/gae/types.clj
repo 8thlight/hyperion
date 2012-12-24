@@ -1,5 +1,7 @@
 (ns hyperion.gae.types
-  (:require [hyperion.api :refer [pack unpack]])
+  (:require [chee.coerce :refer [->int AsInteger]]
+            [hyperion.coerce :refer [->float]]
+            [hyperion.api :refer [pack unpack]])
   (:import [com.google.appengine.api.datastore
             Key KeyFactory ShortBlob Blob Category Email GeoPt Link
             IMHandle IMHandle$Scheme PostalAddress Rating PhoneNumber Text]
@@ -22,6 +24,22 @@
      :user-id (.getUserId user)
      :federated-identity (.getFederatedIdentity user)}
     nil))
+
+(defmethod pack Float [_ value]
+  (->float value))
+
+(defmethod unpack Float [_ value]
+  (->float value))
+
+(extend-type nil
+  AsInteger
+  (->int [this] nil))
+
+(defmethod pack Integer [_ value]
+  (->int value))
+
+(defmethod unpack Integer [_ value]
+  (->int value))
 
 (defmethod pack Key [_ value]
   (cond
@@ -170,8 +188,3 @@
 (defmethod unpack Text [_ value]
   (when value
     (.getValue value)))
-
-
-
-
-

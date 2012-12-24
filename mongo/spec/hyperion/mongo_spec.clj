@@ -8,6 +8,12 @@
 
 (hyperion.log/error!)
 
+(defentity :types
+  [bool]
+  [inti]
+  [flt :type java.lang.Float]
+  [lng])
+
 (describe "Mongo Datastore"
 
   (context "Client connection"
