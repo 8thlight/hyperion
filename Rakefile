@@ -77,10 +77,15 @@ namespace :redis do
   package('redis', %w{api})
 end
 
-PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :redis, :mongo, :riak]
+CI_PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :redis, :mongo]
+PROJECTS = CI_PROJECTS + [:riak]
 
 def create_task_for_all(task_name)
   task task_name => PROJECTS.map {|project| "#{project}:#{task_name}"}
+end
+
+def create_task_for_ci(task_name, sub_task)
+  task task_name => CI_PROJECTS.map {|project| "#{project}:#{sub_task}"}
 end
 
 desc 'Setup checkouts for subprojets'
@@ -88,6 +93,9 @@ create_task_for_all(:checkouts)
 
 desc 'Run the specs Hyperion'
 create_task_for_all(:spec)
+
+desc 'Run the ci specs Hyperion'
+create_task_for_ci(:ci_spec, :spec)
 
 desc 'Deploy Hyperion'
 create_task_for_all(:deploy)
@@ -122,7 +130,7 @@ def deploy(dir)
 end
 
 def lein_task(dir, task)
-  sh "cd #{dir} && lein #{task}"
+  sh "cd #{dir} && lein2 #{task}"
 end
 
 def checkouts(client, servers)
