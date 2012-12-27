@@ -11,12 +11,16 @@ A Hyperion implementation for Riak
     will be stored in the \"my_app_widget\" bucket.
  3. All buckets are implicitly created with default options.  Siblings should not occur.
  4. All fields of each record are indexed to optimize searching.
- 5. Only certain types of search operation are optimized.  They are [:= :<= :>=].
-    Operations [:< :>] are mostly optimized but require some in memory filtering.
-    Operations [!= :contains?] may have VERY poor performance because all the records
-    of the specified kind will be loaded and filtered in memory.
- 6. Sort, Offset, and Limit search options are handled in memory because Riak doesn't
-    provide a facility for these.  Expect poor performance."
+ 5. all "-by-kind" queries execute a MapReduce query which will handle all filtering, sorting, limiting, and offseting.
+    According to the [Riak documentation](http://docs.basho.com/riak/1.1.0/tutorials/querying/MapReduce/),
+    MapReduce queries should not be performed across an entire bucket (a.k.a kind).
+    In order to avoid this, you should use one of the folling optimized filters when performing a "-by-kind" query.
+    * one := filter. This is optimized to execute an equals query on the secondary index.
+    * a :< with a :> filter. This is optimized to execute a range query on the secondary index.
+    * :>= filter. This is optimized to execute a range query on the secondary index.
+    * :<= filter. This is optimized to execute a range query on the secondary index.
+    All other operations on the "-by-kind" queries should be avoided.
+    They will perform poorly and place a large demand on your cluster.
 
 ## Usage
 
@@ -80,11 +84,12 @@ For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-
 ### Natively Supported
 
 * `java.lang.Boolean`
-* `java.lang.Integer`
 
 ### Supported by Packer/Unpacker
 
-* `java.lang.Float` (packed/unpacked to a Double unless the Float type is specified)
+* `java.lang.Integer`
+* `java.lang.Long`
+* `java.lang.Float`
 
 ## License
 

@@ -17,6 +17,7 @@
             [hyperion.riak.map-reduce.count :refer [count-js]]
             [hyperion.riak.map-reduce.ids :refer [ids-js]]
             [hyperion.riak.map-reduce.pass-thru :refer [pass-thru-js]]
+            [hyperion.riak.index-optimizer :refer [build-mr index-type]]
             [hyperion.riak.types])
   (:import [com.basho.riak.client.builders RiakObjectBuilder]
            [com.basho.riak.client.query.functions JSSourceFunction]
@@ -90,15 +91,23 @@
     (.returnBody true)
     (.build)))
 
+(defmulti add-index (fn [builder k v] (index-type v)))
+
+(defmethod add-index :int [builder k v]
+  (.addIndex builder (name k) v))
+
+(defmethod add-index :bin [builder k v]
+  (.addIndex builder (name k) (str v)))
+
+(defmethod add-index nil [_ _ _])
+
 (defn- ->native [record kind id]
   (let [record (dissoc record :id :kind )
         json (generate-string record)
         builder (RiakObjectBuilder/newBuilder (bucket-name kind) id)]
     (.withValue builder json)
     (doseq [[k v] record]
-      (if (instance? Integer v)
-        (.addIndex builder (name k) (int v))
-        (.addIndex builder (name k) (str v))))
+      (add-index builder k v))
     (.build builder)))
 
 (defn json->record [json kind key]
@@ -147,39 +156,19 @@
         nil)))
   ([client bucket id] (.delete client bucket id)))
 
-(defn optimize-filters [filters]
-  (reduce
-    (fn [[q nq] filter]
-      (let [op (filter/operator filter)]
-        (cond
-          (= := op) [(conj q filter) nq]
-          :else [q (conj nq filter)])))
-    [[] []]
-    filters))
-
-(defn filter->query [bucket [operator field value]]
-  (case [operator (if (instance? Integer value) :int :bin )]
-    [:= :int ] (IntValueQuery. (IntIndex/named (name field)) bucket (int value))
-    [:= :bin ] (BinValueQuery. (BinIndex/named (name field)) bucket (str value))
-    (throw (Exception. (str "Don't know how to create query from filter: " filter)))))
-
-(defn filters->queries [bucket filters]
-  (if (seq filters)
-    (map (partial filter->query bucket) filters)
-    [(BinRangeQuery. KeyIndex/index bucket "" "zzzzz")]))
-
 (defn- parse-record [kind raw-record]
   (assoc (dissoc raw-record :id)
          :key (compose-key kind (:id raw-record))
          :kind kind))
 
 (defn- build-map-reduce [client kind filters sorts limit offset]
-  (-> (BucketMapReduce. client (bucket-name kind))
-    (.addMapPhase (JSSourceFunction. (str (filter-js filters))) false)
-    (#(if (not (or (nil? sorts) (empty? sorts)))
-      (.addReducePhase % (JSSourceFunction. (str (sort-js sorts))) false) %))
-    (#(if offset (.addReducePhase % (JSSourceFunction. (str (offset-js offset))) false) %))
-    (#(if limit (.addReducePhase % (JSSourceFunction. (str (limit-js limit))) false) %))))
+  (let [[mr filters] (build-mr client filters (bucket-name kind))]
+    (-> mr
+      (.addMapPhase (JSSourceFunction. (str (filter-js filters))) false)
+      (#(if (not (or (nil? sorts) (empty? sorts)))
+        (.addReducePhase % (JSSourceFunction. (str (sort-js sorts))) false) %))
+      (#(if offset (.addReducePhase % (JSSourceFunction. (str (offset-js offset))) false) %))
+      (#(if limit (.addReducePhase % (JSSourceFunction. (str (limit-js limit))) false) %)))))
 
 (defn- execute-mr [mr]
   (-> mr

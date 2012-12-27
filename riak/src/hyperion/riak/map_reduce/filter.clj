@@ -84,21 +84,14 @@
 (defmethod comparator-js [nil :!=] [filter]
   "if (isNull(fieldValue)) {return [];}")
 
-(def filter-template
-  (str
-"
-function f(riakRecord) {
-"
-big-number-js
-json-parse-js
-"
-  var fieldValue, c;
-  var data = json_parse(riakRecord['values'][0]['data']);
+(defn needs-big-number-js? [filters]
+  (some #(number? (filter/value %)) filters))
 
-  function isNull(value) {
-    return (typeof value === 'undefined' || value === null);
-  };
+(defn needs-contain-js? [filters]
+  (some #(= :contains? (filter/operator %)) filters))
 
+(def contain-js
+  "
   function any(value, coll) {
     for (var i = 0; i < coll['length']; i++) {
       if (value === coll[i]) {
@@ -107,16 +100,32 @@ json-parse-js
     }
     return false;
   };
+  ")
 
-  <(for [filter filters] \">
-    fieldValue = data[<(raw (generate-string (filter/field filter)))>];
-    <(comparator-js filter)>
-  <\")>
+(def filter-template
+  "
+  function f(riakRecord) {
+    var x;
+    <(if (needs-big-number-js? filters) big-number-js \">x=1;<\")>
+    <(if (needs-contain-js? filters) contain-js \">x=1;<\")>
+    <(raw json-parse-js)>
 
-  data['id'] = riakRecord['key'];
-  return [data];
-}
-  "))
+    var fieldValue, c;
+    var data = json_parse(riakRecord['values'][0]['data']);
 
-(def filter-js (fleet [filters] filter-template {:escaping :bypass}))
+    function isNull(value) {
+      return (typeof value === 'undefined' || value === null);
+    };
+
+    <(for [filter filters] \">
+      fieldValue = data[<(raw (generate-string (filter/field filter)))>];
+      <(comparator-js filter)>
+    <\")>
+
+    data['id'] = riakRecord['key'];
+    return [data];
+  }
+  ")
+
+(deftemplate-fn filter-js (fleet [filters] filter-template {:escaping :bypass}))
 

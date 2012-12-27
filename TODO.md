@@ -14,15 +14,13 @@
   * `java.util.Date`
   * `null`
 3. Whatever Java types cannot be natively supported by the Database should have a packer and unpacker included with the Datastore implementation. Documentation on what is natively supported and what is not should be included as well.
-4. Improve Riak Performance
-  * Optimize filters for secondary indexes
-5. Improve Redis Datastore
+4. Improve Redis Datastore
   * Serialize data so that it is compatible with Hyperion-Ruby (aka not marshalled into bytes as it is currently)
   * Optimize filter/sort/limit/offset operations to use the Redis `SORT` query
   * Whatever cannot be optimized should use Lua scripting
   * Nothing done in-memory
-6. [Ragtime](https://github.com/weavejester/ragtime) integration for migrations
-7. Indexes:
+5. [Ragtime](https://github.com/weavejester/ragtime) integration for migrations
+6. Indexes:
     * Riak: currently indexes ALL fields.  That's inefficient. Yet it can't search efficiently without index.  If defentity allowed fields to be marked as indexed, would help riak a great deal. Indexes are needed at runtime to:
         - save (to know which indexes to add)
         - find-by-kind (so we know how to search)
@@ -30,4 +28,4 @@
     * GAE: Indexes are handled externally. Would be useless.
     * SQL: Same as Mongo.
     * Implement indexes as datastore decorators?
-8. Website. Ahhh...maybe someday we will get this far down on the list.
+7. Website. Ahhh...maybe someday we will get this far down on the list.
