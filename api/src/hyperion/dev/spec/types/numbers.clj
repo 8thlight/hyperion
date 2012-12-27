@@ -52,7 +52,6 @@
         )
 
       (context "find"
-        (tags :find)
         (before
           (apply save* (map
                          (fn [value]
@@ -67,7 +66,6 @@
 
         (it "filters on inequality"
           (doseq [value values]
-            ;(prn "filtering on: " value)
             (should== (remove #(= value %) values) (field-results :!= value)))
           (should==
             (conj first-and-last nil)
@@ -129,6 +127,14 @@
       (map type-caster [Integer/MIN_VALUE -42 -1 0 nil 1 42 Integer/MAX_VALUE])
       (type-caster 0))))
 
+(defn it-handles-longs []
+  (let [type-caster (fn [value] (when value (long value)))]
+    (it-handles-numbers
+      :lng
+      (build-type-checker Long)
+      (map type-caster [Long/MIN_VALUE -42 -1 0 nil 1 42 Long/MAX_VALUE])
+      (type-caster 0))))
+
 (defn it-handles-floats []
   (let [type-caster (fn [value] (when value (float value)))]
     (it-handles-numbers
@@ -137,10 +143,10 @@
       (map type-caster [(* -1 Float/MAX_VALUE) -42.010 -1.1098 0.0 nil 1.98 42.89 Float/MAX_VALUE])
       (type-caster 0))))
 
-(defn it-handles-longs []
-  (let [type-caster (fn [value] (when value (long value)))]
+(defn it-handles-doubles []
+  (let [type-caster (fn [value] (when value (double value)))]
     (it-handles-numbers
-      :lng
-      (build-type-checker Long)
-      (map type-caster [Long/MIN_VALUE -42 -1 0 nil 1 42 Long/MAX_VALUE])
+      :dbl
+      (build-type-checker Double)
+      (map type-caster [(* -1 Double/MAX_VALUE) -42.010 -1.1098 0.0 nil 1.98 42.89 Double/MAX_VALUE])
       (type-caster 0))))

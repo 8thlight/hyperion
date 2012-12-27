@@ -8,6 +8,7 @@ A Hyperion implementation for SQLite3
 ### Natively Supported
 
 * `java.lang.Integer` as column type `INTEGER`
+* `java.lang.Double` as column type `DOUBLE`
 
 ### Supported by Packer/Unpacker
 

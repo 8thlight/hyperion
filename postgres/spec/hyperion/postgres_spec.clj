@@ -47,6 +47,7 @@
     bool BOOLEAN,
     inti INTEGER,
     flt FLOAT,
+    dbl FLOAT,
     lng BIGINT,
     data VARCHAR(32),
     first_name VARCHAR(35)
@@ -56,7 +57,8 @@
   [bool]
   [inti]
   [flt :type java.lang.Float]
-  [lng])
+  [lng]
+  [dbl])
 
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))

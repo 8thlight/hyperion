@@ -29,11 +29,11 @@
 
   )
 
-(defmethod pack java.lang.Float [_ value]
-  (->double value))
+(defmethod pack java.lang.Integer [_ value]
+  (->int value))
 
-(defmethod unpack java.lang.Float [_ value]
-  (->float value))
+(defmethod unpack java.lang.Integer [_ value]
+  (->int value))
 
 (defmethod pack java.lang.Long [_ value]
   (->long value))
@@ -41,8 +41,14 @@
 (defmethod unpack java.lang.Long [_ value]
   (->long value))
 
-(defmethod pack java.lang.Integer [_ value]
-  (->int value))
+(defmethod pack java.lang.Float [_ value]
+  (->double value))
 
-(defmethod unpack java.lang.Integer [_ value]
-  (->int value))
+(defmethod unpack java.lang.Float [_ value]
+  (->float value))
+
+(defmethod pack java.lang.Double [_ value]
+  (->double value))
+
+(defmethod unpack java.lang.Double [_ value]
+  (->double value))

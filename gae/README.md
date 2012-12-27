@@ -9,6 +9,7 @@ A Hyperion implementation for the Google App Engine datastore
 
 * `java.lang.Boolean`
 * `java.lang.Long`
+* `java.lang.Double`
 
 ### Supported by Packer/Unpacker
 

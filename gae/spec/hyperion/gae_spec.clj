@@ -37,7 +37,8 @@
   [bool]
   [inti :type java.lang.Integer]
   [flt :type java.lang.Float]
-  [lng])
+  [lng]
+  [dbl])
 
 (describe "Google AppEngine Datastore"
 

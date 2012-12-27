@@ -28,6 +28,9 @@
   )
 
 (extend-protocol AsDouble
+  java.lang.String
+  (->double [this] (Double. this))
+
   java.lang.Float
   (->double [this] (.doubleValue this))
 

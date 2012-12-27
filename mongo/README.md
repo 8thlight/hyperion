@@ -55,6 +55,7 @@ Indexes should be added externally since Hyperion doesn't support indexes.
 * `java.lang.Boolean`
 * `java.lang.Integer`
 * `java.lang.Long`
+* `java.lang.Double`
 
 ### Supported by Packer/Unpacker
 
