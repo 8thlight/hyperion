@@ -132,15 +132,17 @@
     (it-handles-numbers
       :lng
       (build-type-checker Long)
-      (map type-caster [Long/MIN_VALUE -42 -1 0 nil 1 42 Long/MAX_VALUE])
+      (map type-caster [Long/MIN_VALUE (dec Integer/MIN_VALUE) -42 0 nil 42 (inc Integer/MAX_VALUE) Long/MAX_VALUE])
       (type-caster 0))))
+
+(def float-min (* -1 Float/MAX_VALUE))
 
 (defn it-handles-floats []
   (let [type-caster (fn [value] (when value (float value)))]
     (it-handles-numbers
       :flt
       (build-type-checker Float)
-      (map type-caster [(* -1 Float/MAX_VALUE) -42.010 -1.1098 0.0 nil 1.98 42.89 Float/MAX_VALUE])
+      (map type-caster [float-min -42.010 -1.1098 0.0 nil 1.98 42.89 Float/MAX_VALUE])
       (type-caster 0))))
 
 (defn it-handles-doubles []
@@ -148,5 +150,5 @@
     (it-handles-numbers
       :dbl
       (build-type-checker Double)
-      (map type-caster [(* -1 Double/MAX_VALUE) -42.010 -1.1098 0.0 nil 1.98 42.89 Double/MAX_VALUE])
+      (map type-caster [(* -1 Double/MAX_VALUE) float-min -42.010 0.0 nil 42.89 (inc Float/MAX_VALUE) Double/MAX_VALUE])
       (type-caster 0))))
