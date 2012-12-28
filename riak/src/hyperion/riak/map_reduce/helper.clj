@@ -2,6 +2,15 @@
   (:import  [com.google.javascript.jscomp.Compiler]
             [com.google.javascript.jscomp CompilerOptions CompilationLevel JSSourceFile CheckLevel]))
 
+(defn parse-number [s]
+  (try
+    (Long/parseLong s)
+    (catch NumberFormatException _
+      (try
+        (Double/parseDouble s)
+        (catch NumberFormatException _
+          s)))))
+
 (defn remove-from-end [s end]
   (if (.endsWith s end)
       (.substring s 0 (- (count s) (count end)))

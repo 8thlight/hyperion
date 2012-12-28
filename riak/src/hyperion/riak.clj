@@ -1,5 +1,6 @@
 (ns hyperion.riak
   (:require [chee.util :refer [->options]]
+            [chee.coerce :refer [->int]]
             [cheshire.core :refer [generate-string parse-string]]
             [clojure.data.codec.base64 :refer [encode decode]]
             [clojure.set :refer [intersection]]
@@ -94,7 +95,7 @@
 (defmulti add-index (fn [builder k v] (index-type v)))
 
 (defmethod add-index :int [builder k v]
-  (.addIndex builder (name k) v))
+  (.addIndex builder (name k) (->int v)))
 
 (defmethod add-index :bin [builder k v]
   (.addIndex builder (name k) (str v)))

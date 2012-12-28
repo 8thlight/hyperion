@@ -1,14 +1,19 @@
 (ns hyperion.riak.index-optimizer-spec
   (:require [speclj.core :refer :all]
             [hyperion.api :refer [ds]]
-            [hyperion.filtering :refer [make-filter]]
+            [hyperion.filtering :refer [make-filter] :as filter]
             [hyperion.riak.spec-helper :refer [with-testable-riak-datastore]]
             [hyperion.riak.index-optimizer :refer [build-mr expand-filter index-type build-value-query]])
   (:import  [com.basho.riak.client.query IndexMapReduce BucketMapReduce]))
 
+(def pending-message "secondary indexes on integers is turned off until https://github.com/basho/riak-java-client/issues/112 is fixed")
+
+(defn pend-int [] (pending pending-message))
+
 (describe "filter optimization"
   (context "index-type"
     (it "returns index type int for an integer"
+      (pend-int)
       (should= :int (index-type (int 1))))
 
     (it "returns nil for any number not an integer"
@@ -24,17 +29,26 @@
     (it "returns bin for strings"
       (should= :bin (index-type "value")))
 
+    (it "returns int for a string representing an int"
+      (pend-int)
+      (should= :int (index-type "1")))
+
     (it "returns bin for a collection of two bin values"
       (should= :bin (index-type ["value1" "value2"])))
 
     (it "returns int for a collection of two int values"
+      (pend-int)
       (should= :int (index-type [(int 1) (int 1)])))
 
     (it "returns nil for nil"
       (should-be-nil (index-type nil)))
 
+    (it "returns int for a collection of int value and one int string"
+      (pend-int)
+      (should= :int (index-type [(int 1) "1"])))
+
     (it "returns nil for a collection of int value and one bin value"
-      (should-be-nil (index-type [(int 1) "1"])))
+      (should-be-nil (index-type [(int 1) "asdf"])))
 
     (it "returns nil for a collection of int value and one long value"
       (should-be-nil (index-type [(int 1) (long 1)])))
@@ -66,26 +80,24 @@
         (should= "b" (.getBucket query))
         (should= "int-field_int" (.getIndex query))
         (should= (int 1) (.from query))
-        (should= (int 10) (.to query))
-        ))
+        (should= (int 10) (.to query))))
 
     (it "builds a bin range query"
       (let [query (build-value-query :bin-range "b" [@bin-lt-filter @bin-gt-filter])]
         (should= "b" (.getBucket query))
         (should= "bin-field_bin" (.getIndex query))
         (should= "1" (.from query))
-        (should= "10" (.to query))
-        ))
+        (should= "10" (.to query))))
 
     )
 
   (with-testable-riak-datastore)
   (with client (.client (ds)))
-  (with equal-filter (make-filter := :int (int 1)))
-  (with bad-equal-filter (make-filter := :lng (long 1)))
-  (with gt-filter (make-filter :> :int (int 1)))
-  (with lt-filter (make-filter :< :int (int 2)))
-  (with bad-lt-filter (make-filter :< :int (long 2)))
+  (with equal-filter (make-filter := :bin "asdf"))
+  (with bad-equal-filter (make-filter := :bin2 (long 2)))
+  (with gt-filter (make-filter :> :bin "asdf"))
+  (with lt-filter (make-filter :< :bin "asdf2"))
+  (with bad-lt-filter (make-filter :< :bin nil))
   (with bin-lt-filter (make-filter :< :bn "2"))
   (with bin-gt-filter (make-filter :> :bn "2"))
 
@@ -125,9 +137,12 @@
     )
 
   (context "optimizes for a range query"
+    (with not-gt (make-filter :!= (filter/field @gt-filter) (filter/value @gt-filter)))
+    (with not-lt (make-filter :!= (filter/field @lt-filter) (filter/value @lt-filter)))
+
     (it "builds a range query when there is a lt and gt filter"
       (let [[mr filters] (build-mr @client [@gt-filter @lt-filter] "test")]
-        (should== [(make-filter :!= :int (int 1)) (make-filter :!= :int (int 2))] filters)
+        (should== [@not-gt @not-lt] filters)
         (should= IndexMapReduce (type mr))))
 
     (it "doesn't build a range query when the fields don't match"
@@ -141,13 +156,14 @@
         (should= BucketMapReduce (type mr))))
 
     (it "builds a range query when one field match has the same type and another does not"
-      (let [[mr filters] (build-mr @client [@gt-filter @bad-lt-filter @lt-filter] "test")]
-        (should== [@bad-lt-filter (make-filter :!= :int (int 1)) (make-filter :!= :int (int 2))] filters)
+      (let [[mr filters] (build-mr @client [@gt-filter @bad-lt-filter @lt-filter] "test")
+            ]
+        (should== [@bad-lt-filter @not-gt @not-lt] filters)
         (should= IndexMapReduce (type mr))))
     )
 
   (context "optimizes for a gte query"
-    (with gte-filter (make-filter :>= :int (int 1)))
+    (with gte-filter (make-filter :>= :int "asdf"))
     (with bin-gte-filter (make-filter :>= :bin "1"))
     (with bad-gte-filter (make-filter :>= :int (long 1)))
 
@@ -167,6 +183,7 @@
         (should= IndexMapReduce (type mr))))
 
     (it "expands a int gte filter to a range filter"
+      (pend-int)
       (should= [(make-filter :< :int Integer/MAX_VALUE)
                 (make-filter :> :int (int 1))] (expand-filter :int @gte-filter)))
 
@@ -177,7 +194,7 @@
     )
 
   (context "optimizes for a lte query"
-    (with lte-filter (make-filter :<= :int (int 1)))
+    (with lte-filter (make-filter :<= :int "asdf"))
     (with bin-lte-filter (make-filter :<= :bin "1"))
     (with bad-lte-filter (make-filter :<= :int (long 1)))
 
@@ -197,6 +214,7 @@
         (should= IndexMapReduce (type mr))))
 
     (it "expands a int lte filter to a range filter"
+      (pend-int)
       (should= [(make-filter :< :int (int 1))
                 (make-filter :> :int Integer/MIN_VALUE)] (expand-filter :int @lte-filter)))
 

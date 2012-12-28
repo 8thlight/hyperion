@@ -1,16 +1,21 @@
 (ns hyperion.riak.index-optimizer
-  (:require [hyperion.filtering :as filter :refer [make-filter]])
+  (:require [chee.coerce :refer [->int]]
+            [hyperion.filtering :as filter :refer [make-filter]]
+            [hyperion.riak.map-reduce.helper :refer [parse-number]])
   (:import  [com.basho.riak.client.query IndexMapReduce BucketMapReduce]
             [com.basho.riak.client.query.indexes BinIndex IntIndex]
             [com.basho.riak.client.raw.query.indexes BinValueQuery BinRangeQuery IntValueQuery IntRangeQuery]
             [clojure.lang IPersistentCollection]))
 
+; secondary indexes on integers is turned off until
+; https://github.com/basho/riak-java-client/issues/112 is fixed
+
 (defprotocol IndexType
   (index-type [this]))
 
 (extend-protocol IndexType
-  Integer
-  (index-type [this] :int)
+  ;Integer
+  ;(index-type [this] :int)
 
   Number
   (index-type [this] nil)
@@ -21,6 +26,16 @@
       (if (apply = types)
         (first types)
         nil)))
+
+  String
+  (index-type [this]
+    (when-not (number? (parse-number this))
+      :bin))
+    ;(try
+    ;  (Integer/parseInt this)
+    ;  :int
+    ;  (catch NumberFormatException _
+    ;    :bin)))
 
   Object
   (index-type [this] :bin)
@@ -37,15 +52,15 @@
     (IntIndex/named
       (name (filter/field filter)))
     bucket-name
-    (filter/value filter)))
+    (->int (filter/value filter))))
 
 (defmethod build-value-query :int-range [_ bucket-name [lt-filter gt-filter]]
   (IntRangeQuery.
     (IntIndex/named
       (name (filter/field lt-filter)))
     bucket-name
-    (filter/value lt-filter)
-    (filter/value gt-filter)))
+    (->int (filter/value lt-filter))
+    (->int (filter/value gt-filter))))
 
 (defmethod build-value-query :bin [_ bucket-name filter]
   (BinValueQuery.
