@@ -15,10 +15,11 @@ A Hyperion implementation for Riak
     According to the [Riak documentation](http://docs.basho.com/riak/1.1.0/tutorials/querying/MapReduce/),
     MapReduce queries should not be performed across an entire bucket (a.k.a kind).
     In order to avoid this, you should use one of the folling optimized filters when performing a "-by-kind" query.
-    * one := filter. This is optimized to execute an equals query on the secondary index.
-    * a :< with a :> filter. This is optimized to execute a range query on the secondary index.
-    * :>= filter. This is optimized to execute a range query on the secondary index.
-    * :<= filter. This is optimized to execute a range query on the secondary index.
+    * one `:=`. This is optimized to execute an equals query on the secondary index.
+    * `:<` and `:>` together. This is optimized to execute a range query on the secondary index.
+    * one `:>=`. This is optimized to execute a range query on the secondary index.
+    * one `:<=`. This is optimized to execute a range query on the secondary index.
+
     All other operations on the "-by-kind" queries should be avoided.
     They will perform poorly and place a large demand on your cluster.
 
