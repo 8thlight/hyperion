@@ -13,6 +13,7 @@ A Hyperion implementation for the Google App Engine datastore
 
 ### Supported by Packer/Unpacker
 
+* `java.lang.Byte` (if type is not specified, GAE unpacks bytes as integers)
 * `java.lang.Integer` (if type is not specified, GAE unpacks integers as longs)
 * `java.lang.Float` (if type is not specified, GAE unpacks floats as doubles)
 

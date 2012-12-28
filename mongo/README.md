@@ -59,7 +59,8 @@ Indexes should be added externally since Hyperion doesn't support indexes.
 
 ### Supported by Packer/Unpacker
 
-* `java.lang.Float` (if type is not specified, Mongo will unpack to Double)
+* `java.lang.Byte` (if type is not specified, Mongo will unpack to an Integer)
+* `java.lang.Float` (if type is not specified, Mongo will unpack to a Double)
 
 ## License
 

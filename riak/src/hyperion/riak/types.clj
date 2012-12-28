@@ -1,43 +1,14 @@
 (ns hyperion.riak.types
-  (:require [chee.coerce :refer [->string ->int AsString AsInteger]]
-            [hyperion.coerce :refer [->float ->double]]
+  (:require [chee.coerce :refer [->string ->int]]
+            [hyperion.coerce :refer [->float ->double ->long ->byte]]
             [hyperion.api :refer [pack unpack]])
   (:import  [java.math BigInteger]))
 
-(defprotocol AsLong
-  (->long [this]))
+(defmethod pack java.lang.Byte [_ value]
+  (->string value))
 
-(extend-protocol AsLong
-  java.lang.Integer
-  (->long [this] (.longValue this))
-
-  java.lang.Long
-  (->long [this] this)
-
-  java.lang.String
-  (->long [this] (long (BigInteger. this)))
-
-  nil
-  (->long [this] nil)
-
-  )
-
-(extend-protocol AsInteger
-
-  nil
-  (->int [this] nil)
-
-  )
-
-(extend-protocol AsString
-
-  Object
-  (->string [this] (str this))
-
-  nil
-  (->string [this] nil)
-
-  )
+(defmethod unpack java.lang.Byte [_ value]
+  (->byte value))
 
 (defmethod pack java.lang.Integer [_ value]
   (->string value))

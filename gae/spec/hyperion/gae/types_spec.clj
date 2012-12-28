@@ -5,14 +5,16 @@
 
 (describe "GAE Types"
 
-  (context "floats"
-    (it "packs a float"
-      (should= (float 1.0) (pack Float (double 1.0)))
-      (should= Float (type (pack Float (double 1.0)))))
+  (context "bytes"
+    (it "packs to a byte"
+      (let [packed (pack Byte (int 1))]
+        (should= 1 packed)
+        (should= Byte (type packed))))
 
-    (it "unpacks a float"
-      (should= (float 1.0) (unpack Float (double 1.0)))
-      (should= Float (type (unpack Float (double 1.0)))))
+    (it "unpacks to a byte"
+      (let [unpacked (unpack Byte (int 1))]
+        (should= 1 unpacked)
+        (should= Byte (type unpacked))))
 
     )
 
@@ -24,6 +26,17 @@
     (it "unpacks a Integer"
       (should= (int 1) (unpack Integer (long 1)))
       (should= Integer (type (unpack Integer (long 1)))))
+
+    )
+
+  (context "floats"
+    (it "packs a float"
+      (should= (float 1.0) (pack Float (double 1.0)))
+      (should= Float (type (pack Float (double 1.0)))))
+
+    (it "unpacks a float"
+      (should= (float 1.0) (unpack Float (double 1.0)))
+      (should= Float (type (unpack Float (double 1.0)))))
 
     )
 

@@ -45,6 +45,7 @@
     "CREATE TABLE IF NOT EXISTS types (
     id SERIAL PRIMARY KEY,
     bool BOOLEAN,
+    bite SMALLINT,
     inti INTEGER,
     flt FLOAT,
     dbl FLOAT,
@@ -55,6 +56,7 @@
 
 (defentity :types
   [bool]
+  [bite :type java.lang.Byte]
   [inti]
   [flt :type java.lang.Float]
   [lng]

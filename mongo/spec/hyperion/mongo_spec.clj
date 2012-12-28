@@ -10,9 +10,10 @@
 
 (defentity :types
   [bool]
+  [bite :type java.lang.Byte]
   [inti]
-  [flt :type java.lang.Float]
   [lng]
+  [flt :type java.lang.Float]
   [dbl])
 
 (describe "Mongo Datastore"

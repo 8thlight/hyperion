@@ -39,22 +39,34 @@ i.e.
 
 Options:
 
- :api - [:pbc :http] *required
+ * `:api` - [`:pbc` `:http`] *required
 
 HTTP Options:
 
- :host :port :http-client :mapreduce-path :max-connections
- :retry-handler :riak-path :scheme :timeout :url
+ * `:host`
+ * `:port`
+ * `:http-client`
+ * `:mapreduce-path`
+ * `:max-connections`
+ * `:retry-handler`
+ * `:riak-path`
+ * `:scheme`
+ * `:timeout`
+ * `:url`
 
- See: http://basho.github.com/riak-java-client/1.0.5/com/basho/riak/client/raw/http/HTTPClientConfig.Builder.html
+ See the [HTTPClientConfig](http://basho.github.com/riak-java-client/1.0.5/com/basho/riak/client/raw/http/HTTPClientConfig.Builder.html) for more info.
 
 PBC Options:
 
- :host :port :connection-timeout-millis
- :idle-connection-ttl-millis :initial-pool-size
- :pool-size :socket-buffer-size-kb
+ * `:host`
+ * `:port`
+ * `:connection-timeout-millis`
+ * `:idle-connection-ttl-millis`
+ * `:initial-pool-size`
+ * `:pool-size`
+ * `:socket-buffer-size-kb`
 
- See: http://basho.github.com/riak-java-client/1.0.5/com/basho/riak/client/raw/pbc/PBClientConfig.Builder.html
+ See the [PBClientConfig](http://basho.github.com/riak-java-client/1.0.5/com/basho/riak/client/raw/pbc/PBClientConfig.Builder.html) for more info.
 
 ### Riak Configuration
 
@@ -88,6 +100,7 @@ For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-
 
 ### Supported by Packer/Unpacker
 
+* `java.lang.Byte`
 * `java.lang.Integer`
 * `java.lang.Long`
 * `java.lang.Float`

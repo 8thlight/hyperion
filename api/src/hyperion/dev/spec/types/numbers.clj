@@ -42,6 +42,7 @@
         limit-result (limit-result-fn field field-values)]
     (list
       (context "saving"
+        (tags :save)
         (for [value values]
           (it (str "saves " (pr-str value))
             (let [record (save {:kind :types field value})
@@ -119,12 +120,20 @@
       true
       (should= klass (type value)))))
 
+(defn it-handles-bytes []
+  (let [type-caster (fn [value] (when value (byte value)))]
+    (it-handles-numbers
+      :bite
+      (build-type-checker Byte)
+      (map type-caster [Byte/MIN_VALUE -42 -1 0 nil 1 42 Byte/MAX_VALUE])
+      (type-caster 0))))
+
 (defn it-handles-ints []
   (let [type-caster (fn [value] (when value (int value)))]
     (it-handles-numbers
       :inti
       (build-type-checker Integer)
-      (map type-caster [Integer/MIN_VALUE -42 -1 0 nil 1 42 Integer/MAX_VALUE])
+      (map type-caster [Integer/MIN_VALUE (dec Short/MIN_VALUE) -42 0 nil 42 (inc Short/MAX_VALUE) Integer/MAX_VALUE])
       (type-caster 0))))
 
 (defn it-handles-longs []

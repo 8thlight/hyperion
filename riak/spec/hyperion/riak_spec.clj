@@ -30,9 +30,10 @@
 
 (defentity :types
   [bool]
+  [bite :type java.lang.Byte]
   [inti :type java.lang.Integer]
-  [flt :type java.lang.Float]
   [lng :type java.lang.Long]
+  [flt :type java.lang.Float]
   [dbl :type java.lang.Double])
 
 (describe "Riak Datastore"

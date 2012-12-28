@@ -7,10 +7,27 @@
 
   (context "floats"
     (it "unpacks a float"
-      (should= (Float. 1.1) (unpack Float (Double. 1.1))))
+      (let [unpacked (unpack Float (double 1.1))]
+        (should= (float 1.1) unpacked)
+        (should= Float (type unpacked))))
 
     (it "packs a float"
-      (should= (Float. 1.1) (pack Float (Double. 1.1))))
+      (let [packed (pack Float (double 1.1))]
+        (should= (float 1.1) packed)
+        (should= Float (type packed))))
+
+    )
+
+  (context "byte"
+    (it "unpacks a byte"
+      (let [unpacked (unpack Byte (int 1))]
+        (should= (byte 1) unpacked)
+        (should= Byte (type unpacked))))
+
+    (it "packs a byte"
+      (let [packed (pack Byte (int 1))]
+        (should= (byte 1) packed)
+        (should= Byte (type packed))))
 
     )
 

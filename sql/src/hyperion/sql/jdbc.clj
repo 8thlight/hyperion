@@ -79,7 +79,7 @@
   (dorun
     (map-indexed
       (fn [ix value]
-        (set-object value stmt (inc ix)))
+        (.setObject stmt (inc ix) value))
       params)))
 
 (defn- prepare-statement [query-str]

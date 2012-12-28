@@ -51,10 +51,11 @@
     "CREATE TABLE IF NOT EXISTS types (
     id INTEGER NOT NULL AUTO_INCREMENT,
     bool BOOLEAN,
+    bite TINYINT,
     inti INTEGER,
+    lng BIGINT,
     flt DOUBLE,
     dbl DOUBLE,
-    lng BIGINT,
     data VARCHAR(32),
     first_name VARCHAR(35),
     PRIMARY KEY (id)
@@ -62,9 +63,10 @@
 
 (defentity :types
   [bool]
+  [bite :type java.lang.Byte]
   [inti]
-  [flt :type java.lang.Float]
   [lng]
+  [flt :type java.lang.Float]
   [dbl])
 
 (defn create-table [table-name]

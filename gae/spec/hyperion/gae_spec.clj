@@ -35,9 +35,10 @@
 
 (defentity :types
   [bool]
+  [bite :type java.lang.Byte]
   [inti :type java.lang.Integer]
-  [flt :type java.lang.Float]
   [lng]
+  [flt :type java.lang.Float]
   [dbl])
 
 (describe "Google AppEngine Datastore"

@@ -14,6 +14,7 @@ A Hyperion implementation for MySQL
 
 ### Supported by Packer/Unpacker
 
+* `java.lang.Byte` as column type `TINYINT`
 * `java.lang.Float` as column type `DOUBLE` (`FLOAT` will truncate)
 
 ## License

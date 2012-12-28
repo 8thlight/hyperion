@@ -3,10 +3,7 @@
   * All dangerous actions logged with the warn flag
 2. Extend the Datastore spec for packing/unpacking/filtering/sorting on the following types:
   * `clojure.lang.Keyword`
-  * `java.lang.Byte`
   * `java.lang.Character`
-  * `java.lang.Double`
-  * `java.lang.Number`
   * `java.lang.Short`
   * `java.lang.String`
   * `java.math.BigDecimal`

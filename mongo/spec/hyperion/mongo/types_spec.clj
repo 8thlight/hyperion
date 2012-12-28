@@ -22,4 +22,17 @@
       (should-be-nil (unpack Float nil)))
 
     )
+
+  (context "byte"
+    (it "packs a byte"
+      (let [packed (pack Byte (int 1))]
+        (should= (byte 1) packed)
+        (should= Byte (type packed))))
+
+    (it "unpacks a byte"
+      (let [unpacked (unpack Byte (int 1))]
+        (should= (byte 1) unpacked)
+        (should= Byte (type unpacked))))
+
+    )
   )

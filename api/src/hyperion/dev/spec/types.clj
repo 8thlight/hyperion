@@ -7,6 +7,9 @@
   (list
     (context "booleans"
       (it-handles-booleans))
+    (context "bytes"
+      (tags :byte)
+      (it-handles-bytes))
     (context "integers"
       (it-handles-ints))
     (context "longs"
