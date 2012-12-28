@@ -1,7 +1,12 @@
+language: clojure
+lein: lein2
+
 before_script:
   - mysql -e 'create database hyperion;'
   - psql -c 'create database hyperion;' -U postgres
   - rake install
+
+env: CI="1";
 
 script: rake ci_spec
 

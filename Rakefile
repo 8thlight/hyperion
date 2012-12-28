@@ -129,8 +129,12 @@ def deploy(dir)
   lein_task(dir, 'push')
 end
 
+def lein_bin
+  ENV['CI'] ? 'lein2' : 'lein'
+end
+
 def lein_task(dir, task)
-  sh "cd #{dir} && lein2 #{task}"
+  sh "cd #{dir} && #{lein_bin} #{task}"
 end
 
 def checkouts(client, servers)

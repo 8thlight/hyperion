@@ -11,6 +11,8 @@
 
 (log/error!)
 
+(def connection-url "jdbc:sqlite:hyperion_clojure.sqlite")
+
 (defn do-query [query]
   (execute-mutation
     (make-query query)))
@@ -70,48 +72,24 @@
 (defn drop-table [table-name]
   (do-query (format "DROP TABLE IF EXISTS %s" table-name)))
 
-(defn table-exists? [table-name]
-  (not (empty?
-    (execute-query
-    (make-query
-      (format "SELECT name FROM sqlite_master WHERE type='table' AND name='%s'" table-name))))))
-
-(defn wait-for-tables-to-exist [tables]
-  (loop [[table & more] tables]
-    (when table
-      (if (table-exists? table)
-        (recur more)
-        (recur (cons table more))))))
-
-(defn wait-for-tables-to-not-exist [tables]
-  (loop [[table & more] tables]
-    (when table
-      (if (table-exists? table)
-        (recur (cons table more))
-        (recur more)))))
-
-(def connection-url "jdbc:sqlite:hyperion_clojure.sqlite")
 (def all-tables ["testing" "other_testing" "account" "shirt" "types"])
 
 (describe "SQLite Datastore"
   (around [it]
-    (binding [*ds* (new-datastore :implementation :sqlite
-                                  :connection-url connection-url)]
-      (it)))
+    (with-connection connection-url
+      (binding [*ds* (new-datastore :implementation :sqlite
+                                    :connection-url connection-url)]
+        (it))))
 
   (before
-    (with-connection connection-url
-      (create-table "testing")
-      (create-table "other_testing")
-      (create-key-tables)
-      (create-types-table)
-      (wait-for-tables-to-exist all-tables)))
+    (create-table "testing")
+    (create-table "other_testing")
+    (create-key-tables)
+    (create-types-table))
 
   (after
-    (with-connection connection-url
-      (doseq [table all-tables]
-        (drop-table table))
-      (wait-for-tables-to-not-exist all-tables)))
+    (doseq [table all-tables]
+      (drop-table table)))
 
   (it-behaves-like-a-datastore)
 
