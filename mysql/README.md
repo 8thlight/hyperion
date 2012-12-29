@@ -16,6 +16,7 @@ A Hyperion implementation for MySQL
 
 * `java.lang.Byte` as column type `TINYINT`
 * `java.lang.Float` as column type `DOUBLE` (`FLOAT` will truncate)
+* `java.lang.BigInteger` as column type `BLOB` (the numbers are stored as binary)
 
 ## License
 

@@ -144,6 +144,17 @@
       (map type-caster [Long/MIN_VALUE (dec Integer/MIN_VALUE) -42 0 nil 42 (inc Integer/MAX_VALUE) Long/MAX_VALUE])
       (type-caster 0))))
 
+(def big-long-min (BigInteger. (str Long/MIN_VALUE)))
+(def big-long-max (BigInteger. (str Long/MAX_VALUE)))
+
+(defn it-handles-bigints []
+  (let [type-caster (fn [value] (when value (BigInteger. (str value))))]
+    (it-handles-numbers
+      :big-int
+      (build-type-checker BigInteger)
+      (map type-caster [(* 2 big-long-min) (dec big-long-min) 0 nil (inc big-long-max) (* 2 big-long-max)])
+      (type-caster 0))))
+
 (def float-min (* -1 Float/MAX_VALUE))
 
 (defn it-handles-floats []

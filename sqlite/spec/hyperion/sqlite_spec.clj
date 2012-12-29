@@ -52,7 +52,8 @@
     bool BOOLEAN,
     bite TINYINT,
     inti INTEGER,
-    lng BIGINT,
+    lng INTEGER,
+    big_int BLOB,
     flt DOUBLE,
     dbl DOUBLE,
     data VARCHAR(32)
@@ -62,8 +63,9 @@
   [bool :type java.lang.Boolean]
   [bite :type java.lang.Byte]
   [inti]
-  [flt :type java.lang.Float]
   [lng :type java.lang.Long]
+  [big-int :type java.math.BigInteger]
+  [flt :type java.lang.Float]
   [dbl])
 
 (defn create-table [table-name]

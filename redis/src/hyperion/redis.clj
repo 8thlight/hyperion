@@ -72,14 +72,18 @@
 (defn- find-by-kind [db kind filters sorts limit offset]
   (let [keys (keys-of-kind db kind)
         results (map (partial find-by-key db) keys)]
-    (->> results
-      (filter (memory/build-filter filters))
-      (sort/sort-results sorts)
-      (filter/offset-results offset)
-      (filter/limit-results limit))))
+    (try
+      (->> results
+        (filter (memory/build-filter filters))
+        (sort/sort-results sorts)
+        (filter/offset-results offset)
+        (filter/limit-results limit))
+      (catch Exception e
+        (prn (.getMessage e))
+        (throw e)))))
 
 ;; DELETING
-;;
+
 (defn- delete-by-key [db key]
   (let [record (find-by-key db key)
         kind (:kind record)]

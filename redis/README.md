@@ -39,6 +39,10 @@ Hyperion datastore.
 * `java.lang.Float`
 * `java.lang.Double`
 
+### Supported by Packer/Unpacker
+
+* `java.lang.BigInteger`
+
 ## License
 
 Copyright © 2012 8th Light, Inc.

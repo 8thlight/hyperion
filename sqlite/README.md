@@ -15,6 +15,7 @@ A Hyperion implementation for SQLite3
 * `java.lang.Boolean` as column type `BOOLEAN`
 * `java.lang.Byte` as column type `TINYINT`
 * `java.lang.Long` as column type `BIGINT`
+* `java.math.BigInteger` as column type `BLOB` (stored as binary)
 * `java.lang.Float` as column type `DOUBLE` or `FLOAT`
 
 ## License

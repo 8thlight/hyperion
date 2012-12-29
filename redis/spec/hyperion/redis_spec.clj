@@ -5,9 +5,19 @@
             [hyperion.dev.spec :refer [it-behaves-like-a-datastore]]
             [hyperion.redis.spec-helper :refer [with-testable-redis-datastore]]
             [taoensso.carmine :as r]
+            [hyperion.redis.types]
             [hyperion.redis :refer :all ]))
 
 (hyperion.log/error!)
+
+(defentity :types
+  [bool]
+  [bite]
+  [inti]
+  [lng]
+  [big-int :type java.math.BigInteger]
+  [flt]
+  [dbl])
 
 (describe "Redis Datastore"
 

@@ -4,12 +4,15 @@
 
 (defn parse-number [s]
   (try
-    (Long/parseLong s)
+    (Long. s)
     (catch NumberFormatException _
       (try
-        (Double/parseDouble s)
+        (BigInteger. s)
         (catch NumberFormatException _
-          s)))))
+          (try
+            (Double. s)
+            (catch NumberFormatException _
+              s)))))))
 
 (defn remove-from-end [s end]
   (if (.endsWith s end)

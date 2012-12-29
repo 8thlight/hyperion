@@ -38,6 +38,7 @@
   [bite :type java.lang.Byte]
   [inti :type java.lang.Integer]
   [lng]
+  [big-int :type java.math.BigInteger]
   [flt :type java.lang.Float]
   [dbl])
 

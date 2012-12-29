@@ -47,9 +47,10 @@
     bool BOOLEAN,
     bite SMALLINT,
     inti INTEGER,
+    lng BIGINT,
+    big_int NUMERIC,
     flt FLOAT,
     dbl FLOAT,
-    lng BIGINT,
     data VARCHAR(32),
     first_name VARCHAR(35)
     )"))
@@ -58,8 +59,9 @@
   [bool]
   [bite :type java.lang.Byte]
   [inti]
-  [flt :type java.lang.Float]
   [lng]
+  [big-int :type java.math.BigInteger]
+  [flt :type java.lang.Float]
   [dbl])
 
 (defn create-table [table-name]

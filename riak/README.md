@@ -103,6 +103,7 @@ For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-
 * `java.lang.Byte`
 * `java.lang.Integer`
 * `java.lang.Long`
+* `java.lang.BigInteger`
 * `java.lang.Float`
 * `java.lang.Double`
 

@@ -8,12 +8,14 @@
     (context "booleans"
       (it-handles-booleans))
     (context "bytes"
-      (tags :byte)
       (it-handles-bytes))
     (context "integers"
       (it-handles-ints))
     (context "longs"
       (it-handles-longs))
+    (context "big-ints"
+      (tags :big-int)
+      (it-handles-bigints))
     (context "floats"
       (it-handles-floats))
     (context "doubles"

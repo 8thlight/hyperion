@@ -5,7 +5,8 @@
             [hyperion.sql.query-builder :refer :all ]
             [hyperion.sql.format :refer [column->db]]
             [hyperion.sql :refer :all ]
-            [hyperion.sql.types]))
+            [hyperion.sql.types]
+            [hyperion.postgres.types]))
 
 (clojure.lang.RT/loadClassForName "org.postgresql.Driver")
 

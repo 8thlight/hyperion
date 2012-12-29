@@ -1,6 +1,6 @@
 (ns hyperion.gae.types
   (:require [chee.coerce :refer [->int]]
-            [hyperion.coerce :refer [->float ->byte]]
+            [hyperion.coerce :refer [->float ->byte ->biginteger]]
             [hyperion.api :refer [pack unpack]])
   (:import [com.google.appengine.api.datastore
             Key KeyFactory ShortBlob Blob Category Email GeoPt Link
@@ -25,11 +25,11 @@
      :federated-identity (.getFederatedIdentity user)}
     nil))
 
-(defmethod pack Float [_ value]
-  (->float value))
+(defmethod pack Byte [_ value]
+  (->byte value))
 
-(defmethod unpack Float [_ value]
-  (->float value))
+(defmethod unpack Byte [_ value]
+  (->byte value))
 
 (defmethod pack Integer [_ value]
   (->int value))
@@ -37,11 +37,21 @@
 (defmethod unpack Integer [_ value]
   (->int value))
 
-(defmethod pack Byte [_ value]
-  (->byte value))
+(defmethod pack java.math.BigInteger [_ value]
+  (when-let [bigint (->biginteger value)]
+    (.toString bigint 2)))
 
-(defmethod unpack Byte [_ value]
-  (->byte value))
+(defmethod unpack java.math.BigInteger [_ value]
+  (when value
+    (cond
+      (= BigInteger (type value)) value
+      :else (BigInteger. (String. value) 2))))
+
+(defmethod pack Float [_ value]
+  (->float value))
+
+(defmethod unpack Float [_ value]
+  (->float value))
 
 (defmethod pack Key [_ value]
   (cond

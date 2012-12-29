@@ -22,6 +22,7 @@
     (context "count-by-kind"
       (it-counts-by-kind))
     (context "foreign keys"
+      (tags :foreign-keys)
       (it-handles-foreign-keys))
     (context "delete-by-key"
       (it-deletes-by-key))

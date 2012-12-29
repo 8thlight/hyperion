@@ -7,7 +7,8 @@
             [hyperion.sql.transaction-spec :refer [include-transaction-specs]]
             [hyperion.sql.connection :refer [with-connection]]
             [hyperion.sql.jdbc :refer [execute-mutation]]
-            [hyperion.sql.query :refer :all]))
+            [hyperion.sql.query :refer :all]
+            [hyperion.mysql]))
 
 (log/error!)
 
@@ -54,6 +55,7 @@
     bite TINYINT,
     inti INTEGER,
     lng BIGINT,
+    big_int BLOB,
     flt DOUBLE,
     dbl DOUBLE,
     data VARCHAR(32),
@@ -66,6 +68,7 @@
   [bite :type java.lang.Byte]
   [inti]
   [lng]
+  [big-int :type java.math.BigInteger]
   [flt :type java.lang.Float]
   [dbl])
 

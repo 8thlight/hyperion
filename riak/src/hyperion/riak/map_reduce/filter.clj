@@ -6,7 +6,8 @@
             [hyperion.filtering :as filter :refer [make-filter]]
             [hyperion.riak.map-reduce.big-number :refer [big-number-js]]
             [hyperion.riak.map-reduce.helper :refer [deftemplate-fn parse-number]])
-  (:import  [clojure.lang IPersistentCollection]))
+  (:import  [clojure.lang IPersistentCollection]
+            [java.text DecimalFormat]))
 
 (defprotocol ComparableJs
   (to-js [this]))
@@ -32,7 +33,7 @@
 
 (defn- compare-number-js [filter append]
   (format
-    (str "if (isNull(fieldValue)) {return [];} else {c = new BigNumber(" (filter-json filter) ").cmp(new BigNumber(fieldValue));if (!(%s)) {return [];}}")
+    (str "if (isNull(fieldValue)) {return [];} else {try{c = new BigNumber(" (filter-json filter) ").cmp(new BigNumber(fieldValue))}catch(err){return [];};if (!(%s)) {return [];}}")
     append))
 
 (defn- compare-object-js [filter]
@@ -67,6 +68,9 @@
 
 (defmethod -comparator-js [Object :<=] [filter]
   (compare-object-js filter))
+
+(defmethod -comparator-js [Number :=] [filter]
+  (compare-number-js filter "c === 0"))
 
 (defmethod -comparator-js [Object :=] [filter]
   (str "if (fieldValue !== " (filter-json filter) ") {return [];}"))
