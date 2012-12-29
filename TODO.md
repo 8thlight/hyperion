@@ -7,7 +7,6 @@
   * `java.lang.Short`
   * `java.lang.String`
   * `java.math.BigDecimal`
-  * `java.math.BigInteger`
   * `java.util.Date`
   * `null`
 3. Whatever Java types cannot be natively supported by the Database should have a packer and unpacker included with the Datastore implementation. Documentation on what is natively supported and what is not should be included as well.
