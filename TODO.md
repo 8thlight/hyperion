@@ -15,7 +15,9 @@
   * Optimize filter/sort/limit/offset operations to use the Redis `SORT` query
   * Whatever cannot be optimized should use Lua scripting
   * Nothing done in-memory
-5. [Ragtime](https://github.com/weavejester/ragtime) integration for migrations
+5. Migrations:
+    * [Ragtime](https://github.com/weavejester/ragtime) integration?
+    * Necessity is the mother of invention. Wait until it's needed to build.
 6. Indexes:
     * Riak: currently indexes ALL fields.  That's inefficient. Yet it can't search efficiently without index.  If defentity allowed fields to be marked as indexed, would help riak a great deal. Indexes are needed at runtime to:
         - save (to know which indexes to add)
@@ -23,5 +25,5 @@
     * Mongo: really only need indexes at defentity time to "ensure" they exist.  Indexes are not needed at runtime. This could be build into the future migration system instead of application level configuration.
     * GAE: Indexes are handled externally. Would be useless.
     * SQL: Same as Mongo.
-    * Implement indexes as datastore decorators?
+    * Make indexing part of migrations, like Active Record?
 7. Website. Ahhh...maybe someday we will get this far down on the list.
