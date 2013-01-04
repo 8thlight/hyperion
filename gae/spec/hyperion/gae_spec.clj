@@ -41,6 +41,7 @@
   [flt :type java.lang.Float]
   [dbl]
   [str]
+  [kwd :type clojure.lang.Keyword]
   )
 
 (describe "Google AppEngine Datastore"

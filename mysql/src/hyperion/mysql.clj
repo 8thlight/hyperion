@@ -4,8 +4,9 @@
             [hyperion.sql.query :refer [add-to-query]]
             [hyperion.sql.query-builder :refer :all ]
             [hyperion.sql.format :refer [column->db]]
+            [hyperion.sql :refer :all ]
             [hyperion.sql.types]
-            [hyperion.sql :refer :all ]))
+            [hyperion.mysql.types]))
 
 (clojure.lang.RT/loadClassForName "com.mysql.jdbc.Driver")
 

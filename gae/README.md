@@ -17,6 +17,7 @@ A Hyperion implementation for the Google App Engine datastore
 * `java.lang.Byte` (if type is not specified, GAE unpacks `Byte`s as `Integer`s)
 * `java.lang.Integer` (if type is not specified, GAE unpacks `Integer`s as `Long`s)
 * `java.lang.Float` (if type is not specified, GAE unpacks `Float`s as `Double`s)
+* `clojure.lang.Keyword`
 
 ## License
 

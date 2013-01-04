@@ -15,7 +15,9 @@
   [lng]
   [flt :type java.lang.Float]
   [dbl]
-  [str])
+  [str]
+  [kwd :type clojure.lang.Keyword]
+  )
 
 (describe "Mongo Datastore"
 

@@ -16,7 +16,9 @@
   [lng]
   [flt]
   [dbl]
-  [str])
+  [str]
+  [kwd]
+  )
 
 (describe "Redis Datastore"
 

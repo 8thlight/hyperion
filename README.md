@@ -244,6 +244,8 @@ All hyperion implementations provide built in support for the following types:
 * `java.lang.Long`
 * `java.lang.Float`
 * `java.lang.Double`
+* `java.lang.String`
+* `clojure.lang.Keyword`
 
 Implementations may either support the type Natively or with a packer/unpacker. If they are natively supported, no configuration is needed. If supported by a packer/unpacker, you must explicitly configure the type. For example:
 

@@ -57,6 +57,7 @@
     flt DOUBLE,
     dbl DOUBLE,
     str VARCHAR(32),
+    kwd VARCHAR(32),
     data VARCHAR(32)
     )"))
 
@@ -68,6 +69,7 @@
   [flt :type java.lang.Float]
   [dbl]
   [str]
+  [kwd :type clojure.lang.Keyword]
   )
 
 (defn create-table [table-name]

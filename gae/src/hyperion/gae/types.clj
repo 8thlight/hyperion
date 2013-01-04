@@ -1,5 +1,5 @@
 (ns hyperion.gae.types
-  (:require [chee.coerce :refer [->int]]
+  (:require [chee.coerce :refer [->int ->string ->keyword]]
             [hyperion.coerce :refer [->float ->byte ->biginteger]]
             [hyperion.api :refer [pack unpack]])
   (:import [com.google.appengine.api.datastore
@@ -42,6 +42,12 @@
 
 (defmethod unpack Float [_ value]
   (->float value))
+
+(defmethod pack clojure.lang.Keyword [_ value]
+  (->string value))
+
+(defmethod unpack clojure.lang.Keyword [_ value]
+  (->keyword value))
 
 (defmethod pack Key [_ value]
   (cond

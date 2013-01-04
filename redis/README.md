@@ -38,6 +38,7 @@ Hyperion datastore.
 * `java.lang.Long`
 * `java.lang.Float`
 * `java.lang.Double`
+* `clojure.lang.Keyword`
 
 ## License
 

@@ -20,5 +20,7 @@
       (it-handles-doubles))
     (context "strings"
       (it-handles-strings))
+    (context "kewords"
+      (it-handles-keywords))
 
     ))

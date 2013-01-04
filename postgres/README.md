@@ -17,6 +17,7 @@ A Hyperion implementation for PostgreSQL
 
 * `java.lang.Byte` as column type `SMALLINT` (will unpack to an `Integer` by default)
 * `java.lang.Float` as column type `FLOAT` (will unpack to a `Double` by default)
+* `clojure.lang.Keyword` same as `java.lang.String`
 
 ## License
 

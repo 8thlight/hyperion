@@ -1,5 +1,5 @@
 (ns hyperion.coerce
-  (:require [chee.coerce :refer [AsInteger AsString AsBoolean]]))
+  (:require [chee.coerce :refer [AsInteger AsString AsBoolean AsKeyword]]))
 
 ; temporary holding place for coercion methods until they are moved into chee
 
@@ -111,5 +111,12 @@
 
   nil
   (->string [this] nil)
+
+  )
+
+(extend-protocol AsKeyword
+
+  nil
+  (->keyword [this] nil)
 
   )

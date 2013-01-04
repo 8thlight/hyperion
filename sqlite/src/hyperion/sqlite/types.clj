@@ -1,5 +1,5 @@
 (ns hyperion.sqlite.types
-  (:require [chee.coerce :refer [->bool]]
+  (:require [chee.coerce :refer [->bool ->keyword]]
             [hyperion.coerce :refer [->long ->biginteger]]
             [hyperion.api :refer [unpack pack]]))
 
@@ -14,3 +14,9 @@
 
 (defmethod unpack java.lang.Long [_ value]
   (->long value))
+
+(defmethod pack clojure.lang.Keyword [_ value]
+  (->keyword value))
+
+(defmethod unpack clojure.lang.Keyword [_ value]
+  (->keyword value))

@@ -9,3 +9,11 @@
       (map type-caster ["a" "aa" "b" "f" "g" nil "o" "x" "z"])
       (type-caster "g"))))
 
+(defn it-handles-keywords []
+  (let [type-caster (fn [value] (when value (keyword value)))]
+    (it-finds
+      :kwd
+      (build-type-checker clojure.lang.Keyword)
+      (map type-caster [:a :aa :b :f :g nil :o :x :z])
+      (type-caster :g))))
+
