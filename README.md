@@ -234,6 +234,36 @@ Using the `foreign-key` type, our foreign key references are stored following th
 
 If your schema requires foreign keys, **ALWAYS USE THE FOREIGN KEY TYPE**. If you do not, you will be storing generated keys instead of actual database ids. **DO NOT DO THIS**. If Hyperion changes the way it generates keys, all of your foreign key data will be useless.
 
+#### Types
+
+All hyperion implementations provide built in support for the following types:
+
+* `java.lang.Boolean`
+* `java.lang.Byte`
+* `java.lang.Integer`
+* `java.lang.Long`
+* `java.lang.Float`
+* `java.lang.Double`
+
+Implementations may either support the type Natively or with a packer/unpacker. If they are natively supported, no configuration is needed. If supported by a packer/unpacker, you must explicitly configure the type. For example:
+
+``` clojure
+(defentity :users
+  [first-name :type java.lang.String]
+  [age :type java.lang.Integer])
+```
+
+It is always best to explicitly state the types of all fields, regardless of implementation, so that you don't have to worry about the differences between datastores.
+
+#### Unsupported Types
+
+The following types do not have built-in support:
+
+* `java.math.BigInteger`
+* `java.math.BigDecimal`
+
+There are many different opinions on the best way to store these types. We will leave it up to you to store them in the way that you see fit.
+
 ## Logging
 
 Many of the Hyperion components will log informative information (more logging has yet to be added).  The default log level is _Info_.

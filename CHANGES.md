@@ -5,7 +5,6 @@
 * fixes bad keys in filters
 * fixes packing the field name on sorting
 * adds connection pooling for sql datastores
-* adds type spec for `java.lang.Boolean`
 
 # 3.6.0
 

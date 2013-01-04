@@ -68,43 +68,6 @@
 
   )
 
-(extend-protocol AsBigInteger
-  nil
-  (->biginteger [this] nil)
-
-  java.lang.Byte
-  (->biginteger [this] (BigInteger. (str this)))
-
-  java.lang.Short
-  (->biginteger [this] (BigInteger. (str this)))
-
-  java.lang.Integer
-  (->biginteger [this] (BigInteger. (str this)))
-
-  java.lang.Long
-  (->biginteger [this] (BigInteger. (str this)))
-
-  java.math.BigInteger
-  (->biginteger [this] this)
-
-  java.math.BigDecimal
-  (->biginteger [this] (BigInteger. (str this)))
-
-  java.lang.String
-  (->biginteger [this] (BigInteger. this))
-
-  clojure.lang.BigInt
-  (->biginteger [this] (.toBigInteger this))
-
-  )
-
-(extend-type (type (byte-array [])) ; byte[]
-
-  AsBigInteger
-  (->biginteger [this] (BigInteger. this))
-
-  )
-
 (extend-protocol AsFloat
   java.lang.String
   (->float [this] (Float. this))

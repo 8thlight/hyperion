@@ -13,13 +13,3 @@
 
 (defmethod unpack Float [_ value]
   (->float value))
-
-(defmethod pack java.math.BigInteger [_ value]
-  (when-let [bigint (->biginteger value)]
-    (.toString bigint 2)))
-
-(defmethod unpack java.math.BigInteger [_ value]
-  (when value
-    (cond
-      (= BigInteger (type value)) value
-      :else (BigInteger. (String. value) 2))))

@@ -1,6 +1,6 @@
 (ns hyperion.riak.types
   (:require [chee.coerce :refer [->string ->int]]
-            [hyperion.coerce :refer [->float ->double ->long ->byte ->biginteger]]
+            [hyperion.coerce :refer [->float ->double ->long ->byte]]
             [hyperion.api :refer [pack unpack]])
   (:import  [java.math BigInteger]))
 
@@ -12,9 +12,6 @@
 
 (defmethod unpack java.lang.Integer [_ value]
   (->int value))
-
-(defmethod unpack java.math.BigInteger [_ value]
-  (->biginteger value))
 
 (defmethod unpack java.lang.Long [_ value]
   (->long value))

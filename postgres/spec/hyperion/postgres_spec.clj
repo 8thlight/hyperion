@@ -60,7 +60,6 @@
   [bite :type java.lang.Byte]
   [inti]
   [lng]
-  [big-int :type java.math.BigInteger]
   [flt :type java.lang.Float]
   [dbl])
 
