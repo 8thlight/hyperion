@@ -11,12 +11,12 @@ A Hyperion implementation for PostgreSQL
 * `java.lang.Integer` as column type `INTEGER`
 * `java.lang.Long` as column type `BIGINT`
 * `java.lang.Double` as column type `FLOAT`
+* `java.lang.String` as column type `VARCHAR`
 
 ### Supported by Packer/Unpacker
 
 * `java.lang.Byte` as column type `SMALLINT` (will unpack to an `Integer` by default)
 * `java.lang.Float` as column type `FLOAT` (will unpack to a `Double` by default)
-* `java.lang.BigInteger` as column type `NUMERIC` (will unpack to a `BigDecimal` by default)
 
 ## License
 

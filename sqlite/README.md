@@ -9,13 +9,13 @@ A Hyperion implementation for SQLite3
 
 * `java.lang.Integer` as column type `INTEGER`
 * `java.lang.Double` as column type `DOUBLE`
+* `java.lang.String` as column type `VARCHAR`
 
 ### Supported by Packer/Unpacker
 
 * `java.lang.Boolean` as column type `BOOLEAN`
 * `java.lang.Byte` as column type `TINYINT`
 * `java.lang.Long` as column type `BIGINT`
-* `java.math.BigInteger` as column type `BLOB` (stored as binary)
 * `java.lang.Float` as column type `DOUBLE` or `FLOAT`
 
 ## License

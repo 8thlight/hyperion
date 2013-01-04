@@ -51,6 +51,7 @@
     big_int NUMERIC,
     flt FLOAT,
     dbl FLOAT,
+    str VARCHAR(35),
     data VARCHAR(32),
     first_name VARCHAR(35)
     )"))
@@ -61,7 +62,9 @@
   [inti]
   [lng]
   [flt :type java.lang.Float]
-  [dbl])
+  [dbl]
+  [str]
+  )
 
 (defn create-table [table-name]
   (do-query (format create-table-query table-name)))

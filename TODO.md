@@ -6,7 +6,6 @@
   * `java.lang.Character`
   * `java.lang.Short`
   * `java.lang.String`
-  * `java.math.BigDecimal`
   * `java.util.Date`
   * `null`
 3. Improve Redis Datastore

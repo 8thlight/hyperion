@@ -11,12 +11,12 @@ A Hyperion implementation for MySQL
 * `java.lang.Integer` as column type `INTEGER`
 * `java.lang.Long` as column type `BIGINT`
 * `java.lang.Double` as column type `DOUBLE`
+* `java.lang.String` as column type `VARCHAR`
 
 ### Supported by Packer/Unpacker
 
 * `java.lang.Byte` as column type `TINYINT`
 * `java.lang.Float` as column type `DOUBLE` (`FLOAT` will truncate)
-* `java.lang.BigInteger` as column type `BLOB` (the numbers are stored as binary)
 
 ## License
 

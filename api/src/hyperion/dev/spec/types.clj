@@ -1,7 +1,8 @@
 (ns hyperion.dev.spec.types
   (:require [speclj.core :refer :all]
             [hyperion.dev.spec.types.boolean :refer :all]
-            [hyperion.dev.spec.types.numbers :refer :all]))
+            [hyperion.dev.spec.types.numbers :refer :all]
+            [hyperion.dev.spec.types.strings :refer :all]))
 
 (defn it-handles-types []
   (list
@@ -17,5 +18,7 @@
       (it-handles-floats))
     (context "doubles"
       (it-handles-doubles))
+    (context "strings"
+      (it-handles-strings))
 
     ))

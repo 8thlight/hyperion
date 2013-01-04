@@ -34,7 +34,8 @@
   [inti :type java.lang.Integer]
   [lng :type java.lang.Long]
   [flt :type java.lang.Float]
-  [dbl :type java.lang.Double])
+  [dbl :type java.lang.Double]
+  [str])
 
 (describe "Riak Datastore"
 

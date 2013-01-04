@@ -15,7 +15,8 @@
   [inti]
   [lng]
   [flt]
-  [dbl])
+  [dbl]
+  [str])
 
 (describe "Redis Datastore"
 

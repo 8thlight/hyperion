@@ -14,7 +14,8 @@
   [inti]
   [lng]
   [flt :type java.lang.Float]
-  [dbl])
+  [dbl]
+  [str])
 
 (describe "Mongo Datastore"
 
