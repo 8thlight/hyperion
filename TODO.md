@@ -2,10 +2,8 @@
   * All queries should be logged and profiled with the debug flag
   * All dangerous actions logged with the warn flag
 2. Extend the Datastore spec for packing/unpacking/filtering/sorting on the following types. Whatever Java types cannot be natively supported by the Database should have a packer and unpacker included with the Datastore implementation. Documentation on what is natively supported and what is not should be included as well.
-  * `clojure.lang.Keyword`
   * `java.lang.Character`
   * `java.lang.Short`
-  * `java.lang.String`
   * `java.util.Date`
   * `null`
 3. Improve Redis Datastore
