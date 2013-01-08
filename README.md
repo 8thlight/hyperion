@@ -240,6 +240,7 @@ All hyperion implementations provide built in support for the following types:
 
 * `java.lang.Boolean`
 * `java.lang.Byte`
+* `java.lang.Short`
 * `java.lang.Integer`
 * `java.lang.Long`
 * `java.lang.Float`
