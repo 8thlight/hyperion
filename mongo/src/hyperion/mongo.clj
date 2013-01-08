@@ -3,62 +3,68 @@
             [hyperion.abstr :refer [Datastore]]
             [hyperion.key :refer (compose-key decompose-key)]
             [hyperion.log :as log]
-            [hyperion.mongo.types]))
+            [hyperion.filtering :as filter]
+            [hyperion.sorting :as sort]
+            [hyperion.mongo.types])
+  (:import  [com.mongodb ServerAddress MongoOptions Mongo WriteConcern BasicDBObject BasicDBList DB]
+            [javax.net.ssl SSLContext X509TrustManager SSLSocketFactory]
+            [java.security SecureRandom]))
 
 (defn- ->address [spec]
   (let [host (first spec)
         port (second spec)]
-    (com.mongodb.ServerAddress. host port)))
+    (ServerAddress. host port)))
 
 (defn address->seq [address]
   (list (.getHost address) (.getPort address)))
 
+(def trust-manager
+  (proxy [X509TrustManager] []
+    (getAcceptedIssuers [] nil)
+    (checkClientTrusted [certs type])
+    (checkServerTrusted [certs type])))
+
 (defn- trusting-ssl-socket-factory []
-  (let [trust-manager
-        (proxy [javax.net.ssl.X509TrustManager] []
-          (getAcceptedIssuers [] nil)
-          (checkClientTrusted [certs type])
-          (checkServerTrusted [certs type]))
-        trust-managers (into-array javax.net.ssl.X509TrustManager [trust-manager])
-        ssl-context (javax.net.ssl.SSLContext/getInstance "SSL")]
-    (.init ssl-context nil trust-managers (java.security.SecureRandom.))
+  (let [trust-managers (into-array X509TrustManager [trust-manager])
+        ssl-context (SSLContext/getInstance "SSL")]
+    (.init ssl-context nil trust-managers (SecureRandom.))
     (.getSocketFactory ssl-context)))
 
-(defn- socket-factory [options]
-  (when-let [ssl (:ssl options)]
-    (if (= :trust ssl)
+(defn- socket-factory [{:keys [ssl trust]}]
+  (when ssl
+    (if (= trust ssl)
       (trusting-ssl-socket-factory)
-      (javax.net.ssl.SSLSocketFactory/getDefault))))
+      (SSLSocketFactory/getDefault))))
 
 (defn open-mongo [& args]
-  (let [options (->options args)
-        addresses (if (:host options) [(->address [(:host options) (or (:port options) 27017)])] [])
-        addresses (doall (concat addresses (map ->address (:servers options))))
-        mongo-options (com.mongodb.MongoOptions.)]
-    (when (:ssl options) (.setSocketFactory mongo-options (socket-factory options)))
-    (com.mongodb.Mongo. addresses mongo-options)))
+  (let [{:keys [host port servers ssl] :or {port 27017} :as options} (->options args)
+        addresses (if host [(->address [host port])] [])
+        addresses (doall (concat addresses (map ->address servers)))
+        mongo-options (MongoOptions.)]
+    (when ssl (.setSocketFactory mongo-options (socket-factory options)))
+    (Mongo. addresses mongo-options)))
 
 (defn ->write-concern [value]
   (case (keyword value)
-    :fsync-safe com.mongodb.WriteConcern/FSYNC_SAFE
-    :journal-safe com.mongodb.WriteConcern/JOURNAL_SAFE
-    :majority com.mongodb.WriteConcern/MAJORITY
-    :none com.mongodb.WriteConcern/NONE
-    :normal com.mongodb.WriteConcern/NORMAL
-    :replicas-safe com.mongodb.WriteConcern/REPLICAS_SAFE
-    :safe com.mongodb.WriteConcern/SAFE
+    :fsync-safe WriteConcern/FSYNC_SAFE
+    :journal-safe WriteConcern/JOURNAL_SAFE
+    :majority WriteConcern/MAJORITY
+    :none WriteConcern/NONE
+    :normal WriteConcern/NORMAL
+    :replicas-safe WriteConcern/REPLICAS_SAFE
+    :safe WriteConcern/SAFE
     (throw (Exception. (str "Unknown write-concern: " value)))))
 
 (defn open-database [mongo name & args]
-  (let [options (->options args)
+  (let [{:keys [write-concern username password] :or {write-concern :safe} :as options} (->options args)
         db (.getDB mongo name)]
-    (.setWriteConcern db (->write-concern (or (:write-concern options) :safe )))
-    (when (:username options)
-      (.authenticate db (:username options) (.toCharArray (:password options))))
+    (.setWriteConcern db (->write-concern write-concern))
+    (when username
+      (.authenticate db username (.toCharArray password)))
     db))
 
 (defn- ->db-object [record]
-  (let [db-object (com.mongodb.BasicDBObject.)
+  (let [db-object (BasicDBObject.)
         key (or (:key record) (compose-key (:kind record)))]
     (.put db-object "_id" key)
     (doseq [[k v] (dissoc record :key :kind )]
@@ -76,17 +82,17 @@
 
 (defn- key-query [key]
   (doto
-    (com.mongodb.BasicDBObject.)
+    (BasicDBObject.)
     (.put "_id" key)))
 
 (defn- kv-dbo [key value]
   (doto
-    (com.mongodb.BasicDBObject.)
+    (BasicDBObject.)
     (.put key value)))
 
 (defn- db-list [col]
   (doto
-    (com.mongodb.BasicDBList.)
+    (BasicDBList.)
     (.addAll col)))
 
 (defn- insert-records-of-kind [db kind records]
@@ -97,11 +103,10 @@
       (throw (Exception. (str "Failed to save record(s): " error)))
       (map (partial ->record kind) db-objects))))
 
-(defn- update-record [db record]
-  (let [kind (:kind record)
-        collection (.getCollection db kind)
+(defn- update-record [db {:keys [kind key] :as record}]
+  (let [collection (.getCollection db kind)
         db-object (->db-object record)
-        result (.update collection (key-query (:key record)) db-object)]
+        result (.update collection (key-query key) db-object)]
     (->record kind db-object)))
 
 (defn- save-records [db records]
@@ -117,10 +122,10 @@
 
 (defn- find-by-key [db key]
   (try
-  (let [[kind _] (decompose-key key)
-        collection (.getCollection db kind)]
-    (when-let [db-object (.findOne collection (key-query key))]
-      (->record kind db-object)))
+    (let [[kind _] (decompose-key key)
+          collection (.getCollection db kind)]
+      (when-let [db-object (.findOne collection (key-query key))]
+        (->record kind db-object)))
     (catch Exception e
       (log/warn (format "find-by-key error: %s" (.getMessage e)))
       nil)))
@@ -134,27 +139,29 @@
       (log/warn (format "delete-by-key error: %s" (.getMessage e)))
       nil)))
 
-(defn- ->query [[operator field value]]
-  (case operator
-    := (kv-dbo (name field) value)
-    :> (kv-dbo (name field) (kv-dbo "$gt" value))
-    :>= (kv-dbo (name field) (kv-dbo "$gte" value))
-    :< (kv-dbo (name field) (kv-dbo "$lt" value))
-    :<= (kv-dbo (name field) (kv-dbo "$lte" value))
-    :contains? (kv-dbo (name field) (kv-dbo "$in" (db-list value)))
-    :!= (kv-dbo (name field) (kv-dbo "$ne" value))))
+(defn- ->query [filter]
+  (let [field (filter/field filter)
+        value (filter/value filter)]
+    (case (filter/operator filter)
+      := (kv-dbo (name field) value)
+      :> (kv-dbo (name field) (kv-dbo "$gt" value))
+      :>= (kv-dbo (name field) (kv-dbo "$gte" value))
+      :< (kv-dbo (name field) (kv-dbo "$lt" value))
+      :<= (kv-dbo (name field) (kv-dbo "$lte" value))
+      :contains? (kv-dbo (name field) (kv-dbo "$in" (db-list value)))
+      :!= (kv-dbo (name field) (kv-dbo "$ne" value)))))
 
 (defn- build-query [filters]
   (let [queries (map ->query filters)]
     (cond
-      (= 0 (count queries)) (com.mongodb.BasicDBList.)
+      (= 0 (count queries)) (BasicDBList.)
       (= 1 (count queries)) (first queries)
       :else (kv-dbo "$and" (db-list queries)))))
 
 (defn- build-sorts [sorts]
-  (let [doc (com.mongodb.BasicDBObject.)]
-    (doseq [[field direction] sorts]
-      (.put doc (name field) (if (= :asc direction) 1 -1)))
+  (let [doc (BasicDBObject.)]
+    (doseq [sort sorts]
+      (.put doc (name (sort/field sort)) (if (= :asc (sort/order sort)) 1 -1)))
     doc))
 
 (defn- find-by-kind [db kind filters sorts limit offset]
@@ -167,12 +174,12 @@
     (map (partial ->record kind) (iterator-seq (.iterator cursor)))))
 
 (defn- delete-by-kind [db kind filters]
-  (let [collection (.getCollection db kind)]
-    (.remove collection (build-query filters))))
+  (-> (.getCollection db kind)
+    (.remove (build-query filters))))
 
 (defn- count-by-kind [db kind filters]
-  (let [collection (.getCollection db kind)]
-    (.count collection (build-query filters))))
+  (-> (.getCollection db kind)
+    (.count (build-query filters))))
 
 (defn- list-all-kinds [db]
   (filter #(not (.startsWith % "system.")) (.getCollectionNames db)))
@@ -190,12 +197,11 @@
   (ds-unpack-key [this kind value] value))
 
 (defn new-mongo-datastore [& args]
-  (if (and (= 1 (count args)) (.isInstance com.mongodb.DB (first args)))
+  (if (and (= 1 (count args)) (.isInstance DB (first args)))
     (MongoDatastore. (first args))
-    (let [options (->options args)
-          db-name (:database options)
-          _ (when (nil? db-name) (throw (Exception. "Missing :database entry.")))
+    (let [{:keys [database] :as options} (->options args)
+          _ (when (nil? database) (throw (Exception. "Missing :database entry.")))
           mongo (open-mongo options)
-          db (open-database mongo db-name options)]
+          db (open-database mongo database options)]
       (MongoDatastore. db))))
 
