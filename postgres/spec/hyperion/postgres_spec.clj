@@ -56,6 +56,7 @@
     flt FLOAT,
     dbl FLOAT,
     str VARCHAR(35),
+    chr VARCHAR(2),
     kwd VARCHAR(35),
     data VARCHAR(32),
     first_name VARCHAR(35)
@@ -74,6 +75,7 @@
   [flt :type java.lang.Float]
   [dbl]
   [str]
+  [chr :type java.lang.Character]
   [kwd :type clojure.lang.Keyword])
 
 (def connection-url "jdbc:postgresql://localhost:5432/hyperion")

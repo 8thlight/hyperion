@@ -17,3 +17,11 @@
       (map type-caster [:a :aa :b :f :g nil :o :x :z])
       (type-caster :g))))
 
+(defn it-handles-characters []
+  (let [type-caster (fn [value] (when value (.charAt (str value) 0)))]
+    (it-finds
+      :chr
+      (build-type-checker Character)
+      (map type-caster ["a" "b" "f" "g" nil "o" "x" "z"])
+      (type-caster "g"))))
+

@@ -1,7 +1,7 @@
 (ns hyperion.mongo.types
   (:require [chee.coerce :refer [->keyword ->string]]
             [hyperion.api :refer [pack unpack]]
-            [hyperion.coerce :refer [->float ->byte ->biginteger ->short]]))
+            [hyperion.coerce :refer [->float ->byte ->biginteger ->short ->char]]))
 
 (defmethod pack Byte [_ value]
   (->byte value))
@@ -26,3 +26,9 @@
 
 (defmethod unpack clojure.lang.Keyword [_ value]
   (->keyword value))
+
+(defmethod pack java.lang.Character [_ value]
+  (->char value))
+
+(defmethod unpack java.lang.Character [_ value]
+  (->char value))

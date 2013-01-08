@@ -97,6 +97,7 @@ For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-
 ### Natively Supported
 
 * `java.lang.Boolean`
+* `java.lang.String`
 
 ### Supported by Packer/Unpacker
 
@@ -106,6 +107,8 @@ For more info: http://lists.basho.com/pipermail/riak-users_lists.basho.com/2011-
 * `java.lang.BigInteger`
 * `java.lang.Float`
 * `java.lang.Double`
+* `java.lang.Character`
+* `clojure.lang.Keyword`
 
 ## License
 

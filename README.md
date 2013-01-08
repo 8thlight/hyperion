@@ -245,6 +245,7 @@ All hyperion implementations provide built in support for the following types:
 * `java.lang.Long`
 * `java.lang.Float`
 * `java.lang.Double`
+* `java.lang.Character`
 * `java.lang.String`
 * `clojure.lang.Keyword`
 

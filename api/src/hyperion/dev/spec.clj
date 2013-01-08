@@ -10,25 +10,34 @@
 (defn it-behaves-like-a-datastore []
   (list
     (context "save"
+      (tags :save)
       (it-saves))
     (context "find-by-kind"
+      (tags :find)
       (it-finds-by-kind))
     (context "find-by-key"
+      (tags :find)
       (it-finds-by-key))
     (context "find-all-kinds"
+      (tags :find)
       (it-finds-all-kinds))
     (context "searching multiple kinds"
+      (tags :find)
       (it-searches-multiple-kinds))
     (context "count-by-kind"
+      (tags :count)
       (it-counts-by-kind))
     (context "foreign keys"
       (tags :foreign-keys)
       (it-handles-foreign-keys))
     (context "delete-by-key"
+      (tags :delete)
       (it-deletes-by-key))
     (context "delete-by-kind"
+      (tags :delete)
       (it-deletes-by-kind))
     (context "types"
+      (tags :types)
       (it-handles-types))
 
     ))

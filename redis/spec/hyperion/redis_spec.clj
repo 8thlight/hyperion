@@ -18,6 +18,7 @@
   [flt]
   [dbl]
   [str]
+  [chr]
   [kwd])
 
 (describe "Redis Datastore"

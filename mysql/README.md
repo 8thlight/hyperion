@@ -18,6 +18,7 @@ A Hyperion implementation for MySQL
 * `java.lang.Byte` as column type `TINYINT`
 * `java.lang.Short` as column type `INTEGER`
 * `java.lang.Float` as column type `DOUBLE` (`FLOAT` will truncate)
+* `java.lang.Character` as column type `VARCHAR`
 * `clojure.lang.Keyword` same as `java.lang.String`
 
 ## License

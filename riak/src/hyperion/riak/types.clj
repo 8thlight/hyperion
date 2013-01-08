@@ -1,6 +1,6 @@
 (ns hyperion.riak.types
   (:require [chee.coerce :refer [->string ->int ->keyword]]
-            [hyperion.coerce :refer [->float ->double ->long ->byte ->short]]
+            [hyperion.coerce :refer [->float ->double ->long ->byte ->short ->char]]
             [hyperion.api :refer [pack unpack]])
   (:import  [java.math BigInteger]))
 
@@ -30,3 +30,9 @@
 
 (defmethod unpack clojure.lang.Keyword [_ value]
   (->keyword value))
+
+(defmethod pack java.lang.Character [_ value]
+  (->string value))
+
+(defmethod unpack java.lang.Character [_ value]
+  (->char value))

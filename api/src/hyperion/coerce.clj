@@ -21,6 +21,9 @@
 (defprotocol AsDouble
   (->double [this]))
 
+(defprotocol AsCharacter
+  (->char [this]))
+
 (extend-protocol AsBoolean
   java.lang.Integer
   (->bool [this] (= this 1))
@@ -115,6 +118,9 @@
   nil
   (->string [this] nil)
 
+  java.lang.Character
+  (->string [this] (String/valueOf this))
+
   )
 
 (extend-protocol AsKeyword
@@ -133,5 +139,18 @@
 
   java.lang.String
   (->short [this] (Short. this))
+
+  )
+
+(extend-protocol AsCharacter
+
+  java.lang.Character
+  (->char [this] this)
+
+  java.lang.String
+  (->char [this] (.charAt this 0))
+
+  nil
+  (->char [this] nil)
 
   )

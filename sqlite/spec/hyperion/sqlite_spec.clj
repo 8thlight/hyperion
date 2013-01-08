@@ -59,6 +59,7 @@
     flt DOUBLE,
     dbl DOUBLE,
     str VARCHAR(32),
+    chr VARCHAR(2),
     kwd VARCHAR(32),
     data VARCHAR(32)
     )"))
@@ -76,6 +77,7 @@
   [flt :type java.lang.Float]
   [dbl]
   [str]
+  [chr :type java.lang.Character]
   [kwd :type clojure.lang.Keyword])
 
 (def all-tables ["testing" "other_testing" "account" "shirt" "types"])

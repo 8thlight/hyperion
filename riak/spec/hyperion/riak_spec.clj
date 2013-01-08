@@ -37,6 +37,7 @@
   [flt :type java.lang.Float]
   [dbl :type java.lang.Double]
   [str]
+  [chr :type java.lang.Character]
   [kwd :type clojure.lang.Keyword])
 
 (describe "Riak Datastore"

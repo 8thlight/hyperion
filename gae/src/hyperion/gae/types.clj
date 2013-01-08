@@ -1,6 +1,6 @@
 (ns hyperion.gae.types
   (:require [chee.coerce :refer [->int ->string ->keyword]]
-            [hyperion.coerce :refer [->float ->byte ->biginteger ->short]]
+            [hyperion.coerce :refer [->float ->byte ->biginteger ->short ->char]]
             [hyperion.api :refer [pack unpack]])
   (:import [com.google.appengine.api.datastore
             Key KeyFactory ShortBlob Blob Category Email GeoPt Link
@@ -54,6 +54,12 @@
 
 (defmethod unpack clojure.lang.Keyword [_ value]
   (->keyword value))
+
+(defmethod pack java.lang.Character [_ value]
+  (->string value))
+
+(defmethod unpack java.lang.Character [_ value]
+  (->char value))
 
 (defmethod pack Key [_ value]
   (cond

@@ -1,5 +1,6 @@
 (ns hyperion.sql.types
-  (:require [hyperion.coerce :refer [->float ->byte ->short]]
+  (:require [hyperion.coerce :refer [->float ->byte ->short ->char]]
+            [chee.coerce :refer [->string]]
             [hyperion.api :refer [unpack pack]]))
 
 (defmethod pack java.lang.Byte [_ value]
@@ -19,3 +20,9 @@
 
 (defmethod unpack java.lang.Short [_ value]
   (->short value))
+
+(defmethod pack java.lang.Character [_ value]
+  (->string value))
+
+(defmethod unpack java.lang.Character [_ value]
+  (->char value))

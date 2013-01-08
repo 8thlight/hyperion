@@ -18,6 +18,7 @@ A Hyperion implementation for SQLite3
 * `java.lang.Short` as column type `INTEGER`
 * `java.lang.Long` as column type `BIGINT`
 * `java.lang.Float` as column type `DOUBLE` or `FLOAT`
+* `java.lang.Character` as column type `VARCHAR`
 * `clojure.lang.Keyword` same as `java.lang.String`
 
 ## License
