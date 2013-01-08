@@ -236,7 +236,7 @@ If your schema requires foreign keys, **ALWAYS USE THE FOREIGN KEY TYPE**. If yo
 
 #### Types
 
-All hyperion implementations provide built in support for the following types:
+All hyperion implementations provide built-in support for the following types:
 
 * `java.lang.Boolean`
 * `java.lang.Byte`
