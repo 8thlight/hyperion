@@ -17,9 +17,6 @@
     (should (needs-big-number-js? [(num-filter (bigint 1))]))
     (should (needs-big-number-js? [(num-filter (bigdec 1))])))
 
-  (it "needs big number js if there is a filter with a string that represents a number"
-    (should (needs-big-number-js? [(num-filter "1")])))
-
   (it "does not need big number js if there are no filters if numbers"
     (should-not (needs-big-number-js? [(num-filter "asdf")]))
     (should-not (needs-big-number-js? [])))

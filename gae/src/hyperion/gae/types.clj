@@ -1,6 +1,6 @@
 (ns hyperion.gae.types
   (:require [chee.coerce :refer [->int ->string ->keyword]]
-            [hyperion.coerce :refer [->float ->byte ->biginteger]]
+            [hyperion.coerce :refer [->float ->byte ->biginteger ->short]]
             [hyperion.api :refer [pack unpack]])
   (:import [com.google.appengine.api.datastore
             Key KeyFactory ShortBlob Blob Category Email GeoPt Link
@@ -30,6 +30,12 @@
 
 (defmethod unpack Byte [_ value]
   (->byte value))
+
+(defmethod pack Short [_ value]
+  (->short value))
+
+(defmethod unpack Short [_ value]
+  (->short value))
 
 (defmethod pack Integer [_ value]
   (->int value))

@@ -9,6 +9,14 @@
       (map type-caster [Byte/MIN_VALUE -42 -1 0 nil 1 42 Byte/MAX_VALUE])
       (type-caster 0))))
 
+(defn it-handles-shorts []
+  (let [type-caster (fn [value] (when value (short value)))]
+    (it-finds
+      :shrt
+      (build-type-checker Short)
+      (map type-caster [Short/MIN_VALUE (dec Byte/MIN_VALUE) -42 0 nil 42 (inc Byte/MAX_VALUE) Short/MAX_VALUE])
+      (type-caster 0))))
+
 (defn it-handles-ints []
   (let [type-caster (fn [value] (when value (int value)))]
     (it-finds

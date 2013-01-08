@@ -10,6 +10,9 @@
       (it-handles-booleans))
     (context "bytes"
       (it-handles-bytes))
+    (context "shorts"
+      (tags :short)
+      (it-handles-shorts))
     (context "integers"
       (it-handles-ints))
     (context "longs"

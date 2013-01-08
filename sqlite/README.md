@@ -15,6 +15,7 @@ A Hyperion implementation for SQLite3
 
 * `java.lang.Boolean` as column type `BOOLEAN`
 * `java.lang.Byte` as column type `TINYINT`
+* `java.lang.Short` as column type `INTEGER`
 * `java.lang.Long` as column type `BIGINT`
 * `java.lang.Float` as column type `DOUBLE` or `FLOAT`
 * `clojure.lang.Keyword` same as `java.lang.String`

@@ -15,14 +15,17 @@
   (execute-mutation
     (make-query query)))
 
-(def create-table-query
-  "CREATE TABLE IF NOT EXISTS %s (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(35),
-    first_name VARCHAR(35),
-    inti INTEGER,
-    data VARCHAR(32)
-  )")
+(defn create-testing-table [table-name]
+  (do-query
+    (format
+      "CREATE TABLE IF NOT EXISTS %s (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(35),
+        first_name VARCHAR(35),
+        inti INTEGER,
+        data VARCHAR(32)
+      )"
+      table-name)))
 
 (defn create-key-tables []
   (do-query
@@ -46,6 +49,7 @@
     id SERIAL PRIMARY KEY,
     bool BOOLEAN,
     bite SMALLINT,
+    shrt INTEGER,
     inti INTEGER,
     lng BIGINT,
     big_int NUMERIC,
@@ -57,44 +61,39 @@
     first_name VARCHAR(35)
     )"))
 
+(defn empty-tables [tables]
+  (doseq [table tables]
+    (do-query (format "TRUNCATE %s CASCADE" table))))
+
 (defentity :types
   [bool]
   [bite :type java.lang.Byte]
+  [shrt :type java.lang.Short]
   [inti]
   [lng]
   [flt :type java.lang.Float]
   [dbl]
   [str]
-  [kwd :type clojure.lang.Keyword]
-  )
-
-(defn create-table [table-name]
-  (do-query (format create-table-query table-name)))
-
-(defn drop-table [table-name]
-  (do-query (format "DROP TABLE IF EXISTS %s" table-name)))
+  [kwd :type clojure.lang.Keyword])
 
 (def connection-url "jdbc:postgresql://localhost:5432/hyperion")
+(def all-tables ["testing" "other_testing" "account" "shirt" "types"])
 
 (describe "Postgres Datastore"
+  (before-all
+    (with-connection connection-url
+      (create-testing-table "testing")
+      (create-testing-table "other_testing")
+      (create-key-tables)
+      (create-types-table)))
+
   (around [it]
     (binding [*ds* (new-datastore :implementation :postgres :connection-url connection-url)]
       (it)))
 
   (before
     (with-connection connection-url
-      (create-table "testing")
-      (create-table "other_testing")
-      (create-key-tables)
-      (create-types-table)))
-
-  (after
-    (with-connection connection-url
-      (drop-table "testing")
-      (drop-table "other_testing")
-      (drop-table "shirt")
-      (drop-table "account")
-      (drop-table "types")))
+      (empty-tables all-tables)))
 
   (it-behaves-like-a-datastore)
 

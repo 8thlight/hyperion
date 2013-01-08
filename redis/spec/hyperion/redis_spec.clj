@@ -12,13 +12,13 @@
 (defentity :types
   [bool]
   [bite]
+  [shrt]
   [inti]
   [lng]
   [flt]
   [dbl]
   [str]
-  [kwd]
-  )
+  [kwd])
 
 (describe "Redis Datastore"
 

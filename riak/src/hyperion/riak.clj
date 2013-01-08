@@ -30,29 +30,29 @@
            [com.basho.riak.client.raw RawClient]
            [com.basho.riak.client.raw StoreMeta StoreMeta$Builder]))
 
-(defn pbc-config [options]
+(defn pbc-config [{:keys [host port connection-timeout-millis idle-connection-ttl-millis initial-pool-size pool-size socket-buffer-size-kb]}]
   (let [^PBClientConfig$Builder config (PBClientConfig$Builder.)]
-    (when (:host options) (.withHost config (:host options)))
-    (when (:port options) (.withPort config (:port options)))
-    (when (:connection-timeout-millis options) (.withConnectionTimeoutMillis config (:connection-timeout-millis options)))
-    (when (:idle-connection-ttl-millis options) (.withIdleConnectionTTLMillis config (:idle-connection-ttl-millis options)))
-    (when (:initial-pool-size options) (.withInitialPoolSize config (:initial-pool-size options)))
-    (when (:pool-size options) (.withPoolSize config (:pool-size options)))
-    (when (:socket-buffer-size-kb options) (.withSocketBufferSizeKb config (:socket-buffer-size-kb options)))
+    (when host (.withHost config host))
+    (when port (.withPort config port))
+    (when connection-timeout-millis (.withConnectionTimeoutMillis config connection-timeout-millis))
+    (when idle-connection-ttl-millis (.withIdleConnectionTTLMillis config idle-connection-ttl-millis))
+    (when initial-pool-size (.withInitialPoolSize config initial-pool-size))
+    (when pool-size (.withPoolSize config pool-size))
+    (when socket-buffer-size-kb (.withSocketBufferSizeKb config socket-buffer-size-kb))
     (.build config)))
 
-(defn http-config [options]
+(defn http-config [{:keys [host port http-client mapreduce-path max-connections retry-handler riak-path scheme timeout url]}]
   (let [^HTTPClientConfig$Builder config (HTTPClientConfig$Builder.)]
-    (when (:host options) (.withHost config (:host options)))
-    (when (:port options) (.withPort config (:port options)))
-    (when (:http-client options) (.withHttpClient config (:http-client options)))
-    (when (:mapreduce-path options) (.withMapreducePath config (:mapreduce-path options)))
-    (when (:max-connections options) (.withMaxConnctions config (:max-connections options))) ; typo intended!
-    (when (:retry-handler options) (.withRetryHandler config (:retry-handler options)))
-    (when (:riak-path options) (.withRiakPath config (:riak-path options)))
-    (when (:scheme options) (.withScheme config (:scheme options)))
-    (when (:timeout options) (.withTimeout config (:timeout options)))
-    (when (:url options) (.withUrl config (:url options)))
+    (when host (.withHost config host))
+    (when port (.withPort config port))
+    (when http-client (.withHttpClient config http-client))
+    (when mapreduce-path (.withMapreducePath config mapreduce-path))
+    (when max-connections (.withMaxConnctions config max-connections)) ; typo intended!
+    (when retry-handler (.withRetryHandler config retry-handler))
+    (when riak-path (.withRiakPath config riak-path))
+    (when scheme (.withScheme config scheme))
+    (when timeout (.withTimeout config timeout))
+    (when url (.withUrl config url))
     (.build config)))
 
 (defn build-connection-config [options]
@@ -122,7 +122,6 @@
       :kind kind
       :key (compose-key kind id))))
 
-; TODO - investigate using SMILE format of JSON to be faster.
 (defn- save-record [client record]
   (let [key (or (:key record) (compose-key (:kind record)))
         [kind id] (decompose-key key)

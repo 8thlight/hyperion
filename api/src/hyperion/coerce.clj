@@ -6,6 +6,9 @@
 (defprotocol AsByte
   (->byte [this]))
 
+(defprotocol AsShort
+  (->short [this]))
+
 (defprotocol AsLong
   (->long [this]))
 
@@ -118,5 +121,17 @@
 
   nil
   (->keyword [this] nil)
+
+  )
+
+(extend-protocol AsShort
+  java.lang.Number
+  (->short [this] (.shortValue this))
+
+  nil
+  (->short [this] nil)
+
+  java.lang.String
+  (->short [this] (Short. this))
 
   )

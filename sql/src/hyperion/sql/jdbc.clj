@@ -25,6 +25,10 @@
   (set-object [this stmt index]
     (.setInt stmt index (.intValue this)))
 
+  java.lang.Short
+  (set-object [this stmt index]
+    (.setInt stmt index (.intValue this)))
+
   java.lang.Integer
   (set-object [this stmt index]
     (.setInt stmt index this))

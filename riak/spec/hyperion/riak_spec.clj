@@ -31,20 +31,19 @@
 (defentity :types
   [bool]
   [bite :type java.lang.Byte]
+  [shrt :type java.lang.Short]
   [inti :type java.lang.Integer]
   [lng :type java.lang.Long]
   [flt :type java.lang.Float]
   [dbl :type java.lang.Double]
   [str]
-  [kwd :type clojure.lang.Keyword]
-  )
+  [kwd :type clojure.lang.Keyword])
 
 (describe "Riak Datastore"
 
   (before (log/error!))
 
   (context "Connection Config"
-
     (it "configures PBC connection"
       (let [config-map {:api :pbc
                         :host "foo.bar.com"

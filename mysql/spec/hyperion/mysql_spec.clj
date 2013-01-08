@@ -16,15 +16,18 @@
   (execute-mutation
     (make-query query)))
 
-(def create-table-query
-  "CREATE TABLE IF NOT EXISTS %s (
-    id INTEGER NOT NULL AUTO_INCREMENT,
-    name VARCHAR(35),
-    first_name VARCHAR(35),
-    inti INTEGER,
-    data VARCHAR(32),
-    PRIMARY KEY (id)
-  )")
+(defn create-testing-table [table]
+  (do-query
+    (format
+      "CREATE TABLE IF NOT EXISTS %s (
+      id INTEGER NOT NULL AUTO_INCREMENT,
+      name VARCHAR(35),
+      first_name VARCHAR(35),
+      inti INTEGER,
+      data VARCHAR(32),
+      PRIMARY KEY (id)
+      )"
+      table)))
 
 (defn create-key-tables []
   (do-query
@@ -44,7 +47,7 @@
     data VARCHAR(32),
     PRIMARY KEY (id),
     INDEX (account_id),
-    FOREIGN KEY (account_id) REFERENCES account (id)
+    FOREIGN KEY (account_id) REFERENCES account (id) ON DELETE CASCADE
     )"))
 
 (defn create-types-table []
@@ -53,6 +56,7 @@
     id INTEGER NOT NULL AUTO_INCREMENT,
     bool BOOLEAN,
     bite TINYINT,
+    shrt INTEGER,
     inti INTEGER,
     lng BIGINT,
     big_int BLOB,
@@ -65,24 +69,23 @@
     PRIMARY KEY (id)
     )"))
 
+(defn empty-tables [tables]
+  (doseq [table tables]
+    (do-query (format "DELETE FROM %s" table))))
+
 (defentity :types
   [bool]
   [bite :type java.lang.Byte]
+  [shrt :type java.lang.Short]
   [inti]
   [lng]
   [flt :type java.lang.Float]
   [dbl]
   [str]
-  [kwd :type clojure.lang.Keyword]
-  )
-
-(defn create-table [table-name]
-  (do-query (format create-table-query table-name)))
-
-(defn drop-table [table-name]
-  (do-query (format "DROP TABLE IF EXISTS %s" table-name)))
+  [kwd :type clojure.lang.Keyword])
 
 (def connection-url "jdbc:mysql://localhost:3306/hyperion?user=root")
+(def all-tables ["testing" "other_testing" "account" "shirt" "types"])
 
 (describe "MySQL Datastore"
 
@@ -91,6 +94,12 @@
       (should= "hyperion" (.database (.db ds)))))
 
   (context "live"
+    (before-all
+      (with-connection connection-url
+        (create-testing-table "testing")
+        (create-testing-table "other_testing")
+        (create-key-tables)
+        (create-types-table)))
 
     (around [it]
       (binding [*ds* (new-datastore :implementation :mysql :connection-url connection-url :database "hyperion")]
@@ -98,18 +107,7 @@
 
     (before
       (with-connection connection-url
-        (create-table "testing")
-        (create-table "other_testing")
-        (create-key-tables)
-        (create-types-table)))
-
-    (after
-      (with-connection connection-url
-        (drop-table "testing")
-        (drop-table "other_testing")
-        (drop-table "shirt")
-        (drop-table "account")
-        (drop-table "types")))
+        (empty-tables all-tables)))
 
     (it-behaves-like-a-datastore)
 

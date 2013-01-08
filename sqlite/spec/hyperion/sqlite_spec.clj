@@ -11,21 +11,22 @@
 
 (log/error!)
 
-(def connection-url "jdbc:sqlite:hyperion_clojure.sqlite")
-
 (defn do-query [query]
   (execute-mutation
     (make-query query)))
 
-(def create-table-query
-  "CREATE TABLE IF NOT EXISTS %s (
-    id INTEGER PRIMARY KEY,
-    name VARCHAR(35),
-    first_name VARCHAR(35),
-    birthdate DATE,
-    inti INTEGER,
-    data VARCHAR(32)
-  )")
+(defn create-testing-table [table]
+  (do-query
+    (format
+      "CREATE TABLE IF NOT EXISTS %s (
+      id INTEGER PRIMARY KEY,
+      name VARCHAR(35),
+      first_name VARCHAR(35),
+      birthdate DATE,
+      inti INTEGER,
+      data VARCHAR(32)
+      )"
+      table)))
 
 (defn create-key-tables []
   (do-query
@@ -51,6 +52,7 @@
     id INTEGER PRIMARY KEY,
     bool BOOLEAN,
     bite TINYINT,
+    shrt INTEGER,
     inti INTEGER,
     lng INTEGER,
     big_int BLOB,
@@ -61,26 +63,32 @@
     data VARCHAR(32)
     )"))
 
+(defn empty-tables [tables]
+  (doseq [table tables]
+    (do-query (format "DELETE FROM %s" table))))
+
 (defentity :types
   [bool :type java.lang.Boolean]
   [bite :type java.lang.Byte]
+  [shrt :type java.lang.Short]
   [inti]
   [lng :type java.lang.Long]
   [flt :type java.lang.Float]
   [dbl]
   [str]
-  [kwd :type clojure.lang.Keyword]
-  )
-
-(defn create-table [table-name]
-  (do-query (format create-table-query table-name)))
-
-(defn drop-table [table-name]
-  (do-query (format "DROP TABLE IF EXISTS %s" table-name)))
+  [kwd :type clojure.lang.Keyword])
 
 (def all-tables ["testing" "other_testing" "account" "shirt" "types"])
+(def connection-url "jdbc:sqlite:hyperion_clojure.sqlite")
 
 (describe "SQLite Datastore"
+  (before-all
+    (with-connection connection-url
+      (create-testing-table "testing")
+      (create-testing-table "other_testing")
+      (create-key-tables)
+      (create-types-table)))
+
   (around [it]
     (with-connection connection-url
       (binding [*ds* (new-datastore :implementation :sqlite
@@ -88,14 +96,7 @@
         (it))))
 
   (before
-    (create-table "testing")
-    (create-table "other_testing")
-    (create-key-tables)
-    (create-types-table))
-
-  (after
-    (doseq [table all-tables]
-      (drop-table table)))
+    (empty-tables all-tables))
 
   (it-behaves-like-a-datastore)
 

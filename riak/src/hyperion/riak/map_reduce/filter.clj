@@ -43,48 +43,49 @@
     }
     "))
 
-(defmulti -comparator-js (fn [filter] [(type (filter/value filter)) (filter/operator filter)]))
+(defmulti comparator-js
+  (fn [filter] [(type (filter/value filter)) (filter/operator filter)]))
 
-(defmethod -comparator-js [Number :>] [filter]
+(defmethod comparator-js [Number :>] [filter]
   (compare-number-js filter "c === -1"))
 
-(defmethod -comparator-js [Object :>] [filter]
+(defmethod comparator-js [Object :>] [filter]
   (compare-object-js filter))
 
-(defmethod -comparator-js [Number :>=] [filter]
+(defmethod comparator-js [Number :>=] [filter]
   (compare-number-js filter "c === -1 || c === 0"))
 
-(defmethod -comparator-js [Object :>=] [filter]
+(defmethod comparator-js [Object :>=] [filter]
   (compare-object-js filter))
 
-(defmethod -comparator-js [Number :<] [filter]
+(defmethod comparator-js [Number :<] [filter]
   (compare-number-js filter "c === 1"))
 
-(defmethod -comparator-js [Object :<] [filter]
+(defmethod comparator-js [Object :<] [filter]
   (compare-object-js filter))
 
-(defmethod -comparator-js [Number :<=] [filter]
+(defmethod comparator-js [Number :<=] [filter]
   (compare-number-js filter "c === 1 || c === 0"))
 
-(defmethod -comparator-js [Object :<=] [filter]
+(defmethod comparator-js [Object :<=] [filter]
   (compare-object-js filter))
 
-(defmethod -comparator-js [Number :=] [filter]
+(defmethod comparator-js [Number :=] [filter]
   (compare-number-js filter "c === 0"))
 
-(defmethod -comparator-js [Object :=] [filter]
+(defmethod comparator-js [Object :=] [filter]
   (str "if (fieldValue !== " (filter-json filter) ") {return [];}"))
 
-(defmethod -comparator-js [IPersistentCollection :contains?] [filter]
+(defmethod comparator-js [IPersistentCollection :contains?] [filter]
   (str "if (!any(fieldValue, " (filter-json filter) ")) {return [];}"))
 
-(defmethod -comparator-js [nil :=] [filter]
+(defmethod comparator-js [nil :=] [filter]
   "if (!isNull(fieldValue)) {return [];}")
 
-(defmethod -comparator-js [Object :!=] [filter]
+(defmethod comparator-js [Object :!=] [filter]
   (str "if (fieldValue === " (filter-json filter) ") {return [];}"))
 
-(defmethod -comparator-js [nil :!=] [filter]
+(defmethod comparator-js [nil :!=] [filter]
   "if (isNull(fieldValue)) {return [];}")
 
 (defprotocol CoerceFilterValue
@@ -109,14 +110,17 @@
 
   )
 
-(defn comparator-js [filter]
-  (-comparator-js (make-filter
-                    (filter/operator filter)
-                    (filter/field filter)
-                    (coerce-filter-value (filter/value filter)))))
+(defn- coerce-filters [filters]
+  (map
+    (fn [filter]
+      (make-filter
+        (filter/operator filter)
+        (filter/field filter)
+        (coerce-filter-value (filter/value filter))))
+    filters))
 
 (defn needs-big-number-js? [filters]
-  (some #(number? (coerce-filter-value (filter/value %))) filters))
+  (some #(number? (filter/value %)) filters))
 
 (defn needs-contain-js? [filters]
   (some #(= :contains? (filter/operator %)) filters))
@@ -136,25 +140,27 @@
 (def filter-template
   "
   function f(riakRecord) {
-    var x;
-    <(if (needs-big-number-js? filters) big-number-js \">x=1;<\")>
-    <(if (needs-contain-js? filters) contain-js \">x=1;<\")>
+    <(let [filters (coerce-filters filters)] \">
+      var x;
+      <(if (needs-big-number-js? filters) big-number-js \">x=1;<\")>
+      <(if (needs-contain-js? filters) contain-js \">x=1;<\")>
 
-    var fieldValue, c;
-    var data = Riak.mapValuesJson(riakRecord)[0];
+      var fieldValue, c;
+      var data = Riak.mapValuesJson(riakRecord)[0];
 
-    function isNull(value) {
-      return (typeof value === 'undefined' || value === null);
-    };
+      function isNull(value) {
+        return (typeof value === 'undefined' || value === null);
+      };
 
-    <(for [filter filters] \">
-      fieldValue = data[<(raw (generate-string (filter/field filter)))>];
-      <(comparator-js filter)>
+      <(for [filter filters] \">
+        fieldValue = data[<(raw (generate-string (filter/field filter)))>];
+        <(comparator-js filter)>
+      <\")>
+
+      data['id'] = riakRecord['key'];
+      return [data];
+    }
     <\")>
-
-    data['id'] = riakRecord['key'];
-    return [data];
-  }
   ")
 
 (deftemplate-fn filter-js (fleet [filters] filter-template {:escaping :bypass}))

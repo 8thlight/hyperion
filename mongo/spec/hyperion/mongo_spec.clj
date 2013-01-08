@@ -11,13 +11,13 @@
 (defentity :types
   [bool]
   [bite :type java.lang.Byte]
+  [shrt :type java.lang.Short]
   [inti]
   [lng]
   [flt :type java.lang.Float]
   [dbl]
   [str]
-  [kwd :type clojure.lang.Keyword]
-  )
+  [kwd :type clojure.lang.Keyword])
 
 (describe "Mongo Datastore"
 

@@ -36,13 +36,13 @@
 (defentity :types
   [bool]
   [bite :type java.lang.Byte]
+  [shrt :type java.lang.Short]
   [inti :type java.lang.Integer]
   [lng]
   [flt :type java.lang.Float]
   [dbl]
   [str]
-  [kwd :type clojure.lang.Keyword]
-  )
+  [kwd :type clojure.lang.Keyword])
 
 (describe "Google AppEngine Datastore"
 
