@@ -24,24 +24,24 @@
     (checkClientTrusted [certs type])
     (checkServerTrusted [certs type])))
 
+(def trust-managers (into-array X509TrustManager [trust-manager]))
+
 (defn- trusting-ssl-socket-factory []
-  (let [trust-managers (into-array X509TrustManager [trust-manager])
-        ssl-context (SSLContext/getInstance "SSL")]
+  (let [ssl-context (SSLContext/getInstance "SSL")]
     (.init ssl-context nil trust-managers (SecureRandom.))
     (.getSocketFactory ssl-context)))
 
-(defn- socket-factory [{:keys [ssl trust]}]
-  (when ssl
-    (if (= trust ssl)
-      (trusting-ssl-socket-factory)
-      (SSLSocketFactory/getDefault))))
+(defn- socket-factory [ssl]
+  (if (= :trust ssl)
+    (trusting-ssl-socket-factory)
+    (SSLSocketFactory/getDefault)))
 
 (defn open-mongo [& args]
-  (let [{:keys [host port servers ssl] :or {port 27017} :as options} (->options args)
+  (let [{:keys [host port servers ssl] :or {port 27017}} (->options args)
         addresses (if host [(->address [host port])] [])
         addresses (doall (concat addresses (map ->address servers)))
         mongo-options (MongoOptions.)]
-    (when ssl (.setSocketFactory mongo-options (socket-factory options)))
+    (when ssl (.setSocketFactory mongo-options (socket-factory ssl)))
     (Mongo. addresses mongo-options)))
 
 (defn ->write-concern [value]
