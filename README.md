@@ -288,7 +288,7 @@ The complete list of log levels (which come from [timbre](https://github.com/pta
 
 ## Full API
 
-To learn more, downlaod hyperion.api and load up the REPL.
+To learn more, download hyperion.api and load up the REPL.
 
 ```clojure
 user=> (keys (ns-publics 'hyperion.api))
