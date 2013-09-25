@@ -1,6 +1,6 @@
 (defproject hyperion/hyperion-riak "3.7.0"
   :description "Riak Datastore for Hyperion"
-  :dependencies [[org.clojure/clojure "1.4.0"]
+  :dependencies [[org.clojure/clojure "1.5.1"]
                  [hyperion/hyperion-api "3.7.0"]
                  [com.basho.riak/riak-client "1.0.5"]
                  [cheshire "5.0.1"]

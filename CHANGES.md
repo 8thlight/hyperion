@@ -6,7 +6,8 @@
 * fixes packing the field name on sorting
 * adds connection pooling for sql datastores
 * upgrade speclj 2.7.5
-* shorter keys
+* generates shorter keys
+* upgrade to clojure 1.5.1
 
 # 3.6.0
 
