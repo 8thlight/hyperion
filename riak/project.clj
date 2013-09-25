@@ -6,14 +6,8 @@
                  [cheshire "5.0.1"]
                  [fleet "0.9.5"]
                  [com.google.javascript/closure-compiler "r2388"]]
-
-  ; leiningen 1
-  :dev-dependencies [[speclj "2.5.0"]]
-  :test-path "spec"
-
-  ; leiningen 2
-  :profiles {:dev {:dependencies [[speclj "2.5.0"]]}}
+  :profiles {:dev {:dependencies [[speclj "2.7.5"]]}}
   :test-paths ["spec/"]
-  :plugins [[speclj "2.5.0"]])
+  :plugins [[speclj "2.7.5"]])
 
 

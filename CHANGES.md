@@ -5,6 +5,8 @@
 * fixes bad keys in filters
 * fixes packing the field name on sorting
 * adds connection pooling for sql datastores
+* upgrade speclj 2.7.5
+* shorter keys
 
 # 3.6.0
 

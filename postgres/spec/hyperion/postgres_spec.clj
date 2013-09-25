@@ -66,8 +66,7 @@
   (doseq [table tables]
     (do-query (format "TRUNCATE %s CASCADE" table))))
 
-(defentity :types
-  [bool]
+(defentity :types [bool]
   [bite :type java.lang.Byte]
   [shrt :type java.lang.Short]
   [inti]
@@ -82,6 +81,7 @@
 (def all-tables ["testing" "other_testing" "account" "shirt" "types"])
 
 (describe "Postgres Datastore"
+
   (before-all
     (with-connection connection-url
       (create-testing-table "testing")
@@ -91,7 +91,8 @@
 
   (around [it]
     (binding [*ds* (new-datastore :implementation :postgres :connection-url connection-url)]
-      (it)))
+      (it)
+      (.close (.connection *ds*))))
 
   (before
     (with-connection connection-url

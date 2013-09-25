@@ -27,6 +27,11 @@ def package(name, dependencies)
     spec(name)
   end
 
+  desc "Build #{name} pom.xml"
+  task :pom do
+    pom(name)
+  end
+
   desc "Setup checkouts for #{name}"
   task :checkouts do
     checkouts(name, dependencies)
@@ -97,6 +102,9 @@ create_task_for_all(:spec)
 desc 'Run the ci specs Hyperion'
 create_task_for_ci(:ci_spec, :spec)
 
+desc 'Build pom files'
+create_task_for_all(:pom)
+
 desc 'Deploy Hyperion'
 create_task_for_all(:deploy)
 
@@ -119,6 +127,10 @@ end
 
 def spec(dir)
   lein_task(dir, 'spec')
+end
+
+def pom(dir)
+  lein_task(dir, 'pom')
 end
 
 def _install(dir)

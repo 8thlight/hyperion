@@ -23,7 +23,7 @@
   (try
     (KeyFactory/stringToKey value)
     (catch Exception e
-      (throw (IllegalArgumentException. (.getMessage e))))))
+      (throw (javax.management.openmbean.InvalidKeyException. (.getMessage e))))))
 
 (defn- build-native [record]
   (try

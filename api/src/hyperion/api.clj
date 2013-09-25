@@ -6,7 +6,7 @@
             [hyperion.sorting :as sort]
             [chee.datetime :refer [now]]
             [chee.util :refer [->options]])
-  (:import  [java.lang IllegalArgumentException]))
+  (:import [java.lang IllegalArgumentException]))
 
 (declare ^{:dynamic true
            :tag hyperion.abstr.Datastore
@@ -34,6 +34,11 @@
   (if value
     (assoc map key value)
     map))
+
+(defmacro trace-entity [entity message]
+  `(do
+     (log/trace ~message ~entity)
+     ~entity))
 
 ; ----- Hooks ---------------------------------------------
 
@@ -125,8 +130,8 @@ You may add your own packer by declaring a defmethod for your type."
       (fn [acc item]
         (try
           (conj acc (packer item))
-          (catch IllegalArgumentException e
-            (log/warn (format "error packing %s: %s" (pr-str item) (.getMessage e)))
+          (catch javax.management.openmbean.InvalidKeyException e
+            (log/error (format "error packing %s: %s" (pr-str item) (.getMessage e)))
             acc)))
       []
       value)
@@ -191,10 +196,12 @@ You may add your own packer by declaring a defmethod for your type."
 
 (defn- unpack-entity [entity]
   (when entity
+    (trace-entity entity "before unpacking:")
     (-> entity
       normalize-field-names
       unpack-fields
-      after-load)))
+      after-load
+      (trace-entity " after unpacking:"))))
 
 (defn- ensure-entity-has-kind [entity]
   (if-not (contains? entity :kind )
@@ -203,11 +210,13 @@ You may add your own packer by declaring a defmethod for your type."
 
 (defn- pack-entity [entity]
   (when entity
+    (trace-entity entity "before packing:")
     (-> entity
       ensure-entity-has-kind
       with-updated-timestamps
       before-save
-      pack-fields)))
+      pack-fields
+      (trace-entity " after packing:"))))
 
 (defmacro defentity
   "Used to define entities. An entity is simply an encapulation of data that
@@ -328,9 +337,9 @@ You may add your own packer by declaring a defmethod for your type."
       (doall
         (map
           (fn [[field direction]]
-              (sort/make-sort
-                (->field field)
-                (->sort-direction direction)))
+            (sort/make-sort
+              (->field field)
+              (->sort-direction direction)))
           sorts)))))
 
 (defn- find-records-by-kind [kind filters sorts limit offset]
@@ -347,7 +356,7 @@ nil if it doesn't exist."
     (unpack-entity
       (when (key-present? key)
         (ds-find-by-key (ds) key)))
-    (catch IllegalArgumentException e
+    (catch javax.management.openmbean.InvalidKeyException e
       (log/warn (format "find-by-key error: %s" (.getMessage e)))
       nil)))
 
@@ -390,8 +399,8 @@ nil if it doesn't exist."
         (:sorts options)
         (:limit options)
         (:offset options)))
-    (catch IllegalArgumentException e
-      (log/warn (format "find-by-kind error: %s" (.getMessage e)))
+    (catch javax.management.openmbean.InvalidKeyException e
+      (log/error (format "find-by-kind error: %s" e))
       [])))
 
 (defn find-all-kinds
@@ -419,8 +428,8 @@ WARNING: This method is almost certainly horribly inefficient.  Use with caution
     (let [options (->options args)
           kind (name kind)]
       (count-records-by-kind kind (:filters options)))
-    (catch IllegalArgumentException e
-      (log/warn (format "count-by-kind error: %s" (.getMessage e)))
+    (catch javax.management.openmbean.InvalidKeyException e
+      (log/error (format "count-by-kind error: %s" (.getMessage e)))
       0)))
 
 (defn- count-records-by-all-kinds [filters]
@@ -442,8 +451,8 @@ Returns nil no matter what."
     (when (key-present? key)
       (ds-delete-by-key (ds) key)
       nil)
-    (catch IllegalArgumentException e
-      (log/warn (format "find-by-key error: %s" (.getMessage e)))
+    (catch javax.management.openmbean.InvalidKeyException e
+      (log/error (format "find-by-key error: %s" (.getMessage e)))
       nil)))
 
 (defn delete-by-kind
@@ -454,8 +463,8 @@ Returns nil no matter what."
           kind (->kind kind)]
       (ds-delete-by-kind (ds) kind (parse-filters kind (:filters options)))
       nil)
-    (catch IllegalArgumentException e
-      (log/warn (format "delete-by-kind error: %s" (.getMessage e)))
+    (catch javax.management.openmbean.InvalidKeyException e
+      (log/error (format "delete-by-kind error: %s" (.getMessage e)))
       nil)))
 
 ; ----- Factory -------------------------------------------

@@ -1,7 +1,7 @@
 (ns hyperion.key
   (:require [clojure.data.codec.base64 :refer [encode decode]]
             [hyperion.abstr :refer :all])
-  (:import  [java.lang IllegalArgumentException]))
+  (:import [java.lang IllegalArgumentException]))
 
 (defn encode-key [value]
   (.replace
@@ -19,8 +19,24 @@
           1 (str value "===")
           value)))))
 
+(def key-fodder (.toCharArray "ABCDEFGHIJKLMNOPabcdefghijklmnop0123456789"))
+(def fodder-count (count key-fodder))
+
+(defn random-fodder-seq
+  ([] (random-fodder-seq (java.util.Random. (System/nanoTime))))
+  ([generator]
+    (cons
+      (aget key-fodder (.nextInt generator fodder-count))
+      (lazy-seq (random-fodder-seq generator)))))
+
 (defn generate-id []
-  (.replace (str (java.util.UUID/randomUUID)) "-" ""))
+  (let [buffer (StringBuffer.)]
+    (doseq [c (take 8 (random-fodder-seq))]
+      (.append buffer c))
+    (.toString buffer)))
+
+;(defn generate-id []
+;  (.replace (str (java.util.UUID/randomUUID)) "-" ""))
 
 (defn compose-key
   ([kind] (compose-key kind (generate-id)))
@@ -30,6 +46,6 @@
   (let [decoded (decode-key key)
         colon-index (.indexOf decoded (int \:))]
     (if (< colon-index 1)
-      (throw (IllegalArgumentException. (str "Invalid key form: " decoded)))
+      (throw (javax.management.openmbean.InvalidKeyException. (str "Invalid key form: " decoded)))
       (list (.substring decoded 0 colon-index) (.substring decoded (inc colon-index))))))
 

@@ -24,7 +24,7 @@
 (def-loggers) ; Actually define a logger for each logging level
 
 (defn boot-log-level! []
-  (println "booting log level: " (System/getenv "LOG_LEVEL"))
+  (println "booting log level: " (or (System/getenv "LOG_LEVEL") "<default>"))
   (if-let [level (System/getenv "LOG_LEVEL")]
     (timbre/set-level! (keyword level))
     (info!)))

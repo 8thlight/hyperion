@@ -43,6 +43,17 @@
     (let [key (compose-key :foo "123")]
       (should= ["foo" "123"] (decompose-key key))))
 
+  (it "random-fodder-seq"
+    (should= true (seq? (random-fodder-seq)))
+    (should= 10 (count (set (map (fn [_] (take 5 (random-fodder-seq))) (range 10))))))
+
+;  (it "generate key times"
+;    (prn (take 100 (iterate (fn [_] (generate-id)) nil)))
+;    (prn (take 100 (iterate (fn [_] (generate-id2)) nil)))
+;    (time (take 1000 (iterate (fn [_] (generate-id)) nil)))
+;    (time (take 1000 (iterate (fn [_] (generate-id2)) nil)))
+;    )
+
   )
 
 (run-specs)

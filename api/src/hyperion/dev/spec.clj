@@ -5,7 +5,9 @@
             [hyperion.dev.spec.searching :refer [it-finds-all-kinds it-finds-by-kind it-searches-multiple-kinds it-counts-by-kind it-finds-by-key]]
             [hyperion.dev.spec.foreign-keys :refer [it-handles-foreign-keys]]
             [hyperion.dev.spec.types :refer [it-handles-types]]
-            ))
+            [hyperion.log :as log]))
+
+;(log/debug!)
 
 (defn it-behaves-like-a-datastore []
   (list
