@@ -91,8 +91,7 @@
 
   (around [it]
     (binding [*ds* (new-datastore :implementation :postgres :connection-url connection-url)]
-      (it)
-      (.close (.connection *ds*))))
+      (it)))
 
   (before
     (with-connection connection-url

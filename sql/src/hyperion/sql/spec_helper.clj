@@ -1,7 +1,7 @@
 (ns hyperion.sql.spec-helper
   (:require [speclj.core :refer :all]
             [speclj.platform]
-            [hyperion.sql.connection :refer [with-connection-url]]
+            [hyperion.sql.connection :refer [with-connection]]
             [hyperion.sql.jdbc :refer [rollback]]))
 
 (defn str-contains? [s sub]
