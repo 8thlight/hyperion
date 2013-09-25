@@ -138,7 +138,7 @@ def _install(dir)
 end
 
 def deploy(dir)
-  lein_task(dir, 'push')
+  lein_task(dir, 'deploy clojars')
 end
 
 def lein_bin
