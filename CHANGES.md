@@ -1,3 +1,7 @@
+# 3.7.1
+
+* fixes spec helper in 3.7.0
+
 # 3.7.0
 
 * find-by-key returns nil for invalid/missing/nil keys

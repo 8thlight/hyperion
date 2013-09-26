@@ -1,4 +1,4 @@
-(defproject hyperion/hyperion-api "3.7.0"
+(defproject hyperion/hyperion-api "3.7.1"
   :description "A generic persistence API for Clojure"
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [chee "1.0.0"]
