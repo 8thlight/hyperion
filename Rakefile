@@ -82,8 +82,10 @@ namespace :redis do
   package('redis', %w{api})
 end
 
-CI_PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :gae, :redis, :mongo]
-PROJECTS = CI_PROJECTS + [:riak]
+CI_PROJECTS = [:api, :sql, :postgres, :mysql, :sqlite, :redis, :mongo]
+PROJECTS = CI_PROJECTS + [:riak,
+                          :gae # removed do to OutOfMemoryError.  Try adding back when updeating GAE libraries.
+]
 
 def create_task_for_all(task_name)
   task task_name => PROJECTS.map {|project| "#{project}:#{task_name}"}
