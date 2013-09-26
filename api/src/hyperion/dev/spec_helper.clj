@@ -1,9 +1,7 @@
 (ns hyperion.dev.spec-helper
   (:require [speclj.core :refer :all]
-            [speclj.util :refer [endl]]
             [hyperion.api :refer [*ds*]]
-            [hyperion.memory :refer [new-memory-datastore]])
-  (:import  [speclj SpecFailure]))
+            [hyperion.memory :refer [new-memory-datastore]]))
 
 (defn with-memory-datastore []
   (around [it]
