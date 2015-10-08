@@ -47,6 +47,15 @@
     (should= true (seq? (random-fodder-seq)))
     (should= 10 (count (set (map (fn [_] (take 5 (random-fodder-seq))) (range 10))))))
 
+  (it "random-fodder-seq is threadsafe"
+     (should= 250
+        (reduce +
+                (map
+                  (fn[_] (count (set (pmap
+                                       (fn [_] (take 10 (random-fodder-seq)))
+                                       (range 50)))))
+                  (range 5)))))
+
 ;  (it "generate key times"
 ;    (prn (take 100 (iterate (fn [_] (generate-id)) nil)))
 ;    (prn (take 100 (iterate (fn [_] (generate-id2)) nil)))
