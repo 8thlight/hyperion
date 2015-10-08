@@ -23,7 +23,13 @@
 (def fodder-count (count key-fodder))
 
 (defn random-fodder-seq
-  ([] (random-fodder-seq (java.util.Random. (System/nanoTime))))
+  "The default generator for `random-fodder-seq` is threadsafe for JDK 1.6b73
+  or greater (http://bugs.java.com/view_bug.do?bug_id=6379897). Calls to this on
+  multiple threads (i.e. `(pmap (fn [_] (take 10 random-fodder-seq)) (range 10))`)
+  will have a different seed for each instance  of `java.util.Random`. If on a JDK
+  earlier than JDK 1.6b73 there is a chance that there will be multiple instances
+  of `java.util.Random` with the same seed causing collisions"
+  ([] (random-fodder-seq (java.util.Random.)))
   ([generator]
     (cons
       (aget key-fodder (.nextInt generator fodder-count))
