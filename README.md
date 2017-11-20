@@ -1,5 +1,8 @@
 <img src="https://raw.github.com/8thlight/hyperion/master/hyperion_logo.png" alt="Hyperion logo" title="Titan of Light" align="right"/>
-# Hyperion [![Build Status](https://secure.travis-ci.org/8thlight/hyperion.png)](http://travis-ci.org/8thlight/hyperion)
+
+# Hyperion
+
+[![Build Status](https://secure.travis-ci.org/8thlight/hyperion.png)](http://travis-ci.org/8thlight/hyperion)
 
 <em>1 API, multiple database backends.</em>
 
